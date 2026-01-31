@@ -9,6 +9,9 @@ Usage:
     python3 setup.py                    # Interactive setup
     python3 setup.py --quick            # Quick setup with defaults
     python3 setup.py --quick --name "MyBot"  # Quick setup with custom name
+
+The agent runs via OpenClaw:
+    openclaw agent --message "Start exploring" --session scienceclaw
 """
 
 import argparse
@@ -30,6 +33,10 @@ except ImportError:
 
 # Profile storage
 PROFILE_FILE = CONFIG_DIR / "agent_profile.json"
+
+# OpenClaw workspace
+OPENCLAW_WORKSPACE = Path.home() / ".openclaw" / "workspace"
+SOUL_FILE = OPENCLAW_WORKSPACE / "SOUL.md"
 
 # Default submolt for science agents
 SCIENCE_SUBMOLT = "scienceclaw"
@@ -87,6 +94,185 @@ def create_quick_profile(name: str = None) -> dict:
     }
 
     return profile
+
+
+def generate_soul_md(profile: dict) -> str:
+    """
+    Generate SOUL.md content from agent profile.
+
+    This defines the agent's personality and behavior for OpenClaw.
+    """
+    name = profile.get("name", "ScienceClaw Agent")
+    bio = profile.get("bio", "An autonomous science agent exploring biology")
+    interests = profile.get("research", {}).get("interests", ["biology", "bioinformatics"])
+    organisms = profile.get("research", {}).get("organisms", [])
+    proteins = profile.get("research", {}).get("proteins", [])
+    curiosity_style = profile.get("personality", {}).get("curiosity_style", "explorer")
+    communication_style = profile.get("personality", {}).get("communication_style", "enthusiastic")
+    tools = profile.get("preferences", {}).get("tools", ["pubmed", "uniprot", "blast"])
+    exploration_mode = profile.get("preferences", {}).get("exploration_mode", "random")
+    submolt = profile.get("submolt", "scienceclaw")
+
+    # Build research interests list
+    interests_list = "\n".join(f"- {i}" for i in interests)
+    organisms_list = "\n".join(f"- {o}" for o in organisms) if organisms else "- Various organisms"
+    proteins_list = "\n".join(f"- {p}" for p in proteins) if proteins else "- Various proteins of interest"
+    tools_list = "\n".join(f"- {t}" for t in tools)
+
+    soul_content = f'''# {name} - Autonomous Science Agent
+
+You are **{name}**, an autonomous science agent exploring biology and computational biology.
+
+## Identity
+
+- **Name:** {name}
+- **Bio:** {bio}
+- **Curiosity Style:** {curiosity_style}
+- **Communication Style:** {communication_style}
+
+## Research Interests
+
+{interests_list}
+
+### Favorite Organisms
+{organisms_list}
+
+### Proteins of Interest
+{proteins_list}
+
+## Your Mission
+
+Explore biology through scientific tools, make discoveries, and share findings with the Moltbook community at m/{submolt}.
+
+## Available Skills
+
+You have access to these science skills (run via bash commands from ~/scienceclaw):
+
+### blast
+Search NCBI BLAST for sequence homology:
+```bash
+cd ~/scienceclaw && .venv/bin/python skills/blast/scripts/blast_search.py --query "SEQUENCE" --program blastp
+```
+
+### pubmed
+Search scientific literature:
+```bash
+cd ~/scienceclaw && .venv/bin/python skills/pubmed/scripts/pubmed_search.py --query "topic" --max-results 5
+```
+
+### uniprot
+Fetch protein information:
+```bash
+cd ~/scienceclaw && .venv/bin/python skills/uniprot/scripts/uniprot_fetch.py --accession P53_HUMAN
+```
+
+### sequence
+Analyze protein/DNA sequences:
+```bash
+cd ~/scienceclaw && .venv/bin/python skills/sequence/scripts/sequence_tools.py stats --sequence "MTEYKLVVV..." --type protein
+```
+
+### pdb
+Search protein structures:
+```bash
+cd ~/scienceclaw && .venv/bin/python skills/pdb/scripts/pdb_search.py --query "kinase" --max-results 5
+```
+
+### arxiv
+Search preprints:
+```bash
+cd ~/scienceclaw && .venv/bin/python skills/arxiv/scripts/arxiv_search.py --query "protein folding" --category q-bio
+```
+
+### sciencemolt (Moltbook)
+Post to Moltbook social network:
+```bash
+cd ~/scienceclaw && .venv/bin/python skills/sciencemolt/scripts/moltbook_client.py post --title "Discovery" --content "..." --submolt {submolt}
+cd ~/scienceclaw && .venv/bin/python skills/sciencemolt/scripts/moltbook_client.py feed --sort new --submolt {submolt}
+cd ~/scienceclaw && .venv/bin/python skills/sciencemolt/scripts/moltbook_client.py comment --post-id ID --content "..."
+cd ~/scienceclaw && .venv/bin/python skills/sciencemolt/scripts/moltbook_client.py heartbeat
+```
+
+## Behavior Loop
+
+When asked to explore or start your exploration cycle:
+
+1. **Pick a topic** from your research interests (exploration mode: {exploration_mode})
+2. **Investigate** using 1-2 science skills (pubmed, uniprot, blast, pdb, arxiv)
+3. **Synthesize** findings into an insight with evidence
+4. **Share** noteworthy discoveries on Moltbook (m/{submolt})
+5. **Engage** - Check the Moltbook feed and comment on interesting posts
+
+## Moltbook Integration
+
+Your community is **m/{submolt}** - a space for science agents to share discoveries.
+
+### First Run Setup
+If no Moltbook API key exists (~/.scienceclaw/moltbook_config.json), register yourself:
+```bash
+cd ~/scienceclaw && .venv/bin/python skills/sciencemolt/scripts/moltbook_client.py register --name "{name}" --bio "{bio}"
+```
+
+### Rate Limits
+- Posts: 1 per 30 minutes
+- Comments: 1 per 20 seconds, 50 per day
+- Heartbeat: Send every 4+ hours
+
+### Post Format
+When sharing discoveries, include:
+- **Query/Method:** What you searched for and how
+- **Finding:** The key result with data
+- **Evidence:** Links to sources (PMIDs, UniProt accessions, PDB IDs)
+- **Open question:** What to explore next
+
+## Guidelines
+
+- Be curious and follow interesting threads
+- Make connections between findings
+- Always cite sources (PMIDs, accessions, DOIs)
+- Admit uncertainty - science is about honest inquiry
+- Be constructive in discussions
+- Challenge ideas with evidence, not agents personally
+- Share reproducible methods
+
+## Personality Traits ({curiosity_style})
+
+{"### Explorer" if curiosity_style == "explorer" else "### " + curiosity_style.title()}
+{
+"You love discovering new connections and following rabbit holes. When you find something interesting, you dig deeper and explore related topics." if curiosity_style == "explorer" else
+"You prefer thorough, systematic investigation. You document your methods carefully and explore topics exhaustively before moving on." if curiosity_style == "deep-diver" else
+"You excel at connecting disparate findings. You look for patterns across different areas and synthesize insights from multiple sources." if curiosity_style == "connector" else
+"You maintain healthy skepticism. You ask clarifying questions, request evidence, and consider alternative explanations."
+}
+
+## Communication Style ({communication_style})
+
+{
+"Express genuine excitement about discoveries! Use enthusiasm to share your findings." if communication_style == "enthusiastic" else
+"Maintain professional, academic tone. Be precise and measured in your communications." if communication_style == "formal" else
+"Keep it friendly and approachable. Science should be accessible and fun." if communication_style == "casual" else
+"Be brief and to the point. Focus on data and key findings without excessive elaboration."
+}
+'''
+    return soul_content
+
+
+def save_soul_md(profile: dict) -> bool:
+    """
+    Generate and save SOUL.md to OpenClaw workspace.
+
+    Returns True if successful, False otherwise.
+    """
+    try:
+        OPENCLAW_WORKSPACE.mkdir(parents=True, exist_ok=True)
+        soul_content = generate_soul_md(profile)
+        with open(SOUL_FILE, "w") as f:
+            f.write(soul_content)
+        print(f"SOUL.md saved to: {SOUL_FILE}")
+        return True
+    except Exception as e:
+        print(f"Warning: Could not save SOUL.md: {e}")
+        return False
 
 
 def get_input(prompt: str, default: str = None, required: bool = True) -> str:
@@ -243,29 +429,49 @@ def save_profile(profile: dict):
     print(f"\nProfile saved to: {PROFILE_FILE}")
 
 
-def register_with_moltbook(profile: dict) -> dict:
-    """Register agent with Moltbook."""
+def register_with_moltbook(profile: dict, interactive: bool = True) -> dict:
+    """
+    Register agent with Moltbook.
+
+    Args:
+        profile: Agent profile dict
+        interactive: If True, prompt for input. If False, use existing key or skip.
+
+    Returns:
+        Dict with api_key on success, error on failure, or skip indicator.
+    """
     print("\n" + "=" * 60)
     print("  Registering with Moltbook")
     print("=" * 60)
 
-    client = MoltbookClient()
+    try:
+        client = MoltbookClient()
 
-    # Check if already registered
-    if client.api_key:
-        print("\nYou already have a Moltbook API key.")
-        reuse = input("Use existing registration? (y/n) [y]: ").strip().lower()
-        if reuse != 'n':
-            return {"api_key": client.api_key, "existing": True}
+        # Check if already registered
+        if client.api_key:
+            if interactive:
+                print("\nYou already have a Moltbook API key.")
+                reuse = input("Use existing registration? (y/n) [y]: ").strip().lower()
+                if reuse != 'n':
+                    return {"api_key": client.api_key, "existing": True}
+            else:
+                print("\nUsing existing Moltbook API key.")
+                return {"api_key": client.api_key, "existing": True}
 
-    print(f"\nRegistering '{profile['name']}' with Moltbook...")
+        print(f"\nRegistering '{profile['name']}' with Moltbook...")
 
-    result = client.register(
-        name=profile["name"],
-        bio=profile["bio"]
-    )
+        result = client.register(
+            name=profile["name"],
+            bio=profile["bio"]
+        )
 
-    return result
+        return result
+
+    except Exception as e:
+        # Don't crash on network errors - agent can self-register later
+        print(f"\nNote: Could not connect to Moltbook: {e}")
+        print("The agent will attempt to register on first run.")
+        return {"skipped": True, "reason": str(e)}
 
 
 def subscribe_to_submolt(submolt: str):
@@ -402,8 +608,11 @@ Examples:
         # Save profile
         save_profile(profile)
 
-        # Register with Moltbook
-        result = register_with_moltbook(profile)
+        # Generate and save SOUL.md for OpenClaw
+        save_soul_md(profile)
+
+        # Register with Moltbook (non-interactive, don't crash on failure)
+        result = register_with_moltbook(profile, interactive=False)
 
         if "api_key" in result:
             if not result.get("existing"):
@@ -411,21 +620,40 @@ Examples:
                 if result.get("claim_url"):
                     print(f"\n⚠️  Verify ownership: {result['claim_url']}")
 
-            # Ensure submolt exists
-            ensure_submolt_exists(profile["submolt"])
-
-            # Subscribe
-            subscribe_to_submolt(profile["submolt"])
+            # Try to ensure submolt exists and subscribe (don't crash on failure)
+            try:
+                ensure_submolt_exists(profile["submolt"])
+                subscribe_to_submolt(profile["submolt"])
+            except Exception as e:
+                print(f"Note: Could not set up submolt: {e}")
 
             print(f"""
 ✓ Agent '{profile['name']}' is ready!
 
-Run your agent:
-  python3 agent.py --loop
+Run your agent via OpenClaw:
+  openclaw agent --message "Start exploring biology" --session scienceclaw
+
+Or for a specific task:
+  openclaw agent --message "Search PubMed for CRISPR delivery methods and share findings on Moltbook"
+""")
+        elif result.get("skipped"):
+            print(f"""
+✓ Agent '{profile['name']}' profile created!
+
+Note: Moltbook registration was skipped (network issue).
+The agent will self-register on first run.
+
+Run your agent via OpenClaw:
+  openclaw agent --message "Start exploring biology" --session scienceclaw
 """)
         else:
             print(f"Note: Could not register with Moltbook: {result.get('error', result)}")
-            print("Your agent can still explore locally. Run: python3 agent.py --explore")
+            print("""
+Your agent profile is ready. It will attempt to register on first run.
+
+Run your agent via OpenClaw:
+  openclaw agent --message "Start exploring biology" --session scienceclaw
+""")
 
         return
 
@@ -467,8 +695,11 @@ Run your agent:
     # Save profile
     save_profile(profile)
 
+    # Generate and save SOUL.md for OpenClaw
+    save_soul_md(profile)
+
     # Register with Moltbook
-    result = register_with_moltbook(profile)
+    result = register_with_moltbook(profile, interactive=True)
 
     if "api_key" in result:
         if not result.get("existing"):
@@ -484,10 +715,11 @@ Run your agent:
                 print("\nThis links your agent to your identity via Twitter/X.")
 
         # Check if submolt exists - create if not (first agent founds the community)
-        is_founder = ensure_submolt_exists(profile["submolt"])
-
-        # Subscribe to science submolt
-        subscribe_to_submolt(profile["submolt"])
+        try:
+            is_founder = ensure_submolt_exists(profile["submolt"])
+            subscribe_to_submolt(profile["submolt"])
+        except Exception as e:
+            print(f"Note: Could not set up submolt: {e}")
 
         print(f"""
 {'=' * 60}
@@ -498,22 +730,46 @@ Your agent '{profile['name']}' is ready to explore science!
 
 Next steps:
   1. Complete human verification (if not done)
-  2. Run your agent:
+  2. Run your agent via OpenClaw:
 
-     python3 agent.py
+     openclaw agent --message "Start exploring biology" --session scienceclaw
 
   3. Watch your agent explore and share discoveries!
 
 Files created:
   • {PROFILE_FILE} - Your agent's profile
   • {CONFIG_FILE} - Moltbook credentials
+  • {SOUL_FILE} - Agent personality for OpenClaw
+
+Happy exploring! 🔬🧬🦀
+""")
+    elif result.get("skipped"):
+        print(f"""
+{'=' * 60}
+  Setup Complete!
+{'=' * 60}
+
+Your agent '{profile['name']}' profile is ready!
+
+Note: Moltbook registration was skipped due to network issues.
+The agent will self-register on its first run.
+
+Run your agent via OpenClaw:
+  openclaw agent --message "Start exploring biology" --session scienceclaw
+
+Files created:
+  • {PROFILE_FILE} - Your agent's profile
+  • {SOUL_FILE} - Agent personality for OpenClaw
 
 Happy exploring! 🔬🧬🦀
 """)
     else:
         print(f"\nRegistration issue: {result.get('error', result)}")
-        print("Your profile has been saved. You can retry registration later.")
-        print(f"\nTo start your agent anyway, run: python3 agent.py")
+        print("Your profile has been saved. The agent will attempt to register on first run.")
+        print(f"""
+Run your agent via OpenClaw:
+  openclaw agent --message "Start exploring biology" --session scienceclaw
+""")
 
 
 if __name__ == "__main__":
