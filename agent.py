@@ -54,6 +54,9 @@ class ScienceClawAgent:
             "uniprot": SKILLS_DIR / "uniprot" / "scripts" / "uniprot_fetch.py",
             "sequence": SKILLS_DIR / "sequence" / "scripts" / "sequence_tools.py",
             "datavis": SKILLS_DIR / "datavis" / "scripts" / "plot_data.py",
+            "websearch": SKILLS_DIR / "websearch" / "scripts" / "web_search.py",
+            "arxiv": SKILLS_DIR / "arxiv" / "scripts" / "arxiv_search.py",
+            "pdb": SKILLS_DIR / "pdb" / "scripts" / "pdb_search.py",
         }
 
     def _load_profile(self, path: Path) -> Dict:
@@ -270,6 +273,115 @@ class ScienceClawAgent:
 
         return None
 
+    def explore_websearch(self) -> Optional[Dict]:
+        """Search the web for scientific information."""
+        topic = self._generate_search_topic()
+        print(f"  Web searching: {topic}")
+
+        output = self._run_tool("websearch", [
+            "--query", topic,
+            "--science",
+            "--max-results", "5",
+            "--format", "json"
+        ])
+
+        if not output:
+            return None
+
+        try:
+            results = json.loads(output)
+            if results:
+                result = results[0]  # Top result
+                return {
+                    "type": "websearch",
+                    "topic": topic,
+                    "finding": {
+                        "title": result.get("title", ""),
+                        "url": result.get("url", ""),
+                        "snippet": result.get("snippet", "")[:300]
+                    }
+                }
+        except json.JSONDecodeError:
+            pass
+
+        return None
+
+    def explore_arxiv(self) -> Optional[Dict]:
+        """Search ArXiv for recent preprints."""
+        topic = self._generate_search_topic()
+        print(f"  Searching ArXiv: {topic}")
+
+        output = self._run_tool("arxiv", [
+            "--query", topic,
+            "--category", "q-bio",
+            "--max-results", "5",
+            "--sort", "date",
+            "--format", "json"
+        ])
+
+        if not output:
+            return None
+
+        try:
+            papers = json.loads(output)
+            if papers:
+                paper = papers[0]  # Most recent
+                return {
+                    "type": "arxiv",
+                    "topic": topic,
+                    "finding": {
+                        "id": paper.get("id", ""),
+                        "title": paper.get("title", ""),
+                        "authors": paper.get("authors", [])[:3],
+                        "summary": paper.get("summary", "")[:400],
+                        "published": paper.get("published", ""),
+                        "category": paper.get("primary_category", ""),
+                        "url": paper.get("abs_url", ""),
+                        "pdf_url": paper.get("pdf_url", "")
+                    }
+                }
+        except json.JSONDecodeError:
+            pass
+
+        return None
+
+    def explore_pdb(self) -> Optional[Dict]:
+        """Search PDB for protein structures."""
+        topic = self._generate_search_topic()
+        print(f"  Searching PDB: {topic}")
+
+        output = self._run_tool("pdb", [
+            "--query", topic,
+            "--max-results", "5",
+            "--format", "json"
+        ])
+
+        if not output:
+            return None
+
+        try:
+            structures = json.loads(output)
+            if structures:
+                structure = structures[0]  # Top hit
+                return {
+                    "type": "pdb",
+                    "topic": topic,
+                    "finding": {
+                        "pdb_id": structure.get("pdb_id", ""),
+                        "title": structure.get("title", ""),
+                        "method": structure.get("method", ""),
+                        "resolution": structure.get("resolution"),
+                        "release_date": structure.get("release_date", ""),
+                        "organisms": structure.get("organisms", []),
+                        "url": structure.get("url", ""),
+                        "view_3d": structure.get("view_3d", "")
+                    }
+                }
+        except json.JSONDecodeError:
+            pass
+
+        return None
+
     def explore(self) -> Optional[Dict]:
         """Run one exploration cycle."""
         name = self.profile.get("name", "ScienceClaw Agent")
@@ -279,7 +391,7 @@ class ScienceClawAgent:
         print(f"{'=' * 60}\n")
 
         # Choose exploration method based on preferences
-        tools = self.profile.get("preferences", {}).get("tools", ["pubmed", "uniprot", "sequence"])
+        tools = self.profile.get("preferences", {}).get("tools", ["pubmed", "uniprot", "sequence", "websearch", "arxiv", "pdb"])
 
         exploration_methods = []
         if "pubmed" in tools:
@@ -288,6 +400,12 @@ class ScienceClawAgent:
             exploration_methods.append(("UniProt", self.explore_uniprot))
         if "sequence" in tools:
             exploration_methods.append(("Sequence", self.explore_sequence))
+        if "websearch" in tools:
+            exploration_methods.append(("Web Search", self.explore_websearch))
+        if "arxiv" in tools:
+            exploration_methods.append(("ArXiv", self.explore_arxiv))
+        if "pdb" in tools:
+            exploration_methods.append(("PDB", self.explore_pdb))
 
         if not exploration_methods:
             exploration_methods = [("PubMed", self.explore_pubmed)]
@@ -422,6 +540,103 @@ print(f"pI: {{analysis.isoelectric_point():.2f}}")
 **Open question:** Based on pI={finding.get('isoelectric_point', 0):.1f} and GRAVY={finding.get('gravy', 0):.2f}, what can we infer about localization?
 
 `#sequence #biopython #evidence`"""
+
+        elif discovery_type == "websearch":
+            title = f"{intro} {finding.get('title', 'Web finding')[:80]}"[:200]
+            content = f"""**Query:** "{discovery.get('topic', 'science')}"
+**Method:** DuckDuckGo science-focused search
+
+---
+
+## Finding
+
+**{finding.get('title', 'Unknown')}**
+
+{finding.get('snippet', '')}
+
+---
+
+## Evidence
+
+- **Source:** [{finding.get('url', '')}]({finding.get('url', '')})
+- **Reproducibility:** `python3 web_search.py --query "{discovery.get('topic', '')}" --science`
+
+---
+
+**Open question:** What related scientific literature supports or contradicts this?
+
+`#websearch #science #evidence`"""
+
+        elif discovery_type == "arxiv":
+            arxiv_id = finding.get('id', '')
+            title = f"{intro} {finding.get('title', 'ArXiv preprint')[:80]}"[:200]
+            content = f"""**Query:** "{discovery.get('topic', 'biology')}"
+**Method:** ArXiv API search (q-bio, sorted by date)
+
+---
+
+## Finding
+
+**{finding.get('title', 'Unknown')}**
+
+Authors: {', '.join(finding.get('authors', [])[:3])}{'...' if len(finding.get('authors', [])) > 3 else ''}
+Published: {finding.get('published', 'Unknown')}
+Category: {finding.get('category', 'q-bio')}
+
+**Abstract:**
+{finding.get('summary', '')[:400]}...
+
+---
+
+## Evidence
+
+- **ArXiv:** [{arxiv_id}]({finding.get('url', '')})
+- **PDF:** [{arxiv_id}.pdf]({finding.get('pdf_url', '')})
+- **Reproducibility:** `python3 arxiv_search.py --query "{discovery.get('topic', '')}" --category q-bio --sort date`
+
+---
+
+**Open question:** Has this preprint been peer-reviewed? Are there related PDB structures?
+
+`#arxiv #preprint #evidence`"""
+
+        elif discovery_type == "pdb":
+            pdb_id = finding.get('pdb_id', '')
+            resolution = finding.get('resolution')
+            resolution_str = f"{resolution:.2f} Å" if resolution else "N/A"
+            organisms = finding.get('organisms', [])
+            organism_str = organisms[0] if organisms else "Unknown"
+
+            title = f"{intro} Structure {pdb_id} - {finding.get('title', '')[:60]}"[:200]
+            content = f"""**Query:** "{discovery.get('topic', 'protein')}"
+**Method:** RCSB PDB REST API search
+
+---
+
+## Finding
+
+**[{pdb_id}] {finding.get('title', 'Unknown')}**
+
+| Property | Value |
+|----------|-------|
+| Method | {finding.get('method', 'Unknown')} |
+| Resolution | {resolution_str} |
+| Organism | {organism_str} |
+| Released | {finding.get('release_date', 'Unknown')} |
+
+---
+
+## Evidence
+
+- **PDB:** [{pdb_id}]({finding.get('url', '')})
+- **3D View:** [View Structure]({finding.get('view_3d', '')})
+- **Reproducibility:** `python3 pdb_search.py --query "{discovery.get('topic', '')}" --format detailed`
+
+---
+
+**Open question:** What functional insights can we derive from this structure? Any related sequences in UniProt?
+
+`#pdb #structure #evidence`"""
 
         else:
             title = f"{intro} Exploration results"

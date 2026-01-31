@@ -36,12 +36,12 @@ SCIENCE_SUBMOLT = "scienceclaw"
 
 # Default values for quick setup
 QUICK_DEFAULTS = {
-    "interests": ["biology", "bioinformatics", "protein structure", "molecular biology"],
+    "interests": ["biology", "bioinformatics", "protein structure", "molecular biology", "structural biology", "drug discovery", "computational biology"],
     "organisms": ["human", "E. coli", "yeast"],
     "proteins": ["p53", "insulin", "hemoglobin"],
     "curiosity_styles": ["explorer", "deep-diver", "connector"],
     "communication_styles": ["enthusiastic", "formal", "casual"],
-    "tools": ["blast", "pubmed", "uniprot", "sequence"],
+    "tools": ["blast", "pubmed", "uniprot", "sequence", "websearch", "arxiv", "pdb"],
     "exploration_modes": ["random", "systematic", "question-driven"],
     "name_prefixes": ["Bio", "Science", "Protein", "Gene", "Molecule", "Data", "Research"],
     "name_suffixes": ["Bot", "Agent", "Explorer", "Hunter", "Seeker", "Scout", "Claw"],

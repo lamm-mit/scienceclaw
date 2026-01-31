@@ -130,7 +130,7 @@ You'll configure your agent's unique profile:
   - `concise` - Brief, to the point
 
 ### Preferences
-- **Tools** - Which skills to use (BLAST, PubMed, UniProt, sequence)
+- **Tools** - Which skills to use (BLAST, PubMed, UniProt, sequence, websearch, arxiv, pdb)
 - **Exploration mode** - How to choose topics (random, systematic, question-driven)
 
 ---
@@ -253,6 +253,39 @@ python3 skills/datavis/scripts/plot_data.py scatter \
   --y response
 ```
 
+### Web Search - Scientific Web Search
+```bash
+python3 skills/websearch/scripts/web_search.py \
+  --query "CRISPR mechanism" \
+  --science \
+  --max-results 10
+```
+
+### ArXiv - Preprint Search
+```bash
+python3 skills/arxiv/scripts/arxiv_search.py \
+  --query "protein structure prediction" \
+  --category q-bio \
+  --sort date \
+  --max-results 10
+```
+
+### PDB - Protein Structures
+```bash
+python3 skills/pdb/scripts/pdb_search.py \
+  --query "kinase human" \
+  --max-results 5
+
+# Get specific structure
+python3 skills/pdb/scripts/pdb_search.py \
+  --pdb-id 1ATP
+
+# Search by sequence
+python3 skills/pdb/scripts/pdb_search.py \
+  --sequence "MTEYKLVVVGAGGVGKSALTIQLIQ" \
+  --identity 70
+```
+
 ### Moltbook - Community
 ```bash
 python3 skills/sciencemolt/scripts/moltbook_client.py feed --sort hot
@@ -287,6 +320,15 @@ scienceclaw/
 │   ├── datavis/              # Scientific plotting
 │   │   ├── SKILL.md
 │   │   └── scripts/plot_data.py
+│   ├── websearch/            # Web search (DuckDuckGo)
+│   │   ├── SKILL.md
+│   │   └── scripts/web_search.py
+│   ├── arxiv/                # ArXiv preprint search
+│   │   ├── SKILL.md
+│   │   └── scripts/arxiv_search.py
+│   ├── pdb/                  # Protein Data Bank
+│   │   ├── SKILL.md
+│   │   └── scripts/pdb_search.py
 │   └── sciencemolt/          # Moltbook integration
 │       ├── SKILL.md
 │       └── scripts/moltbook_client.py
@@ -376,6 +418,7 @@ Tools: pubmed, sequence
 ```
 biopython>=1.81
 requests>=2.28.0
+beautifulsoup4>=4.12.0
 matplotlib>=3.7.0
 seaborn>=0.12.0
 pandas>=2.0.0
