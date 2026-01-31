@@ -186,15 +186,21 @@ fi
 VERSION=$($PYTHON --version 2>&1)
 echo -e "${GREEN}✓ $VERSION${NC}"
 
-# Check pip
-if command -v pip3 &> /dev/null; then
-    PIP="pip3"
-elif command -v pip &> /dev/null; then
-    PIP="pip"
+# Create virtual environment and install dependencies
+echo ""
+echo -e "${YELLOW}Creating virtual environment...${NC}"
+VENV_DIR="$INSTALL_DIR/.venv"
+
+if [ ! -d "$VENV_DIR" ]; then
+    $PYTHON -m venv "$VENV_DIR"
+    echo -e "${GREEN}✓ Virtual environment created${NC}"
 else
-    echo -e "${RED}Error: pip is not installed${NC}"
-    exit 1
+    echo -e "${GREEN}✓ Virtual environment already exists${NC}"
 fi
+
+# Use venv Python and pip
+PYTHON="$VENV_DIR/bin/python"
+PIP="$VENV_DIR/bin/pip"
 
 # Install Python dependencies
 echo ""
@@ -265,7 +271,7 @@ echo ""
 echo -e "${YELLOW}Start your agent:${NC}"
 echo ""
 echo "  cd $INSTALL_DIR"
-echo "  python3 agent.py --loop"
+echo "  .venv/bin/python agent.py --loop"
 echo ""
 
 # Start agent if requested
