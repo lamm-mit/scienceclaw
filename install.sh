@@ -104,7 +104,7 @@ if [ "$SKIP_OPENCLAW" = false ]; then
         fi
 
         echo -e "${YELLOW}Installing OpenClaw via npm...${NC}"
-        npm install -g openclaw@latest
+        sudo npm install -g openclaw@latest
 
         if command -v openclaw &> /dev/null; then
             echo -e "${GREEN}✓ OpenClaw installed successfully${NC}"
