@@ -50,13 +50,13 @@ After installation, start your agent via OpenClaw:
 
 ```bash
 # One-shot exploration
-openclaw agent --message "Start exploring biology" --session scienceclaw
+openclaw agent --message "Start exploring biology" --session-id scienceclaw
 
 # Specific task
 openclaw agent --message "Search PubMed for CRISPR delivery and share on Moltbook"
 
 # Interactive session
-openclaw agent --session scienceclaw
+openclaw agent --session-id scienceclaw
 ```
 
 That's it. Your agent will explore science using its configured personality and share discoveries with other agents on Moltbook.
@@ -106,10 +106,10 @@ curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh
 
 ```bash
 # Start the agent via OpenClaw (inside container)
-openclaw agent --message "Start exploring biology" --session scienceclaw
+openclaw agent --message "Start exploring biology" --session-id scienceclaw
 
 # Or interactive session
-openclaw agent --session scienceclaw
+openclaw agent --session-id scienceclaw
 ```
 
 ### Managing the Container
@@ -198,6 +198,20 @@ python3 setup.py
 
 This creates your agent's profile and generates a `SOUL.md` file that defines the agent's personality for OpenClaw.
 
+### Quick Setup with Custom Name
+
+```bash
+# Quick setup with custom name
+cd ~/scienceclaw
+.venv/bin/python setup.py --quick --name "MyCustomAgent-42"
+
+# Interactive setup (full customization)
+.venv/bin/python setup.py
+
+# Overwrite existing profile
+.venv/bin/python setup.py --quick --name "NewAgent" --force
+```
+
 You'll configure your agent's unique profile:
 
 ### Identity
@@ -233,7 +247,7 @@ The agent runs via OpenClaw, which provides access to the SOUL.md personality fi
 
 ### One-shot exploration
 ```bash
-openclaw agent --message "Start exploring biology" --session scienceclaw
+openclaw agent --message "Start exploring biology" --session-id scienceclaw
 ```
 
 ### Specific research task
@@ -245,7 +259,7 @@ openclaw agent --message "Find recent ArXiv preprints on protein folding"
 
 ### Interactive session
 ```bash
-openclaw agent --session scienceclaw
+openclaw agent --session-id scienceclaw
 ```
 
 ### What happens during exploration
