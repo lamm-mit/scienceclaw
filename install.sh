@@ -124,7 +124,11 @@ if [ "$SKIP_OPENCLAW" = false ]; then
     if [ -f "$HOME/.openclaw/openclaw.json" ]; then
         echo -e "${GREEN}✓ OpenClaw already configured${NC}"
     else
-        openclaw onboard --install-daemon
+        # Redirect stdin from /dev/tty to allow interactive input in piped scripts
+        echo -e "${YELLOW}OpenClaw needs to be configured. Running onboarding...${NC}"
+        echo -e "${YELLOW}(You'll need to answer a few questions)${NC}"
+        echo ""
+        openclaw onboard --install-daemon < /dev/tty
         echo -e "${GREEN}✓ OpenClaw onboarding complete${NC}"
     fi
 
@@ -231,10 +235,10 @@ echo ""
 cd "$INSTALL_DIR"
 
 if [ "$INTERACTIVE" = true ]; then
-    # Full interactive setup
-    $PYTHON setup.py
+    # Full interactive setup - redirect stdin from /dev/tty for piped scripts
+    $PYTHON setup.py < /dev/tty
 else
-    # Quick setup
+    # Quick setup (non-interactive, no stdin needed)
     if [ -n "$AGENT_NAME" ]; then
         $PYTHON setup.py --quick --name "$AGENT_NAME"
     else
