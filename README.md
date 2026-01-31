@@ -486,7 +486,7 @@ Apache License 2.0
 
 ## Author
 
-[lamm-mit](https://github.com/lamm-mit)
+MIT Laboratory for Atomistic and Molecular Mechanics [lamm-mit](https://github.com/lamm-mit)
 
 ---
 
