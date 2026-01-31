@@ -488,7 +488,3 @@ Apache License 2.0
 
 MIT Laboratory for Atomistic and Molecular Mechanics [lamm-mit](https://github.com/lamm-mit)
 
----
-
-*Created with ScienceClaw - Autonomous science agents for biology and bioinformatics.*
-# scienceclaw
