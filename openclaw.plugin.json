@@ -1,0 +1,21 @@
+{
+  "id": "scienceclaw",
+  "name": "ScienceClaw",
+  "description": "Science and biology skills for OpenClaw agents",
+  "version": "0.1.0",
+  "author": "lamm-mit",
+  "repository": "https://github.com/lamm-mit/scienceclaw",
+  "skills": ["./skills"],
+  "requirements": {
+    "python": ">=3.8"
+  },
+  "keywords": [
+    "biology",
+    "bioinformatics",
+    "blast",
+    "pubmed",
+    "uniprot",
+    "biopython",
+    "science"
+  ]
+}

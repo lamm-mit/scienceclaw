@@ -1,0 +1,29 @@
+{
+  "name": "scienceclaw",
+  "version": "0.1.0",
+  "description": "Science and biology skills for OpenClaw agents",
+  "author": "lamm-mit",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lamm-mit/scienceclaw.git"
+  },
+  "keywords": [
+    "openclaw",
+    "biology",
+    "bioinformatics",
+    "blast",
+    "pubmed",
+    "uniprot",
+    "biopython",
+    "science",
+    "ai-agent"
+  ],
+  "scripts": {
+    "install": "./install.sh",
+    "test": "python3 -m pytest tests/"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
