@@ -1,11 +1,11 @@
 #!/bin/bash
 # ScienceClaw Installer
 #
-# One-line install (full setup):
-#   curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash
+# PREREQUISITE: OpenClaw must be installed and onboarded first!
+#   bash install-openclaw.sh   (or install OpenClaw manually)
 #
-# Skip OpenClaw install (if already installed):
-#   curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --skip-openclaw
+# Then run this installer:
+#   curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash
 #
 # Custom agent name:
 #   curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --name "MyBot-7"
@@ -23,17 +23,12 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Parse arguments
-SKIP_OPENCLAW=false
 AGENT_NAME=""
 INTERACTIVE=false
 START=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --skip-openclaw)
-            SKIP_OPENCLAW=true
-            shift
-            ;;
         --name|-n)
             AGENT_NAME="$2"
             shift 2
@@ -63,77 +58,52 @@ echo -e "${GREEN}╚════════════════════
 echo ""
 
 # =============================================================================
-# Step 1: Install OpenClaw (if not skipped)
+# Step 1: Check OpenClaw is installed and configured
 # =============================================================================
 
-if [ "$SKIP_OPENCLAW" = false ]; then
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${CYAN}  Step 1: Installing OpenClaw${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${CYAN}  Step 1: Checking OpenClaw${NC}"
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+# Check if OpenClaw is installed
+if ! command -v openclaw &> /dev/null; then
+    echo -e "${RED}Error: OpenClaw is not installed${NC}"
     echo ""
-
-    # Check if OpenClaw is already installed
-    if command -v openclaw &> /dev/null; then
-        echo -e "${GREEN}✓ OpenClaw is already installed${NC}"
-        openclaw --version 2>/dev/null || true
-    else
-        # Check for Node.js
-        if ! command -v node &> /dev/null; then
-            echo -e "${RED}Error: Node.js is not installed${NC}"
-            echo ""
-            echo "OpenClaw requires Node.js >= 22. Install it first:"
-            echo ""
-            echo "  macOS:   brew install node"
-            echo "  Ubuntu:  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs"
-            echo "  Other:   https://nodejs.org/en/download/"
-            echo ""
-            exit 1
-        fi
-
-        # Check Node version
-        NODE_VERSION=$(node --version | sed 's/v//' | cut -d'.' -f1)
-        if [ "$NODE_VERSION" -lt 22 ]; then
-            echo -e "${RED}Error: Node.js version $NODE_VERSION is too old${NC}"
-            echo "OpenClaw requires Node.js >= 22"
-            echo ""
-            echo "Update Node.js:"
-            echo "  macOS:   brew upgrade node"
-            echo "  nvm:     nvm install 22 && nvm use 22"
-            echo ""
-            exit 1
-        fi
-
-        echo -e "${YELLOW}Installing OpenClaw via npm...${NC}"
-        sudo npm install -g openclaw@latest
-
-        if command -v openclaw &> /dev/null; then
-            echo -e "${GREEN}✓ OpenClaw installed successfully${NC}"
-        else
-            echo -e "${RED}Error: OpenClaw installation failed${NC}"
-            exit 1
-        fi
-    fi
-
-    # Run OpenClaw onboarding (if not already done)
+    echo "Please install OpenClaw first:"
     echo ""
-    echo -e "${YELLOW}Running OpenClaw onboarding...${NC}"
-    echo -e "${YELLOW}(This will set up your workspace and daemon)${NC}"
+    echo "  1. Install Node.js >= 22:"
+    echo "     macOS:  brew install node"
+    echo "     Ubuntu: curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs"
     echo ""
-
-    # Check if already onboarded by looking for config
-    if [ -f "$HOME/.openclaw/openclaw.json" ]; then
-        echo -e "${GREEN}✓ OpenClaw already configured${NC}"
-    else
-        # Redirect stdin from /dev/tty to allow interactive input in piped scripts
-        echo -e "${YELLOW}OpenClaw needs to be configured. Running onboarding...${NC}"
-        echo -e "${YELLOW}(You'll need to answer a few questions)${NC}"
-        echo ""
-        openclaw onboard --install-daemon < /dev/tty
-        echo -e "${GREEN}✓ OpenClaw onboarding complete${NC}"
-    fi
-
+    echo "  2. Install and configure OpenClaw:"
+    echo "     sudo npm install -g openclaw@latest"
+    echo "     openclaw onboard --install-daemon"
     echo ""
+    echo "  3. Then run this installer again."
+    echo ""
+    exit 1
 fi
+
+echo -e "${GREEN}✓ OpenClaw is installed${NC}"
+openclaw --version 2>/dev/null || true
+
+# Check if OpenClaw is configured
+if [ ! -f "$HOME/.openclaw/openclaw.json" ]; then
+    echo ""
+    echo -e "${RED}Error: OpenClaw is not configured${NC}"
+    echo ""
+    echo "Please run OpenClaw onboarding first:"
+    echo ""
+    echo "  openclaw onboard --install-daemon"
+    echo ""
+    echo "Then run this installer again."
+    echo ""
+    exit 1
+fi
+
+echo -e "${GREEN}✓ OpenClaw is configured${NC}"
+echo ""
 
 # =============================================================================
 # Step 2: Install ScienceClaw
