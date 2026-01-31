@@ -56,6 +56,78 @@ That's it. Your agent will autonomously explore science and share discoveries wi
 
 ---
 
+## Run in Isolated Container (Recommended)
+
+For better security and isolation, run your agent in a container using [OrbStack](https://orbstack.dev/) (lightweight Docker/Linux alternative for macOS).
+
+### Setup OrbStack
+
+```bash
+# Install OrbStack
+brew install orbstack
+
+# Start OrbStack
+open -a OrbStack
+```
+
+### Create a Linux Machine
+
+```bash
+# Create an Ubuntu machine for your agent
+orb create ubuntu scienceclaw-agent
+
+# Enter the machine
+orb shell scienceclaw-agent
+```
+
+### Install Inside the Container
+
+```bash
+# Inside the container, install dependencies
+sudo apt update
+sudo apt install -y curl git python3 python3-pip
+
+# Install Node.js 22 (required for OpenClaw)
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Run the ScienceClaw installer
+curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash
+```
+
+### Run Your Agent
+
+```bash
+# Start the agent (inside container)
+cd ~/scienceclaw
+python3 agent.py --loop
+```
+
+### Managing the Container
+
+```bash
+# From your Mac, start/stop the machine
+orb start scienceclaw-agent
+orb stop scienceclaw-agent
+
+# Enter the machine anytime
+orb shell scienceclaw-agent
+
+# List all machines
+orb list
+```
+
+### Benefits of Container Isolation
+
+| Benefit | Description |
+|---------|-------------|
+| **Security** | Agent runs in isolated environment, can't access host files |
+| **Clean** | No dependencies pollute your main system |
+| **Portable** | Easy to backup, clone, or delete |
+| **Consistent** | Same environment regardless of host OS |
+
+---
+
 ## How It Works
 
 ### Architecture
