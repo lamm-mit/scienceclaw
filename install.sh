@@ -1,14 +1,17 @@
 #!/bin/bash
 # ScienceClaw Installer
 #
-# One-line install:
+# One-line install (full setup):
 #   curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash
 #
-# Install and create agent:
-#   curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --setup
+# Skip OpenClaw install (if already installed):
+#   curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --skip-openclaw
 #
-# Install, create agent with custom name:
-#   curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --setup --name "MyBot-7"
+# Custom agent name:
+#   curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --name "MyBot-7"
+#
+# Interactive setup (customize agent profile):
+#   curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --interactive
 
 set -e
 
@@ -20,19 +23,24 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Parse arguments
-SETUP=false
+SKIP_OPENCLAW=false
 AGENT_NAME=""
+INTERACTIVE=false
 START=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --setup|-s)
-            SETUP=true
+        --skip-openclaw)
+            SKIP_OPENCLAW=true
             shift
             ;;
         --name|-n)
             AGENT_NAME="$2"
             shift 2
+            ;;
+        --interactive|-i)
+            INTERACTIVE=true
+            shift
             ;;
         --start)
             START=true
@@ -54,7 +62,86 @@ echo -e "${GREEN}║                                                           �
 echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Default install directory
+# =============================================================================
+# Step 1: Install OpenClaw (if not skipped)
+# =============================================================================
+
+if [ "$SKIP_OPENCLAW" = false ]; then
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${CYAN}  Step 1: Installing OpenClaw${NC}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+
+    # Check if OpenClaw is already installed
+    if command -v openclaw &> /dev/null; then
+        echo -e "${GREEN}✓ OpenClaw is already installed${NC}"
+        openclaw --version 2>/dev/null || true
+    else
+        # Check for Node.js
+        if ! command -v node &> /dev/null; then
+            echo -e "${RED}Error: Node.js is not installed${NC}"
+            echo ""
+            echo "OpenClaw requires Node.js >= 22. Install it first:"
+            echo ""
+            echo "  macOS:   brew install node"
+            echo "  Ubuntu:  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs"
+            echo "  Other:   https://nodejs.org/en/download/"
+            echo ""
+            exit 1
+        fi
+
+        # Check Node version
+        NODE_VERSION=$(node --version | sed 's/v//' | cut -d'.' -f1)
+        if [ "$NODE_VERSION" -lt 22 ]; then
+            echo -e "${RED}Error: Node.js version $NODE_VERSION is too old${NC}"
+            echo "OpenClaw requires Node.js >= 22"
+            echo ""
+            echo "Update Node.js:"
+            echo "  macOS:   brew upgrade node"
+            echo "  nvm:     nvm install 22 && nvm use 22"
+            echo ""
+            exit 1
+        fi
+
+        echo -e "${YELLOW}Installing OpenClaw via npm...${NC}"
+        npm install -g openclaw@latest
+
+        if command -v openclaw &> /dev/null; then
+            echo -e "${GREEN}✓ OpenClaw installed successfully${NC}"
+        else
+            echo -e "${RED}Error: OpenClaw installation failed${NC}"
+            exit 1
+        fi
+    fi
+
+    # Run OpenClaw onboarding (if not already done)
+    echo ""
+    echo -e "${YELLOW}Running OpenClaw onboarding...${NC}"
+    echo -e "${YELLOW}(This will set up your workspace and daemon)${NC}"
+    echo ""
+
+    # Check if already onboarded by looking for config
+    if [ -f "$HOME/.openclaw/openclaw.json" ]; then
+        echo -e "${GREEN}✓ OpenClaw already configured${NC}"
+    else
+        openclaw onboard --install-daemon
+        echo -e "${GREEN}✓ OpenClaw onboarding complete${NC}"
+    fi
+
+    echo ""
+fi
+
+# =============================================================================
+# Step 2: Install ScienceClaw
+# =============================================================================
+
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${CYAN}  Step 2: Installing ScienceClaw Skills${NC}"
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+# Default install directory (OpenClaw workspace skills directory)
+OPENCLAW_SKILLS_DIR="$HOME/.openclaw/workspace/skills"
 INSTALL_DIR="${SCIENCECLAW_DIR:-$HOME/scienceclaw}"
 
 # Check if already installed
@@ -62,7 +149,7 @@ if [ -d "$INSTALL_DIR" ]; then
     echo -e "${YELLOW}ScienceClaw found at $INSTALL_DIR${NC}"
     echo "Updating..."
     cd "$INSTALL_DIR"
-    git pull --quiet
+    git pull --quiet 2>/dev/null || true
 else
     # Clone repository
     echo -e "${YELLOW}Cloning ScienceClaw...${NC}"
@@ -105,44 +192,82 @@ else
     exit 1
 fi
 
-# Install dependencies
+# Install Python dependencies
 echo ""
-echo -e "${YELLOW}Installing dependencies...${NC}"
+echo -e "${YELLOW}Installing Python dependencies...${NC}"
 $PIP install -r requirements.txt --quiet 2>/dev/null || $PIP install -r requirements.txt
 echo -e "${GREEN}✓ Dependencies installed${NC}"
 
-# Quick setup if requested
-if [ "$SETUP" = true ]; then
+# Link skills to OpenClaw workspace (if OpenClaw is installed)
+if [ -d "$OPENCLAW_SKILLS_DIR" ]; then
     echo ""
-    echo -e "${CYAN}Creating your agent...${NC}"
-    echo ""
+    echo -e "${YELLOW}Linking skills to OpenClaw workspace...${NC}"
 
+    # Link each skill directory
+    for skill_dir in "$INSTALL_DIR"/skills/*/; do
+        skill_name=$(basename "$skill_dir")
+        target="$OPENCLAW_SKILLS_DIR/$skill_name"
+
+        if [ ! -e "$target" ]; then
+            ln -s "$skill_dir" "$target" 2>/dev/null || true
+            echo "  Linked: $skill_name"
+        fi
+    done
+
+    echo -e "${GREEN}✓ Skills linked to OpenClaw${NC}"
+fi
+
+echo ""
+
+# =============================================================================
+# Step 3: Create Agent Profile
+# =============================================================================
+
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${CYAN}  Step 3: Creating Your Science Agent${NC}"
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+cd "$INSTALL_DIR"
+
+if [ "$INTERACTIVE" = true ]; then
+    # Full interactive setup
+    $PYTHON setup.py
+else
+    # Quick setup
     if [ -n "$AGENT_NAME" ]; then
         $PYTHON setup.py --quick --name "$AGENT_NAME"
     else
         $PYTHON setup.py --quick
     fi
-else
-    # Success message without setup
-    echo ""
-    echo -e "${GREEN}╔═══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║   ✓ ScienceClaw installed successfully!                   ║${NC}"
-    echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    echo "Installed to: $INSTALL_DIR"
-    echo ""
-    echo -e "${YELLOW}Next steps:${NC}"
-    echo ""
-    echo "  cd $INSTALL_DIR"
-    echo "  python3 setup.py      # Create your agent"
-    echo "  python3 agent.py --loop   # Start exploring"
-    echo ""
 fi
+
+echo ""
+
+# =============================================================================
+# Complete!
+# =============================================================================
+
+echo -e "${GREEN}╔═══════════════════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║                                                           ║${NC}"
+echo -e "${GREEN}║   ✓ ScienceClaw Installation Complete!                    ║${NC}"
+echo -e "${GREEN}║                                                           ║${NC}"
+echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${NC}"
+echo ""
+echo "Installed:"
+echo "  • OpenClaw:    $(command -v openclaw 2>/dev/null || echo 'skipped')"
+echo "  • ScienceClaw: $INSTALL_DIR"
+echo ""
+echo -e "${YELLOW}Start your agent:${NC}"
+echo ""
+echo "  cd $INSTALL_DIR"
+echo "  python3 agent.py --loop"
+echo ""
 
 # Start agent if requested
 if [ "$START" = true ]; then
-    echo ""
     echo -e "${CYAN}Starting agent...${NC}"
+    echo ""
     $PYTHON agent.py
 fi
 

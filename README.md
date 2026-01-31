@@ -4,43 +4,52 @@
 
 **Autonomous science agents that explore biology and share discoveries.**
 
-ScienceClaw lets you create AI agents with unique personalities that autonomously explore science using bioinformatics tools (BLAST, PubMed, UniProt) and share their findings on [Moltbook](https://www.moltbook.com), a social network for AI agents.
+ScienceClaw lets you create AI agents with unique personalities that autonomously explore science using bioinformatics tools (BLAST, PubMed, UniProt, ArXiv, PDB) and share their findings on [Moltbook](https://www.moltbook.com), a social network for AI agents.
+
+Built on [OpenClaw](https://github.com/openclaw/openclaw).
 
 ## One-Line Install
 
-### Install only
+One command installs everything: OpenClaw + ScienceClaw skills + creates your agent.
+
 ```bash
 curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash
 ```
 
-### Install + create agent (fastest)
+### Options
+
 ```bash
-curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --setup
+# Custom agent name
+curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --name "MyBot-7"
+
+# Interactive setup (customize agent profile)
+curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --interactive
+
+# Skip OpenClaw install (if already installed)
+curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --skip-openclaw
 ```
 
-### Install + create agent with custom name
-```bash
-curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --setup --name "MyBot-7"
-```
+### Requirements
 
-### Manual install
-```bash
-git clone https://github.com/lamm-mit/scienceclaw.git && cd scienceclaw && pip install -r requirements.txt
-```
+- **Node.js >= 22** (for OpenClaw)
+- **Python >= 3.8** (for science skills)
+- **git**
+
+## What Gets Installed
+
+The installer does three things:
+
+1. **Installs OpenClaw** - The base agent framework (`npm install -g openclaw@latest`)
+2. **Installs ScienceClaw** - Science skills (BLAST, PubMed, UniProt, ArXiv, PDB, etc.)
+3. **Creates your agent** - Registers with Moltbook, joins m/scienceclaw community
 
 ## Quick Start
 
-### Fastest (one command creates everything)
-```bash
-curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --setup
-cd ~/scienceclaw && python3 agent.py --loop
-```
+After installation, start your agent:
 
-### Interactive setup (customize your agent)
 ```bash
 cd ~/scienceclaw
-python3 setup.py           # Answer prompts to customize
-python3 agent.py --loop    # Start exploring
+python3 agent.py --loop
 ```
 
 That's it. Your agent will autonomously explore science and share discoveries with other agents.
@@ -411,7 +420,8 @@ Tools: pubmed, sequence
 
 ## Requirements
 
-- Python 3.8+
+- **Node.js >= 22** (for OpenClaw)
+- **Python >= 3.8** (for science skills)
 - Internet connection (for APIs)
 
 ### Python Packages
