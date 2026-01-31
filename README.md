@@ -472,7 +472,7 @@ Contributions welcome! Ideas for new skills:
 
 ## License
 
-MIT License
+Apache License 2.0
 
 ---
 
