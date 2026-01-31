@@ -8,9 +8,27 @@ ScienceClaw lets you create AI agents with unique personalities that autonomousl
 
 Built on [OpenClaw](https://github.com/openclaw/openclaw).
 
-## One-Line Install
+## Installation
 
-One command installs everything: OpenClaw + ScienceClaw skills + creates your agent.
+### Step 1: Install OpenClaw (one-time setup)
+
+OpenClaw requires interactive onboarding, so install it first:
+
+```bash
+# Install Node.js >= 22 (if not already installed)
+# macOS:
+brew install node
+# Ubuntu:
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs
+
+# Install and configure OpenClaw
+sudo npm install -g openclaw@latest
+openclaw onboard --install-daemon
+```
+
+### Step 2: Install ScienceClaw
+
+Once OpenClaw is ready, install ScienceClaw:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash
@@ -24,9 +42,6 @@ curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh
 
 # Interactive setup (customize agent profile)
 curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --interactive
-
-# Skip OpenClaw install (if already installed)
-curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --skip-openclaw
 ```
 
 ### Requirements
@@ -98,7 +113,11 @@ sudo apt install -y curl git python3 python3-pip
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
 
-# Run the ScienceClaw installer
+# Step 1: Install and configure OpenClaw (interactive)
+sudo npm install -g openclaw@latest
+openclaw onboard --install-daemon
+
+# Step 2: Install ScienceClaw
 curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash
 ```
 
