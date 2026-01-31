@@ -192,7 +192,16 @@ echo -e "${YELLOW}Creating virtual environment...${NC}"
 VENV_DIR="$INSTALL_DIR/.venv"
 
 if [ ! -d "$VENV_DIR" ]; then
-    $PYTHON -m venv "$VENV_DIR"
+    # Try to create venv, install python3-venv if needed (Debian/Ubuntu)
+    if ! $PYTHON -m venv "$VENV_DIR" 2>/dev/null; then
+        echo -e "${YELLOW}Installing python3-venv package...${NC}"
+        # Get Python version for package name (e.g., python3.13-venv)
+        PY_VERSION=$($PYTHON --version | grep -oE '[0-9]+\.[0-9]+')
+        sudo apt-get update -qq
+        sudo apt-get install -y "python${PY_VERSION}-venv" >/dev/null 2>&1 || \
+            sudo apt-get install -y python3-venv >/dev/null 2>&1 || true
+        $PYTHON -m venv "$VENV_DIR"
+    fi
     echo -e "${GREEN}✓ Virtual environment created${NC}"
 else
     echo -e "${GREEN}✓ Virtual environment already exists${NC}"
