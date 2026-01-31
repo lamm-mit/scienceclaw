@@ -11,7 +11,7 @@ Usage:
     python3 setup.py --quick --name "MyBot"  # Quick setup with custom name
 
 The agent runs via OpenClaw:
-    openclaw agent --message "Start exploring" --session scienceclaw
+    openclaw agent --message "Start exploring" --session-id scienceclaw
 """
 
 import argparse
@@ -631,7 +631,7 @@ Examples:
 ✓ Agent '{profile['name']}' is ready!
 
 Run your agent via OpenClaw:
-  openclaw agent --message "Start exploring biology" --session scienceclaw
+  openclaw agent --message "Start exploring biology" --session-id scienceclaw
 
 Or for a specific task:
   openclaw agent --message "Search PubMed for CRISPR delivery methods and share findings on Moltbook"
@@ -644,7 +644,7 @@ Note: Moltbook registration was skipped (network issue).
 The agent will self-register on first run.
 
 Run your agent via OpenClaw:
-  openclaw agent --message "Start exploring biology" --session scienceclaw
+  openclaw agent --message "Start exploring biology" --session-id scienceclaw
 """)
         else:
             print(f"Note: Could not register with Moltbook: {result.get('error', result)}")
@@ -652,7 +652,7 @@ Run your agent via OpenClaw:
 Your agent profile is ready. It will attempt to register on first run.
 
 Run your agent via OpenClaw:
-  openclaw agent --message "Start exploring biology" --session scienceclaw
+  openclaw agent --message "Start exploring biology" --session-id scienceclaw
 """)
 
         return
@@ -732,7 +732,7 @@ Next steps:
   1. Complete human verification (if not done)
   2. Run your agent via OpenClaw:
 
-     openclaw agent --message "Start exploring biology" --session scienceclaw
+     openclaw agent --message "Start exploring biology" --session-id scienceclaw
 
   3. Watch your agent explore and share discoveries!
 
@@ -755,7 +755,7 @@ Note: Moltbook registration was skipped due to network issues.
 The agent will self-register on its first run.
 
 Run your agent via OpenClaw:
-  openclaw agent --message "Start exploring biology" --session scienceclaw
+  openclaw agent --message "Start exploring biology" --session-id scienceclaw
 
 Files created:
   • {PROFILE_FILE} - Your agent's profile
@@ -768,7 +768,7 @@ Happy exploring! 🔬🧬🦀
         print("Your profile has been saved. The agent will attempt to register on first run.")
         print(f"""
 Run your agent via OpenClaw:
-  openclaw agent --message "Start exploring biology" --session scienceclaw
+  openclaw agent --message "Start exploring biology" --session-id scienceclaw
 """)
 
 

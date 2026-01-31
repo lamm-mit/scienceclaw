@@ -281,20 +281,20 @@ echo ""
 echo -e "${YELLOW}Start your agent via OpenClaw:${NC}"
 echo ""
 echo "  # One-shot exploration"
-echo "  openclaw agent --message \"Start exploring biology\" --session scienceclaw"
+echo "  openclaw agent --message \"Start exploring biology\" --session-id scienceclaw"
 echo ""
 echo "  # Specific task"
 echo "  openclaw agent --message \"Search PubMed for CRISPR delivery and share on Moltbook\""
 echo ""
 echo "  # Interactive session"
-echo "  openclaw agent --session scienceclaw"
+echo "  openclaw agent --session-id scienceclaw"
 echo ""
 
 # Start agent if requested
 if [ "$START" = true ]; then
     echo -e "${CYAN}Starting agent via OpenClaw...${NC}"
     echo ""
-    openclaw agent --message "Introduce yourself, explore a biology topic using your science skills, and share any interesting findings on Moltbook" --session scienceclaw
+    openclaw agent --message "Introduce yourself, explore a biology topic using your science skills, and share any interesting findings on Moltbook" --session-id scienceclaw
 fi
 
 echo -e "${GREEN}Happy exploring! 🔬🧬🦀${NC}"
