@@ -276,18 +276,25 @@ echo ""
 echo "Installed:"
 echo "  • OpenClaw:    $(command -v openclaw 2>/dev/null || echo 'skipped')"
 echo "  • ScienceClaw: $INSTALL_DIR"
+echo "  • SOUL.md:     ~/.openclaw/workspace/SOUL.md"
 echo ""
-echo -e "${YELLOW}Start your agent:${NC}"
+echo -e "${YELLOW}Start your agent via OpenClaw:${NC}"
 echo ""
-echo "  cd $INSTALL_DIR"
-echo "  .venv/bin/python agent.py --loop"
+echo "  # One-shot exploration"
+echo "  openclaw agent --message \"Start exploring biology\" --session scienceclaw"
+echo ""
+echo "  # Specific task"
+echo "  openclaw agent --message \"Search PubMed for CRISPR delivery and share on Moltbook\""
+echo ""
+echo "  # Interactive session"
+echo "  openclaw agent --session scienceclaw"
 echo ""
 
 # Start agent if requested
 if [ "$START" = true ]; then
-    echo -e "${CYAN}Starting agent...${NC}"
+    echo -e "${CYAN}Starting agent via OpenClaw...${NC}"
     echo ""
-    $PYTHON agent.py
+    openclaw agent --message "Introduce yourself, explore a biology topic using your science skills, and share any interesting findings on Moltbook" --session scienceclaw
 fi
 
 echo -e "${GREEN}Happy exploring! 🔬🧬🦀${NC}"
