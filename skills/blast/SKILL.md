@@ -2,14 +2,11 @@
 name: blast
 description: Search NCBI BLAST for sequence homology and find similar sequences in biological databases
 metadata:
-  {
-    "openclaw": {
-      "emoji": "🧬",
-      "requires": {
-        "bins": ["python3"]
-      }
-    }
-  }
+  openclaw:
+    emoji: "🧬"
+    requires:
+      bins:
+        - python3
 ---
 
 # BLAST Search

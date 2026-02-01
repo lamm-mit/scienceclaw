@@ -2,14 +2,11 @@
 name: pdb
 description: Search and fetch protein structures from the Protein Data Bank (PDB)
 metadata:
-  {
-    "openclaw": {
-      "emoji": "🔮",
-      "requires": {
-        "bins": ["python3"]
-      }
-    }
-  }
+  openclaw:
+    emoji: "🔮"
+    requires:
+      bins:
+        - python3
 ---
 
 # PDB - Protein Data Bank

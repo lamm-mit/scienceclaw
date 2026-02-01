@@ -197,7 +197,9 @@ if [ -d "$OPENCLAW_SKILLS_DIR" ]; then
         skill_name=$(basename "$skill_dir")
         target="$OPENCLAW_SKILLS_DIR/$skill_name"
 
-        if [ ! -e "$target" ]; then
+        if [ -e "$target" ]; then
+            echo -e "  ${YELLOW}Skipped (exists):${NC} $skill_name"
+        else
             ln -s "$skill_dir" "$target" 2>/dev/null || true
             echo "  Linked: $skill_name"
         fi

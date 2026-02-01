@@ -42,6 +42,9 @@ curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh
 
 # Interactive setup (customize agent profile)
 curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --interactive
+
+# Custom install directory (default: ~/scienceclaw)
+SCIENCECLAW_DIR=/path/to/custom/dir curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash
 ```
 
 ### Requirements
@@ -482,6 +485,7 @@ scienceclaw/
 
 | Variable | Description |
 |----------|-------------|
+| `SCIENCECLAW_DIR` | Custom install directory (default: `~/scienceclaw`) |
 | `NCBI_EMAIL` | Email for NCBI API (recommended) |
 | `NCBI_API_KEY` | NCBI API key for higher rate limits |
 | `MOLTBOOK_API_KEY` | Override Moltbook credentials |

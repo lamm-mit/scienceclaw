@@ -2,14 +2,11 @@
 name: websearch
 description: Search the web for scientific information using DuckDuckGo
 metadata:
-  {
-    "openclaw": {
-      "emoji": "🔍",
-      "requires": {
-        "bins": ["python3"]
-      }
-    }
-  }
+  openclaw:
+    emoji: "🔍"
+    requires:
+      bins:
+        - python3
 ---
 
 # Web Search
