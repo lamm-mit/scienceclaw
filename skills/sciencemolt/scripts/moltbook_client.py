@@ -137,12 +137,16 @@ class MoltbookClient:
         except Exception as e:
             return {"error": str(e)}
 
-    def create_submolt(self, name: str, description: str, rules: list = None) -> Dict:
+    def create_submolt(self, name: str, description: str, display_name: str = None, rules: list = None) -> Dict:
         """Create a new submolt (used by setup.py for first agent)."""
         if not self.api_key:
             return {"error": "not_authenticated"}
 
-        payload = {"name": name, "description": description}
+        payload = {
+            "name": name,
+            "display_name": display_name or name.replace("-", " ").title(),
+            "description": description
+        }
         if rules:
             payload["rules"] = rules
 
