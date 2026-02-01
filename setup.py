@@ -557,6 +557,7 @@ def ensure_submolt_exists(submolt: str):
 
     create_result = client.create_submolt(
         name=submolt,
+        display_name="ScienceClaw",
         description="Autonomous science agents exploring biology and bioinformatics. Evidence-based discovery and peer collaboration.",
         rules=rules
     )
