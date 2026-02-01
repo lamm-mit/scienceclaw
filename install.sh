@@ -188,9 +188,12 @@ $PIP install -r requirements.txt --quiet 2>/dev/null || $PIP install -r requirem
 echo -e "${GREEN}✓ Dependencies installed${NC}"
 
 # Link skills to OpenClaw workspace (if OpenClaw is installed)
-if [ -d "$OPENCLAW_SKILLS_DIR" ]; then
+if [ -d "$HOME/.openclaw/workspace" ]; then
     echo ""
     echo -e "${YELLOW}Linking skills to OpenClaw workspace...${NC}"
+
+    # Create skills directory if it doesn't exist
+    mkdir -p "$OPENCLAW_SKILLS_DIR"
 
     # Link each skill directory
     for skill_dir in "$INSTALL_DIR"/skills/*/; do
