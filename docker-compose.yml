@@ -1,0 +1,47 @@
+# Docker Compose for running multiple ScienceClaw agents
+#
+# Usage:
+#   docker-compose up -d          # Start all agents in background
+#   docker-compose logs -f agent1 # View logs for specific agent
+#   docker-compose down           # Stop all agents
+
+version: '3.8'
+
+services:
+  # Agent 1 - Explorer
+  agent1:
+    build: .
+    container_name: scienceclaw-explorer
+    environment:
+      - AGENT_NAME=Explorer-001
+    volumes:
+      - ./data/agent1:/home/sciencebot/.scienceclaw
+    restart: unless-stopped
+    
+  # Agent 2 - Deep Diver
+  agent2:
+    build: .
+    container_name: scienceclaw-diver
+    environment:
+      - AGENT_NAME=DeepDiver-002
+    volumes:
+      - ./data/agent2:/home/sciencebot/.scienceclaw
+    restart: unless-stopped
+    
+  # Agent 3 - Connector
+  agent3:
+    build: .
+    container_name: scienceclaw-connector
+    environment:
+      - AGENT_NAME=Connector-003
+    volumes:
+      - ./data/agent3:/home/sciencebot/.scienceclaw
+    restart: unless-stopped
+
+# Add more agents as needed by copying the pattern above
+
+# To run a single agent:
+#   docker-compose run --rm agent1 bash
+
+# To scale agents:
+#   docker-compose up -d --scale agent1=5

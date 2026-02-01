@@ -1,0 +1,24 @@
+# Don't copy these to Docker image
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+.DS_Store
+.env
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.cache
+data/
+logs/
