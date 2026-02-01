@@ -38,6 +38,9 @@ PROFILE_FILE = CONFIG_DIR / "agent_profile.json"
 OPENCLAW_WORKSPACE = Path.home() / ".openclaw" / "workspace"
 SOUL_FILE = OPENCLAW_WORKSPACE / "SOUL.md"
 
+# ScienceClaw install directory (configurable via environment variable)
+SCIENCECLAW_DIR = os.environ.get("SCIENCECLAW_DIR", str(Path.home() / "scienceclaw"))
+
 # Default submolt for science agents
 SCIENCE_SUBMOLT = "scienceclaw"
 
@@ -119,6 +122,9 @@ def generate_soul_md(profile: dict) -> str:
     proteins_list = "\n".join(f"- {p}" for p in proteins) if proteins else "- Various proteins of interest"
     tools_list = "\n".join(f"- {t}" for t in tools)
 
+    # Use the configurable install directory
+    install_dir = SCIENCECLAW_DIR
+
     soul_content = f'''# {name} - Autonomous Science Agent
 
 You are **{name}**, an autonomous science agent exploring biology and computational biology.
@@ -146,42 +152,42 @@ Explore biology through scientific tools, make discoveries, and share findings w
 
 ## Available Skills
 
-You have access to these science skills (run via bash commands from ~/scienceclaw):
+You have access to these science skills (run via bash commands from {install_dir}):
 
 ### blast
 Search NCBI BLAST for sequence homology:
 ```bash
-cd ~/scienceclaw && .venv/bin/python skills/blast/scripts/blast_search.py --query "SEQUENCE" --program blastp
+cd {install_dir} && .venv/bin/python skills/blast/scripts/blast_search.py --query "SEQUENCE" --program blastp
 ```
 
 ### pubmed
 Search scientific literature:
 ```bash
-cd ~/scienceclaw && .venv/bin/python skills/pubmed/scripts/pubmed_search.py --query "topic" --max-results 5
+cd {install_dir} && .venv/bin/python skills/pubmed/scripts/pubmed_search.py --query "topic" --max-results 5
 ```
 
 ### uniprot
 Fetch protein information:
 ```bash
-cd ~/scienceclaw && .venv/bin/python skills/uniprot/scripts/uniprot_fetch.py --accession P53_HUMAN
+cd {install_dir} && .venv/bin/python skills/uniprot/scripts/uniprot_fetch.py --accession P53_HUMAN
 ```
 
 ### sequence
 Analyze protein/DNA sequences:
 ```bash
-cd ~/scienceclaw && .venv/bin/python skills/sequence/scripts/sequence_tools.py stats --sequence "MTEYKLVVV..." --type protein
+cd {install_dir} && .venv/bin/python skills/sequence/scripts/sequence_tools.py stats --sequence "MTEYKLVVV..." --type protein
 ```
 
 ### pdb
 Search protein structures:
 ```bash
-cd ~/scienceclaw && .venv/bin/python skills/pdb/scripts/pdb_search.py --query "kinase" --max-results 5
+cd {install_dir} && .venv/bin/python skills/pdb/scripts/pdb_search.py --query "kinase" --max-results 5
 ```
 
 ### arxiv
 Search preprints:
 ```bash
-cd ~/scienceclaw && .venv/bin/python skills/arxiv/scripts/arxiv_search.py --query "protein folding" --category q-bio
+cd {install_dir} && .venv/bin/python skills/arxiv/scripts/arxiv_search.py --query "protein folding" --category q-bio
 ```
 
 ### Moltbook (Social Network)
@@ -222,7 +228,7 @@ Your community is **m/{submolt}** - a space for science agents to share discover
 ### First Run Setup
 If no Moltbook API key exists (~/.scienceclaw/moltbook_config.json), register yourself:
 ```bash
-cd ~/scienceclaw && .venv/bin/python skills/sciencemolt/scripts/moltbook_client.py register --name "{name}" --bio "{bio}"
+cd {install_dir} && .venv/bin/python skills/sciencemolt/scripts/moltbook_client.py register --name "{name}" --bio "{bio}"
 ```
 
 ### Rate Limits

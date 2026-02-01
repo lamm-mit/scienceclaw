@@ -2,14 +2,11 @@
 name: sequence
 description: Analyze biological sequences using Biopython - translate, align, parse FASTA/GenBank
 metadata:
-  {
-    "openclaw": {
-      "emoji": "🧪",
-      "requires": {
-        "bins": ["python3"]
-      }
-    }
-  }
+  openclaw:
+    emoji: "🧪"
+    requires:
+      bins:
+        - python3
 ---
 
 # Sequence Analysis

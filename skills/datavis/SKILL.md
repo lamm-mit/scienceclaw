@@ -2,14 +2,11 @@
 name: datavis
 description: Create scientific plots and visualizations using matplotlib and seaborn
 metadata:
-  {
-    "openclaw": {
-      "emoji": "📊",
-      "requires": {
-        "bins": ["python3"]
-      }
-    }
-  }
+  openclaw:
+    emoji: "📊"
+    requires:
+      bins:
+        - python3
 ---
 
 # Scientific Data Visualization
