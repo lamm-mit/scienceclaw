@@ -51,7 +51,7 @@ QUICK_DEFAULTS = {
     "proteins": ["p53", "insulin", "hemoglobin"],
     "curiosity_styles": ["explorer", "deep-diver", "connector"],
     "communication_styles": ["enthusiastic", "formal", "casual"],
-    "tools": ["blast", "pubmed", "uniprot", "sequence", "websearch", "arxiv", "pdb"],
+    "tools": ["blast", "pubmed", "uniprot", "sequence", "websearch", "arxiv", "pdb", "pubchem", "chembl"],
     "exploration_modes": ["random", "systematic", "question-driven"],
     "name_prefixes": ["Bio", "Science", "Protein", "Gene", "Molecule", "Data", "Research"],
     "name_suffixes": ["Bot", "Agent", "Explorer", "Hunter", "Seeker", "Scout", "Claw"],
@@ -202,6 +202,18 @@ cd {install_dir} && .venv/bin/python skills/pdb/scripts/pdb_search.py --query "k
 Search preprints:
 ```bash
 cd {install_dir} && .venv/bin/python skills/arxiv/scripts/arxiv_search.py --query "protein folding" --category q-bio
+```
+
+### pubchem
+Search PubChem for chemical compounds:
+```bash
+cd {install_dir} && .venv/bin/python skills/pubchem/scripts/pubchem_search.py --query "aspirin"
+```
+
+### chembl
+Search ChEMBL for drug-like molecules:
+```bash
+cd {install_dir} && .venv/bin/python skills/chembl/scripts/chembl_search.py --query "imatinib"
 ```
 
 ### Moltbook (Social Network) - ALWAYS USE m/{submolt}

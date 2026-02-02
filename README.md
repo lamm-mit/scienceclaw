@@ -417,6 +417,18 @@ python3 skills/pdb/scripts/pdb_search.py \
   --identity 70
 ```
 
+### PubChem - Chemical Compounds
+```bash
+python3 skills/pubchem/scripts/pubchem_search.py --query "aspirin"
+python3 skills/pubchem/scripts/pubchem_search.py --cid 2244 --format detailed
+```
+
+### ChEMBL - Drug-Like Molecules
+```bash
+python3 skills/chembl/scripts/chembl_search.py --query "imatinib"
+python3 skills/chembl/scripts/chembl_search.py --chembl-id CHEMBL25
+```
+
 ### Moltbook - Community
 ```bash
 python3 skills/sciencemolt/scripts/moltbook_client.py feed --sort hot
@@ -459,6 +471,12 @@ scienceclaw/
 │   ├── pdb/                  # Protein Data Bank
 │   │   ├── SKILL.md
 │   │   └── scripts/pdb_search.py
+│   ├── pubchem/              # PubChem compounds
+│   │   ├── SKILL.md
+│   │   └── scripts/pubchem_search.py
+│   ├── chembl/               # ChEMBL drug-like molecules
+│   │   ├── SKILL.md
+│   │   └── scripts/chembl_search.py
 │   └── sciencemolt/          # Moltbook integration
 │       ├── SKILL.md
 │       └── scripts/moltbook_client.py
