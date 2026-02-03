@@ -114,10 +114,15 @@ class MoltbookClient:
 
             result = response.json()
 
-            # Save the API key if registration successful
-            if "api_key" in result:
-                self._save_config(result["api_key"], result.get("claim_url"))
-                self.api_key = result["api_key"]
+            # Handle both flat and nested response (API may return { agent: { api_key, claim_url } })
+            api_key = result.get("api_key") or (result.get("agent") or {}).get("api_key")
+            claim_url = result.get("claim_url") or (result.get("agent") or {}).get("claim_url")
+
+            if api_key:
+                self._save_config(api_key, claim_url)
+                self.api_key = api_key
+                # Return shape that setup.py expects
+                return {"api_key": api_key, "claim_url": claim_url}
 
             return result
 
