@@ -24,5 +24,13 @@ numpy>=1.24.0
 # py3Dmol>=2.0.0
 
 # Optional: TDC binding-effect prediction (skills/tdc - BBB, hERG, CYP3A4)
-# pip install PyTDC DeepPurpose torch dgl
-# On Python 3.13+, DGL may require a conda env with Python 3.11 and: conda install -c dglteam dgl
+# TDC requires PyTDC, DeepPurpose, torch, and dgl. On Python 3.13+, dgl has no wheels,
+# so create a conda environment with Python 3.11:
+#
+#   conda create -n tdc python=3.11 -y
+#   conda activate tdc
+#   conda install -c dglteam dgl -y
+#   conda install -c conda-forge rdkit descriptastorus -y
+#   pip install PyTDC DeepPurpose fuzzywuzzy huggingface_hub 'pydantic<2'
+#
+# Then run TDC scripts with: conda run -n tdc python skills/tdc/scripts/tdc_predict.py ...
