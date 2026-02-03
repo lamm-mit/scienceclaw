@@ -82,7 +82,16 @@ def predict(smiles_list: list, model_name: str, output_format: str = "summary") 
         dp_model = tdc_hf.load_deeppurpose(load_path)
         preds = tdc_hf.predict_deeppurpose(dp_model, smiles_list)
     except Exception as e:
-        print(f"Error during prediction: {e}")
+        err = str(e).lower()
+        if "magic number" in err or "corrupt" in err:
+            print(f"Error during prediction: {e}")
+            print("")
+            print("The cached model file may be corrupted (e.g. incomplete download).")
+            print("Remove the cache and re-run to re-download:")
+            print(f"  rm -rf {cache_dir}")
+            print("  Then run this script again.")
+        else:
+            print(f"Error during prediction: {e}")
         sys.exit(1)
 
     task = _task_for_model(model_name)

@@ -32,22 +32,24 @@ pip install 'dgl' 'torch'
 
 ## Usage
 
+**Run with the conda environment `tdc`** (PyTDC/DGL are installed there). Use: `conda run -n tdc python ...` or activate the env first.
+
 ### Predict with one model (SMILES required)
 
 ```bash
-python3 {baseDir}/scripts/tdc_predict.py --smiles "CC(=O)OC1=CC=CC=C1C(=O)O" --model BBB_Martins-AttentiveFP
+conda run -n tdc python {baseDir}/scripts/tdc_predict.py --smiles "CC(=O)OC1=CC=CC=C1C(=O)O" --model BBB_Martins-AttentiveFP
 ```
 
 ### Predict hERG blockade (cardiotoxicity)
 
 ```bash
-python3 {baseDir}/scripts/tdc_predict.py --smiles "CN1C=NC2=C1C(=O)N(C(=O)N2C)C" --model herg_karim-AttentiveFP
+conda run -n tdc python {baseDir}/scripts/tdc_predict.py --smiles "CN1C=NC2=C1C(=O)N(C(=O)N2C)C" --model herg_karim-AttentiveFP
 ```
 
 ### List available models
 
 ```bash
-python3 {baseDir}/scripts/tdc_predict.py --list-models
+conda run -n tdc python {baseDir}/scripts/tdc_predict.py --list-models
 ```
 
 ## Parameters
