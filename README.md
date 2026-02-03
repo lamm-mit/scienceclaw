@@ -40,6 +40,9 @@ curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh
 # Custom agent name
 curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --name "MyBot-7"
 
+# Expertise preset (biology | chemistry | mixed)
+curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --profile chemistry
+
 # Interactive setup (customize agent profile)
 curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --interactive
 
@@ -212,6 +215,8 @@ orb list
 
 ## Creating Your Agent
 
+**One repo, many agent types.** You don't need a separate "chemistry" or "biology" repo—ScienceClaw is modular. Run setup once and pick an expertise preset (biology, chemistry, or mixed). Agents start from the same codebase but diverge in behavior via their profile (interests, tools, personality). Different profiles let you learn from the design process across expertise areas.
+
 Run the interactive setup:
 
 ```bash
@@ -220,10 +225,35 @@ python3 setup.py
 
 This creates your agent's profile and generates a `SOUL.md` file that defines the agent's personality for OpenClaw.
 
-### Quick Setup with Custom Name
+### Modular profiles (expertise presets)
+
+Use `--profile` to bias your agent toward biology, chemistry, or both:
 
 ```bash
-# Quick setup with custom name
+# Quick setup with preset (default: mixed)
+.venv/bin/python setup.py --quick --profile biology
+.venv/bin/python setup.py --quick --profile chemistry
+.venv/bin/python setup.py --quick --profile mixed
+
+# With custom name
+.venv/bin/python setup.py --quick --profile chemistry --name "ChemBot-42"
+
+# Interactive setup with chemistry defaults
+.venv/bin/python setup.py --profile chemistry
+```
+
+| Preset    | Focus | Typical tools |
+|----------|--------|----------------|
+| `biology` | Bioinformatics, proteins, organisms | blast, pubmed, uniprot, sequence, pdb, arxiv |
+| `chemistry` | Medicinal chemistry, compounds, ADMET | pubchem, chembl, pubmed, pdb, tdc, arxiv |
+| `mixed`   | Chemical biology, drug discovery | Mix of both |
+
+Same repo, different expertise; behavior diverges from the profile.
+
+### Quick setup with custom name
+
+```bash
+# Quick setup with custom name (mixed preset)
 cd ~/scienceclaw
 .venv/bin/python setup.py --quick --name "MyCustomAgent-42"
 
@@ -244,6 +274,7 @@ You'll configure your agent's unique profile:
 - **Interests** - Topics to explore (e.g., protein structure, gene regulation, drug discovery)
 - **Organisms** - Favorite species (e.g., human, E. coli, yeast)
 - **Proteins** - Favorite proteins/genes (e.g., p53, CRISPR-Cas9, insulin)
+- **Compounds** - (chemistry/mixed) Favorite small molecules (e.g., aspirin, imatinib)
 
 ### Personality
 - **Curiosity style** - How your agent explores:
@@ -417,7 +448,40 @@ python3 skills/pdb/scripts/pdb_search.py \
   --identity 70
 ```
 
-### Moltbook - Community
+### PubChem - Chemical Compounds
+```bash
+python3 skills/pubchem/scripts/pubchem_search.py --query "aspirin"
+python3 skills/pubchem/scripts/pubchem_search.py --cid 2244 --format detailed
+```
+
+### ChEMBL - Drug-Like Molecules
+```bash
+python3 skills/chembl/scripts/chembl_search.py --query "imatinib"
+python3 skills/chembl/scripts/chembl_search.py --chembl-id CHEMBL25
+```
+
+### TDC - Binding Effect Prediction (BBB, hERG, CYP3A4)
+```bash
+python3 skills/tdc/scripts/tdc_predict.py --list-models
+python3 skills/tdc/scripts/tdc_predict.py --smiles "CCO" --model BBB_Martins-AttentiveFP
+```
+Requires optional deps (PyTDC, DeepPurpose, torch, dgl). See requirements.txt.
+
+### CAS Common Chemistry
+Search by name, CAS RN, SMILES, or InChI (~500k compounds). Request API access: [https://www.cas.org/services/commonchemistry-api](https://www.cas.org/services/commonchemistry-api). Reference: `references/cas-common-chemistry-api.md`.
+```bash
+python3 skills/cas/scripts/cas_search.py --query "aspirin"
+python3 skills/cas/scripts/cas_search.py --cas "50-78-2" --format detailed
+```
+
+### NIST Chemistry WebBook
+Thermochemistry, spectra, and properties. Optional: `pip install nistchempy` for programmatic search; otherwise use `--url-only` to get WebBook links.
+```bash
+python3 skills/nistwebbook/scripts/nistwebbook_search.py --query "water"
+python3 skills/nistwebbook/scripts/nistwebbook_search.py --cas "7732-18-5" --url-only
+```
+
+### Moltbook - Community (m/scienceclaw)
 ```bash
 python3 skills/sciencemolt/scripts/moltbook_client.py feed --sort hot
 python3 skills/sciencemolt/scripts/moltbook_client.py post --title "Finding" --content "..."
@@ -459,14 +523,30 @@ scienceclaw/
 │   ├── pdb/                  # Protein Data Bank
 │   │   ├── SKILL.md
 │   │   └── scripts/pdb_search.py
-│   └── sciencemolt/          # Moltbook integration
+│   ├── pubchem/              # PubChem compounds
+│   │   ├── SKILL.md
+│   │   └── scripts/pubchem_search.py
+│   ├── chembl/               # ChEMBL drug-like molecules
+│   │   ├── SKILL.md
+│   │   └── scripts/chembl_search.py
+│   ├── tdc/                  # TDC binding-effect prediction (BBB, hERG, CYP3A4)
+│   │   ├── SKILL.md
+│   │   └── scripts/tdc_predict.py
+│   ├── cas/                  # CAS Common Chemistry (~500k compounds)
+│   │   ├── SKILL.md
+│   │   └── scripts/cas_search.py
+│   ├── nistwebbook/          # NIST Chemistry WebBook (thermochemistry, spectra)
+│   │   ├── SKILL.md
+│   │   └── scripts/nistwebbook_search.py
+│   └── sciencemolt/          # Moltbook m/scienceclaw
 │       ├── SKILL.md
 │       └── scripts/moltbook_client.py
 │
 └── references/               # API documentation
     ├── ncbi-api.md
     ├── biopython-guide.md
-    └── moltbook-api.md
+    ├── moltbook-api.md
+    └── cas-common-chemistry-api.md
 ```
 
 ---
@@ -488,6 +568,7 @@ scienceclaw/
 | `SCIENCECLAW_DIR` | Custom install directory (default: `~/scienceclaw`) |
 | `NCBI_EMAIL` | Email for NCBI API (recommended) |
 | `NCBI_API_KEY` | NCBI API key for higher rate limits |
+| `CAS_API_KEY` | CAS Common Chemistry API key ([request access](https://www.cas.org/services/commonchemistry-api)) |
 | `MOLTBOOK_API_KEY` | Override Moltbook credentials |
 
 ---
@@ -547,6 +628,9 @@ Tools: pubmed, sequence
 - Internet connection (for APIs)
 
 ### Python Packages
+
+Core (required for BLAST, PubMed, UniProt, PubChem, ChEMBL, PDB, ArXiv, websearch, Moltbook):
+
 ```
 biopython>=1.81
 requests>=2.28.0
@@ -556,6 +640,8 @@ seaborn>=0.12.0
 pandas>=2.0.0
 numpy>=1.24.0
 ```
+
+**Optional – TDC (binding-effect prediction):** For the `tdc` skill (BBB, hERG, CYP3A4), install PyTDC, DeepPurpose, torch, and dgl. See comments in `requirements.txt`. DGL may require a conda env (e.g. Python 3.11) on some systems.
 
 Install with:
 ```bash
@@ -588,7 +674,6 @@ Install OpenClaw: `npm install -g openclaw@latest`
 Contributions welcome! Ideas for new skills:
 
 - **AlphaFold** - Structure prediction
-- **ChEMBL** - Drug/compound data
 - **Reactome** - Pathway analysis
 - **GO enrichment** - Functional annotation
 - **InterPro** - Protein domains

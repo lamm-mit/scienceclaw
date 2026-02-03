@@ -3,12 +3,15 @@
 ScienceClaw Agent Setup
 
 Creates and registers a new science agent with a unique profile.
-The agent will join the m/scienceclaw community on Moltbook.
+Modular: one repo, many agent types—use --profile biology|chemistry|mixed to set
+expertise; agents diverge in behavior via their profile. The agent joins
+m/scienceclaw on Moltbook; the first live agent creates the submolt if it doesn't exist.
 
 Usage:
-    python3 setup.py                    # Interactive setup
-    python3 setup.py --quick            # Quick setup with defaults
-    python3 setup.py --quick --name "MyBot"  # Quick setup with custom name
+    python3 setup.py                         # Interactive setup
+    python3 setup.py --quick                  # Quick setup (mixed preset)
+    python3 setup.py --quick --profile biology
+    python3 setup.py --quick --profile chemistry --name "ChemBot-7"
 
 The agent runs via OpenClaw:
     openclaw agent --message "Start exploring" --session-id scienceclaw
@@ -41,49 +44,99 @@ SOUL_FILE = OPENCLAW_WORKSPACE / "SOUL.md"
 # ScienceClaw install directory (configurable via environment variable)
 SCIENCECLAW_DIR = os.environ.get("SCIENCECLAW_DIR", str(Path.home() / "scienceclaw"))
 
-# Default submolt for science agents
+# Default submolt for science agents (first live agent will create it if missing)
 SCIENCE_SUBMOLT = "scienceclaw"
 
-# Default values for quick setup
+# Expertise presets: different agent "flavors" from the same repo (behavior diverges via profile)
+EXPERTISE_PRESETS = {
+    "biology": {
+        "description": "Biology & bioinformatics focus",
+        "interests": ["biology", "bioinformatics", "protein structure", "molecular biology", "structural biology", "gene regulation", "systems biology"],
+        "organisms": ["human", "E. coli", "yeast", "Arabidopsis"],
+        "proteins": ["p53", "insulin", "hemoglobin", "CRISPR-Cas9"],
+        "compounds": [],
+        "tools": ["blast", "pubmed", "uniprot", "sequence", "pdb", "arxiv", "websearch"],
+        "name_prefixes": ["Bio", "Gene", "Protein", "Science", "Data", "Research"],
+        "name_suffixes": ["Bot", "Agent", "Explorer", "Hunter", "Seeker", "Claw"],
+    },
+    "chemistry": {
+        "description": "Chemistry & drug discovery focus",
+        "interests": ["medicinal chemistry", "drug discovery", "chemical biology", "ADMET", "small molecules", "synthesis", "computational chemistry"],
+        "organisms": ["human"],
+        "proteins": [],
+        "compounds": ["aspirin", "imatinib", "metformin", "caffeine"],
+        "tools": ["pubchem", "chembl", "cas", "nistwebbook", "pubmed", "pdb", "tdc", "arxiv", "websearch"],
+        "name_prefixes": ["Chem", "Molecule", "Compound", "Drug", "Science", "Lab"],
+        "name_suffixes": ["Bot", "Agent", "Explorer", "Hunter", "Seeker", "Claw"],
+    },
+    "mixed": {
+        "description": "Biology + chemistry (e.g. chemical biology, drug discovery)",
+        "interests": ["biology", "drug discovery", "chemical biology", "protein structure", "medicinal chemistry", "bioinformatics", "computational biology"],
+        "organisms": ["human", "E. coli"],
+        "proteins": ["p53", "kinases"],
+        "compounds": ["imatinib", "aspirin"],
+        "tools": ["blast", "pubmed", "uniprot", "sequence", "pdb", "pubchem", "chembl", "cas", "nistwebbook", "arxiv", "tdc", "websearch"],
+        "name_prefixes": ["Bio", "Science", "Protein", "Molecule", "Data", "Research"],
+        "name_suffixes": ["Bot", "Agent", "Explorer", "Hunter", "Seeker", "Scout", "Claw"],
+    },
+}
+
+# Shared defaults (used across presets when not overridden)
 QUICK_DEFAULTS = {
-    "interests": ["biology", "bioinformatics", "protein structure", "molecular biology", "structural biology", "drug discovery", "computational biology"],
-    "organisms": ["human", "E. coli", "yeast"],
-    "proteins": ["p53", "insulin", "hemoglobin"],
     "curiosity_styles": ["explorer", "deep-diver", "connector"],
     "communication_styles": ["enthusiastic", "formal", "casual"],
-    "tools": ["blast", "pubmed", "uniprot", "sequence", "websearch", "arxiv", "pdb"],
     "exploration_modes": ["random", "systematic", "question-driven"],
-    "name_prefixes": ["Bio", "Science", "Protein", "Gene", "Molecule", "Data", "Research"],
-    "name_suffixes": ["Bot", "Agent", "Explorer", "Hunter", "Seeker", "Scout", "Claw"],
 }
 
 
-def generate_random_name() -> str:
-    """Generate a random agent name."""
-    prefix = random.choice(QUICK_DEFAULTS["name_prefixes"])
-    suffix = random.choice(QUICK_DEFAULTS["name_suffixes"])
+def get_preset(preset_key: str) -> dict:
+    """Return expertise preset dict. Raises KeyError if unknown."""
+    if preset_key not in EXPERTISE_PRESETS:
+        raise KeyError(f"Unknown profile preset: {preset_key}. Choose from: {', '.join(EXPERTISE_PRESETS)}")
+    return EXPERTISE_PRESETS[preset_key].copy()
+
+
+def generate_random_name(preset: dict = None) -> str:
+    """Generate a random agent name. Uses preset name_prefixes/suffixes if provided."""
+    if preset and "name_prefixes" in preset and "name_suffixes" in preset:
+        prefix = random.choice(preset["name_prefixes"])
+        suffix = random.choice(preset["name_suffixes"])
+    else:
+        # Fallback: use mixed preset names
+        p = EXPERTISE_PRESETS["mixed"]
+        prefix = random.choice(p["name_prefixes"])
+        suffix = random.choice(p["name_suffixes"])
     number = random.randint(1, 999)
     return f"{prefix}{suffix}-{number}"
 
 
-def create_quick_profile(name: str = None) -> dict:
-    """Create a profile with randomized defaults for quick setup."""
+def create_quick_profile(name: str = None, profile_preset: str = "mixed") -> dict:
+    """Create a profile with randomized defaults. Use profile_preset for expertise (biology, chemistry, mixed)."""
+    preset = get_preset(profile_preset)
     if not name:
-        name = generate_random_name()
+        name = generate_random_name(preset)
 
-    # Randomize some variety
-    interests = random.sample(QUICK_DEFAULTS["interests"], k=random.randint(2, 4))
-    organisms = random.sample(QUICK_DEFAULTS["organisms"], k=random.randint(1, 2))
-    proteins = random.sample(QUICK_DEFAULTS["proteins"], k=random.randint(1, 2))
-    tools = random.sample(QUICK_DEFAULTS["tools"], k=random.randint(2, 4))
+    interests = random.sample(preset["interests"], k=min(random.randint(2, 4), len(preset["interests"])))
+    organisms = random.sample(preset["organisms"], k=min(random.randint(1, 2), len(preset["organisms"]))) if preset["organisms"] else []
+    proteins = random.sample(preset["proteins"], k=min(random.randint(1, 2), len(preset["proteins"]))) if preset["proteins"] else []
+    compounds = random.sample(preset["compounds"], k=min(random.randint(1, 2), len(preset["compounds"]))) if preset.get("compounds") else []
+    tools = random.sample(preset["tools"], k=min(random.randint(3, 5), len(preset["tools"])))
+
+    if profile_preset == "chemistry" and compounds:
+        bio_extra = f" and compounds like {', '.join(compounds[:2])}"
+    elif interests:
+        bio_extra = f" and {interests[1] if len(interests) > 1 else interests[0]}"
+    else:
+        bio_extra = ""
 
     profile = {
         "name": name,
-        "bio": f"An autonomous science agent exploring {interests[0]} and {interests[1] if len(interests) > 1 else 'biology'}",
+        "bio": f"An autonomous science agent exploring {interests[0] if interests else 'science'}{bio_extra}",
         "research": {
             "interests": interests,
             "organisms": organisms,
             "proteins": proteins,
+            "compounds": compounds,
         },
         "personality": {
             "curiosity_style": random.choice(QUICK_DEFAULTS["curiosity_styles"]),
@@ -94,6 +147,7 @@ def create_quick_profile(name: str = None) -> dict:
             "exploration_mode": random.choice(QUICK_DEFAULTS["exploration_modes"]),
         },
         "submolt": SCIENCE_SUBMOLT,
+        "expertise_preset": profile_preset,
     }
 
     return profile
@@ -110,6 +164,7 @@ def generate_soul_md(profile: dict) -> str:
     interests = profile.get("research", {}).get("interests", ["biology", "bioinformatics"])
     organisms = profile.get("research", {}).get("organisms", [])
     proteins = profile.get("research", {}).get("proteins", [])
+    compounds = profile.get("research", {}).get("compounds", [])
     curiosity_style = profile.get("personality", {}).get("curiosity_style", "explorer")
     communication_style = profile.get("personality", {}).get("communication_style", "enthusiastic")
     tools = profile.get("preferences", {}).get("tools", ["pubmed", "uniprot", "blast"])
@@ -120,7 +175,11 @@ def generate_soul_md(profile: dict) -> str:
     interests_list = "\n".join(f"- {i}" for i in interests)
     organisms_list = "\n".join(f"- {o}" for o in organisms) if organisms else "- Various organisms"
     proteins_list = "\n".join(f"- {p}" for p in proteins) if proteins else "- Various proteins of interest"
+    compounds_list = "\n".join(f"- {c}" for c in compounds) if compounds else ""
     tools_list = "\n".join(f"- {t}" for t in tools)
+    compounds_section = (
+        f"\n### Compounds of Interest\n{compounds_list}\n" if compounds_list else ""
+    )
 
     # Use the configurable install directory
     install_dir = SCIENCECLAW_DIR
@@ -159,6 +218,7 @@ This is non-negotiable. Every post you make goes to m/{submolt}.
 
 ### Proteins of Interest
 {proteins_list}
+{compounds_section}
 
 ## Your Mission
 
@@ -204,6 +264,38 @@ Search preprints:
 cd {install_dir} && .venv/bin/python skills/arxiv/scripts/arxiv_search.py --query "protein folding" --category q-bio
 ```
 
+### pubchem
+Search PubChem for compounds (SMILES, properties):
+```bash
+cd {install_dir} && .venv/bin/python skills/pubchem/scripts/pubchem_search.py --query "aspirin"
+```
+
+### chembl
+Search ChEMBL for drug-like molecules and bioactivity:
+```bash
+cd {install_dir} && .venv/bin/python skills/chembl/scripts/chembl_search.py --query "imatinib"
+```
+
+### tdc
+Predict binding effects (BBB, hERG, CYP3A4) from SMILES (optional; needs PyTDC/DeepPurpose):
+```bash
+cd {install_dir} && .venv/bin/python skills/tdc/scripts/tdc_predict.py --smiles "CCO" --model BBB_Martins-AttentiveFP
+```
+
+### cas
+Search CAS Common Chemistry by name, CAS RN, SMILES, or InChI (~500k compounds). Request API access: https://www.cas.org/services/commonchemistry-api
+```bash
+cd {install_dir} && .venv/bin/python skills/cas/scripts/cas_search.py --query "aspirin"
+cd {install_dir} && .venv/bin/python skills/cas/scripts/cas_search.py --cas "50-78-2"
+```
+
+### nistwebbook
+Look up NIST Chemistry WebBook (thermochemistry, spectra, properties). Optional: pip install nistchempy for programmatic search.
+```bash
+cd {install_dir} && .venv/bin/python skills/nistwebbook/scripts/nistwebbook_search.py --query "water"
+cd {install_dir} && .venv/bin/python skills/nistwebbook/scripts/nistwebbook_search.py --cas "7732-18-5" --url-only
+```
+
 ### Moltbook (Social Network) - ALWAYS USE m/{submolt}
 Read the official API docs: **https://moltbook.com/skill.md**
 
@@ -232,7 +324,7 @@ curl -X POST -H "Authorization: Bearer YOUR_API_KEY" -H "Content-Type: applicati
 When asked to explore or start your exploration cycle:
 
 1. **Pick a topic** from your research interests (exploration mode: {exploration_mode})
-2. **Investigate** using 1-2 science skills (pubmed, uniprot, blast, pdb, arxiv)
+2. **Investigate** using 1-2 science skills (pubmed, uniprot, blast, pdb, arxiv, pubchem, chembl, cas, nistwebbook, tdc)
 3. **Synthesize** findings into an insight with evidence
 4. **Share** noteworthy discoveries on Moltbook → **m/{submolt}** (ALWAYS include `"submolt": "{submolt}"` in API calls)
 5. **Engage** - Check the m/{submolt} feed and comment on interesting posts from other science agents
@@ -351,12 +443,28 @@ def get_list_input(prompt: str, examples: str = None) -> list:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
-def create_agent_profile() -> dict:
-    """Interactive profile creation."""
+def create_agent_profile(profile_preset: str = None) -> dict:
+    """Interactive profile creation. If profile_preset is set, use it as default suggestions."""
     print("\n" + "=" * 60)
     print("  ScienceClaw Agent Setup")
     print("=" * 60)
     print("\nLet's create your science agent's unique profile.\n")
+
+    # Expertise preset (modular agent: same repo, different expertise)
+    if profile_preset is None:
+        print("Expertise preset (biology / chemistry / mixed):")
+        for key, p in EXPERTISE_PRESETS.items():
+            print(f"  {key}: {p['description']}")
+        profile_preset = get_input("Preset", "mixed").strip().lower() or "mixed"
+        if profile_preset not in EXPERTISE_PRESETS:
+            profile_preset = "mixed"
+
+    preset = get_preset(profile_preset)
+    def_example_interests = ", ".join(preset["interests"][:3])
+    def_example_organisms = ", ".join(preset["organisms"][:4]) if preset["organisms"] else "human, E. coli"
+    def_example_proteins = ", ".join(preset["proteins"][:4]) if preset["proteins"] else "p53, insulin"
+    def_example_compounds = ", ".join(preset["compounds"][:4]) if preset.get("compounds") else ""
+    def_example_tools = ", ".join(preset["tools"][:6])
 
     # Basic info
     name = get_input("Agent name", "ScienceClaw Agent")
@@ -364,7 +472,7 @@ def create_agent_profile() -> dict:
     print("\nDescribe your agent's personality and approach:")
     bio = get_input(
         "Short bio (1-2 sentences)",
-        "An autonomous science agent exploring biology and bioinformatics"
+        f"An autonomous science agent exploring {preset['interests'][0] if preset['interests'] else 'science'}"
     )
 
     # Research focus
@@ -373,20 +481,25 @@ def create_agent_profile() -> dict:
 
     research_interests = get_list_input(
         "Research interests (comma-separated)",
-        "protein structure, gene regulation, drug discovery"
+        def_example_interests
     )
     if not research_interests:
-        research_interests = ["biology", "bioinformatics", "molecular biology"]
+        research_interests = list(preset["interests"][:3]) or ["biology", "bioinformatics"]
 
     favorite_organisms = get_list_input(
         "Favorite organisms (comma-separated, optional)",
-        "human, E. coli, yeast, Arabidopsis"
+        def_example_organisms
     )
 
     favorite_proteins = get_list_input(
         "Favorite proteins/genes (comma-separated, optional)",
-        "p53, CRISPR-Cas9, insulin, hemoglobin"
+        def_example_proteins
     )
+
+    favorite_compounds = get_list_input(
+        "Favorite compounds (comma-separated, optional)",
+        def_example_compounds or "aspirin, imatinib"
+    ) if (preset.get("compounds") or profile_preset == "mixed") else []
 
     # Personality
     print("\n--- Personality ---")
@@ -406,10 +519,10 @@ def create_agent_profile() -> dict:
 
     preferred_tools = get_list_input(
         "Preferred tools (comma-separated)",
-        "blast, pubmed, uniprot, sequence"
+        def_example_tools
     )
     if not preferred_tools:
-        preferred_tools = ["blast", "pubmed", "uniprot", "sequence"]
+        preferred_tools = list(preset["tools"][:5]) or ["pubmed", "uniprot", "blast"]
 
     exploration_mode = get_input(
         "Exploration mode (random/trending/systematic/question-driven)",
@@ -424,6 +537,7 @@ def create_agent_profile() -> dict:
             "interests": research_interests,
             "organisms": favorite_organisms,
             "proteins": favorite_proteins,
+            "compounds": favorite_compounds,
         },
         "personality": {
             "curiosity_style": curiosity_style,
@@ -434,6 +548,7 @@ def create_agent_profile() -> dict:
             "exploration_mode": exploration_mode,
         },
         "submolt": SCIENCE_SUBMOLT,
+        "expertise_preset": profile_preset,
     }
 
     return profile
@@ -446,11 +561,15 @@ def display_profile(profile: dict):
     print("=" * 60)
     print(f"\nName: {profile['name']}")
     print(f"Bio: {profile['bio']}")
+    if profile.get("expertise_preset"):
+        print(f"Expertise preset: {profile['expertise_preset']}")
     print(f"\nResearch Interests: {', '.join(profile['research']['interests'])}")
-    if profile['research']['organisms']:
+    if profile['research'].get('organisms'):
         print(f"Favorite Organisms: {', '.join(profile['research']['organisms'])}")
-    if profile['research']['proteins']:
+    if profile['research'].get('proteins'):
         print(f"Favorite Proteins: {', '.join(profile['research']['proteins'])}")
+    if profile['research'].get('compounds'):
+        print(f"Favorite Compounds: {', '.join(profile['research']['compounds'])}")
     print(f"\nCuriosity Style: {profile['personality']['curiosity_style']}")
     print(f"Communication Style: {profile['personality']['communication_style']}")
     print(f"\nPreferred Tools: {', '.join(profile['preferences']['tools'])}")
@@ -602,9 +721,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python3 setup.py                      # Interactive setup
-  python3 setup.py --quick              # Quick setup with random profile
-  python3 setup.py --quick --name "MyBot-7"  # Quick setup with custom name
+  python3 setup.py                         # Interactive setup
+  python3 setup.py --quick                  # Quick setup, mixed biology+chemistry
+  python3 setup.py --quick --profile biology
+  python3 setup.py --quick --profile chemistry --name "ChemBot-42"
+  python3 setup.py --profile chemistry      # Interactive with chemistry defaults
+
+Profiles (--profile): biology | chemistry | mixed. Same repo, different expertise;
+agents diverge in behavior via their profile. First live agent creates m/scienceclaw.
         """
     )
     parser.add_argument(
@@ -615,6 +739,13 @@ Examples:
     parser.add_argument(
         "--name", "-n",
         help="Agent name (used with --quick)"
+    )
+    parser.add_argument(
+        "--profile", "-p",
+        choices=list(EXPERTISE_PRESETS),
+        default="mixed",
+        metavar="PRESET",
+        help="Expertise preset: biology, chemistry, or mixed (default: mixed)"
     )
     parser.add_argument(
         "--force", "-f",
@@ -635,8 +766,9 @@ Examples:
             print("Use --force to overwrite, or run without --quick for interactive setup.")
             return
 
-        # Create quick profile
-        profile = create_quick_profile(name=args.name)
+        # Create quick profile from chosen preset
+        profile = create_quick_profile(name=args.name, profile_preset=args.profile)
+        print(f"Preset: {args.profile} — {EXPERTISE_PRESETS[args.profile]['description']}")
 
         print(f"Creating agent: {profile['name']}")
         print(f"  Interests: {', '.join(profile['research']['interests'])}")
@@ -719,8 +851,8 @@ Run your agent via OpenClaw:
             print("\nUsing existing profile. Run 'python3 agent.py' to start your agent.")
             return
 
-    # Create profile
-    profile = create_agent_profile()
+    # Create profile (optionally pre-selected preset from --profile)
+    profile = create_agent_profile(profile_preset=args.profile)
 
     # Display and confirm
     display_profile(profile)
