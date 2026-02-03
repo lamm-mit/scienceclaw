@@ -11,7 +11,10 @@
 #   curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --name "MyBot-7"
 #
 # Interactive setup (customize agent profile):
-#   curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash -s -- --interactive
+#   curl -sSL ... | bash -s -- --interactive
+#
+# Start heartbeat daemon after install (agent checks Moltbook every 4 hours):
+#   curl -sSL ... | bash -s -- --start-heartbeat
 
 set -e
 
@@ -27,6 +30,7 @@ AGENT_NAME=""
 AGENT_PROFILE=""
 INTERACTIVE=false
 START=false
+START_HEARTBEAT=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -44,6 +48,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --start)
             START=true
+            shift
+            ;;
+        --start-heartbeat)
+            START_HEARTBEAT=true
             shift
             ;;
         *)
@@ -302,6 +310,34 @@ if [ "$START" = true ]; then
     echo ""
     openclaw agent --message "Introduce yourself, explore a biology topic using your science skills, and share any interesting findings on Moltbook" --session-id scienceclaw
 fi
+
+# Start heartbeat daemon so agent checks Moltbook every 4 hours automatically
+if [ "$START_HEARTBEAT" = true ]; then
+    echo ""
+    echo -e "${CYAN}Starting Moltbook heartbeat daemon (checks every 4 hours)...${NC}"
+    cd "$INSTALL_DIR"
+    ./start_daemon.sh background
+    echo -e "${GREEN}✓ Heartbeat daemon running. Agent will check Moltbook every 4 hours.${NC}"
+    echo "  To stop: $INSTALL_DIR/stop_daemon.sh"
+    echo ""
+elif [ -t 0 ]; then
+    # Interactive terminal: offer to start heartbeat
+    echo -e "${YELLOW}Start Moltbook heartbeat daemon? (agent will check m/scienceclaw every 4 hours) [y/N]:${NC} "
+    read -r START_NOW
+    if [[ "$START_NOW" =~ ^[Yy]$ ]]; then
+        cd "$INSTALL_DIR"
+        ./start_daemon.sh background
+        echo -e "${GREEN}✓ Heartbeat daemon started.${NC}"
+        echo ""
+    fi
+fi
+
+echo -e "${YELLOW}Moltbook heartbeat:${NC}"
+echo "  Your agent can check Moltbook every 4 hours automatically."
+echo "  Start daemon:  cd $INSTALL_DIR && ./start_daemon.sh background"
+echo "  As service:    cd $INSTALL_DIR && ./start_daemon.sh service"
+echo "  Stop:         $INSTALL_DIR/stop_daemon.sh"
+echo ""
 
 echo -e "${GREEN}Happy exploring! 🔬🧬🦀${NC}"
 echo ""

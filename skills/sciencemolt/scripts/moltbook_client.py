@@ -222,6 +222,47 @@ class MoltbookClient:
         except Exception as e:
             return {"error": str(e)}
 
+    def pin_post(self, post_id: str) -> Dict:
+        """Pin a post (submolt owner/mod only). Max 3 pinned per submolt."""
+        if not self.api_key:
+            return {"error": "not_authenticated"}
+        try:
+            response = requests.post(
+                f"{self.api_base}/posts/{post_id}/pin",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                timeout=30
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json()
+                except Exception:
+                    return {"error": response.text}
+            return response.json() if response.text else {"success": True}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def get_feed(self, submolt: str = None, sort: str = "new", limit: int = 5) -> Dict:
+        """Get posts (e.g. to find a post id)."""
+        if not self.api_key:
+            return {"error": "not_authenticated"}
+        try:
+            url = f"{self.api_base}/posts?sort={sort}&limit={limit}"
+            if submolt:
+                url += f"&submolt={submolt}"
+            response = requests.get(
+                url,
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                timeout=30
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json()
+                except Exception:
+                    return {"error": response.text}
+            return response.json()
+        except Exception as e:
+            return {"error": str(e)}
+
 
 # =============================================================================
 # CLI - Minimal commands for setup/testing
@@ -243,6 +284,22 @@ def main():
     # Status (check if registered)
     subparsers.add_parser("status", help="Check registration status")
 
+    # Post
+    post_parser = subparsers.add_parser("post", help="Create a post on m/scienceclaw")
+    post_parser.add_argument("--title", "-t", required=True, help="Post title")
+    post_parser.add_argument("--content", "-c", required=True, help="Post content (body)")
+    post_parser.add_argument("--submolt", "-s", default="scienceclaw", help="Submolt (default: scienceclaw)")
+
+    # Pin (submolt owner/mod only)
+    pin_parser = subparsers.add_parser("pin", help="Pin a post (need post id; submolt owner/mod only)")
+    pin_parser.add_argument("post_id", help="Post ID (from feed or from manifesto.py output)")
+
+    # Feed (to get post ids)
+    feed_parser = subparsers.add_parser("feed", help="Show latest posts (to get post IDs for pin)")
+    feed_parser.add_argument("--submolt", "-s", default="scienceclaw")
+    feed_parser.add_argument("--sort", default="new", choices=("new", "hot", "top", "rising"))
+    feed_parser.add_argument("--limit", "-n", type=int, default=5)
+
     args = parser.parse_args()
 
     if args.command == "register":
@@ -261,6 +318,43 @@ def main():
             print(f"Config: {CONFIG_FILE}")
         else:
             print("Not registered. Run: moltbook_client.py register --name 'Your Agent'")
+
+    elif args.command == "post":
+        client = MoltbookClient()
+        if not client.api_key:
+            print("Not registered. Run: moltbook_client.py register --name 'Your Agent'")
+            sys.exit(1)
+        result = client.create_post(title=args.title, content=args.content, submolt=args.submolt)
+        if "error" in result:
+            print(f"Error: {result}")
+            sys.exit(1)
+        print(f"Posted to m/{args.submolt}: {result.get('id', result)}")
+
+    elif args.command == "pin":
+        client = MoltbookClient()
+        if not client.api_key:
+            print("Not registered. Run: moltbook_client.py register --name 'Your Agent'")
+            sys.exit(1)
+        result = client.pin_post(args.post_id)
+        if "error" in result:
+            print(f"Error: {result}")
+            sys.exit(1)
+        print(f"Pinned post {args.post_id}")
+
+    elif args.command == "feed":
+        client = MoltbookClient()
+        if not client.api_key:
+            print("Not registered. Run: moltbook_client.py register --name 'Your Agent'")
+            sys.exit(1)
+        result = client.get_feed(submolt=args.submolt, sort=args.sort, limit=args.limit)
+        if "error" in result:
+            print(f"Error: {result}")
+            sys.exit(1)
+        posts = result.get("posts") or result.get("items") or []
+        for p in posts:
+            pid = p.get("id") or p.get("post_id")
+            title = p.get("title") or p.get("content", "")[:50]
+            print(f"{pid}\t{title}")
 
     else:
         parser.print_help()
