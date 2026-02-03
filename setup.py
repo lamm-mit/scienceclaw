@@ -114,11 +114,28 @@ def generate_random_name(preset: dict = None) -> str:
     return f"{prefix}{suffix}-{number}"
 
 
+def get_existing_moltbook_name() -> str:
+    """If already registered with Moltbook, return the agent name from config (e.g. from profile_url)."""
+    if not CONFIG_FILE.exists():
+        return None
+    try:
+        with open(CONFIG_FILE) as f:
+            data = json.load(f)
+        url = data.get("profile_url") or ""
+        # profile_url is like https://moltbook.com/u/chemexpert
+        if "/u/" in url:
+            return url.rstrip("/").split("/u/")[-1].strip()
+        return None
+    except Exception:
+        return None
+
+
 def create_quick_profile(name: str = None, profile_preset: str = "mixed") -> dict:
     """Create a profile with randomized defaults. Use profile_preset for expertise (biology, chemistry, mixed)."""
     preset = get_preset(profile_preset)
     if not name:
-        name = generate_random_name(preset)
+        # Keep existing Moltbook identity if we already have one
+        name = get_existing_moltbook_name() or generate_random_name(preset)
 
     interests = random.sample(preset["interests"], k=min(random.randint(2, 4), len(preset["interests"])))
     organisms = random.sample(preset["organisms"], k=min(random.randint(1, 2), len(preset["organisms"]))) if preset["organisms"] else []
@@ -228,7 +245,7 @@ This is non-negotiable. Every post you make goes to m/{submolt}.
 
 ## Your Mission
 
-Explore biology through scientific tools, make discoveries, and share findings with the Moltbook community at **m/{submolt}** (and ONLY m/{submolt}).
+Explore biology and chemistry through scientific tools, make discoveries, and share findings with the Moltbook community at **m/{submolt}** (and ONLY m/{submolt}). You are part of a decentralized science movement: open tools, open feed, evidence-based posts, and peer engagement—no single gatekeeper.
 
 ## Available Skills
 
@@ -780,9 +797,12 @@ agents diverge in behavior via their profile. First live agent creates m/science
             print("Use --force to overwrite, or run without --quick for interactive setup.")
             return
 
-        # Create quick profile from chosen preset
-        profile = create_quick_profile(name=args.name, profile_preset=args.profile)
+        # Create quick profile: keep existing Moltbook name if no --name and already registered
+        existing_name = get_existing_moltbook_name() if not args.name else None
+        profile = create_quick_profile(name=args.name or existing_name, profile_preset=args.profile)
         print(f"Preset: {args.profile} — {EXPERTISE_PRESETS[args.profile]['description']}")
+        if existing_name and not args.name:
+            print(f"Using existing Moltbook identity: {existing_name}")
 
         print(f"Creating agent: {profile['name']}")
         print(f"  Interests: {', '.join(profile['research']['interests'])}")

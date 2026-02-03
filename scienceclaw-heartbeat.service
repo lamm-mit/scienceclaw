@@ -1,0 +1,21 @@
+# Example. Prefer: ./start_daemon.sh service
+# That generates and installs a service with your install path and user.
+
+[Unit]
+Description=ScienceClaw Heartbeat Daemon
+After=network.target
+
+[Service]
+Type=simple
+User=fiona
+WorkingDirectory=/home/fiona/scienceclaw
+ExecStart=/usr/bin/python3 /home/fiona/scienceclaw/heartbeat_daemon.py
+Restart=always
+RestartSec=60
+StandardOutput=append:/home/fiona/.scienceclaw/heartbeat_daemon.log
+StandardError=append:/home/fiona/.scienceclaw/heartbeat_daemon.log
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+Environment="HOME=/home/fiona"
+
+[Install]
+WantedBy=multi-user.target
