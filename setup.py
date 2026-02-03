@@ -41,8 +41,12 @@ PROFILE_FILE = CONFIG_DIR / "agent_profile.json"
 OPENCLAW_WORKSPACE = Path.home() / ".openclaw" / "workspace"
 SOUL_FILE = OPENCLAW_WORKSPACE / "SOUL.md"
 
-# ScienceClaw install directory (configurable via environment variable)
-SCIENCECLAW_DIR = os.environ.get("SCIENCECLAW_DIR", str(Path.home() / "scienceclaw"))
+# ScienceClaw install directory: env SCIENCECLAW_DIR, or repo containing this setup.py, or ~/scienceclaw
+_SETUP_DIR = Path(__file__).resolve().parent
+SCIENCECLAW_DIR = os.environ.get(
+    "SCIENCECLAW_DIR",
+    str(_SETUP_DIR if (_SETUP_DIR / "skills" / "tdc").exists() else Path.home() / "scienceclaw"),
+)
 
 # Default submolt for science agents (first live agent will create it if missing)
 SCIENCE_SUBMOLT = "scienceclaw"
@@ -199,6 +203,8 @@ You are **{name}**, an autonomous science agent exploring biology and computatio
 
 This is non-negotiable. Every post you make goes to m/{submolt}.
 
+**When asked about blood-brain barrier (BBB), hERG, CYP3A4, or "does X cross the BBB":** You MUST run the **tdc** skill: (1) get the compound's SMILES (e.g. pubchem or cas skill), (2) run the TDC script **using the conda env named `tdc`** (PyTDC is ALREADY installed there; do NOT create a venv or install TDC): `conda run -n tdc python skills/tdc/scripts/tdc_predict.py --smiles "SMILES" --model BBB_Martins-AttentiveFP`, (3) include the TDC prediction in your answer. Do not answer from general knowledge alone—run the script and cite the result. **NEVER try to install PyTDC or create a venv for TDC; use the existing conda env `tdc`.**
+
 ---
 
 ## Identity
@@ -277,10 +283,17 @@ cd {install_dir} && .venv/bin/python skills/chembl/scripts/chembl_search.py --qu
 ```
 
 ### tdc
-Predict binding effects (BBB, hERG, CYP3A4) from SMILES (optional; needs PyTDC/DeepPurpose):
+Predict binding effects (BBB, hERG, CYP3A4) from SMILES. **Use this skill whenever the user asks about blood-brain barrier, BBB penetration, hERG, cardiotoxicity, CYP3A4, or ADMET for a compound**—run the script and cite the prediction in your answer. If the user gives a drug name (e.g. aspirin), look up SMILES first (e.g. pubchem or cas skill), then run tdc.
+
+**IMPORTANT: PyTDC/DeepPurpose/DGL are ALREADY installed in the conda environment named `tdc`. Do NOT try to create a venv or install TDC—use the existing conda env:**
+
 ```bash
-cd {install_dir} && .venv/bin/python skills/tdc/scripts/tdc_predict.py --smiles "CCO" --model BBB_Martins-AttentiveFP
+cd {install_dir} && conda run -n tdc python skills/tdc/scripts/tdc_predict.py --smiles "CC(=O)OC1=CC=CC=C1C(=O)O" --model BBB_Martins-AttentiveFP
+# hERG: --model herg_karim-AttentiveFP   CYP3A4: --model CYP3A4_Veith-AttentiveFP
 ```
+If running from workspace: `cd $HOME/.openclaw/workspace && conda run -n tdc python skills/tdc/scripts/tdc_predict.py --smiles "SMILES" --model BBB_Martins-AttentiveFP`
+
+**Do not install TDC or create a venv—the conda env `tdc` is ready to use.**
 
 ### cas
 Search CAS Common Chemistry by name, CAS RN, SMILES, or InChI (~500k compounds). Request API access: https://www.cas.org/services/commonchemistry-api
@@ -324,7 +337,7 @@ curl -X POST -H "Authorization: Bearer YOUR_API_KEY" -H "Content-Type: applicati
 When asked to explore or start your exploration cycle:
 
 1. **Pick a topic** from your research interests (exploration mode: {exploration_mode})
-2. **Investigate** using 1-2 science skills (pubmed, uniprot, blast, pdb, arxiv, pubchem, chembl, cas, nistwebbook, tdc)
+2. **Investigate** using 1-2 science skills (pubmed, uniprot, blast, pdb, arxiv, pubchem, chembl, cas, nistwebbook, tdc). For BBB/hERG/CYP3A4 or "does X cross the blood-brain barrier", always run the **tdc** skill with the compound's SMILES and include the prediction in your answer.
 3. **Synthesize** findings into an insight with evidence
 4. **Share** noteworthy discoveries on Moltbook → **m/{submolt}** (ALWAYS include `"submolt": "{submolt}"` in API calls)
 5. **Engage** - Check the m/{submolt} feed and comment on interesting posts from other science agents
@@ -357,6 +370,7 @@ When sharing discoveries, include:
 
 ## Guidelines
 
+- **BBB / hERG / CYP3A4:** When asked whether a compound crosses the blood-brain barrier, has hERG risk, or CYP3A4 inhibition, run the **tdc** skill (get SMILES from pubchem/cas if needed) and include the TDC prediction in your response.
 - Be curious and follow interesting threads
 - Make connections between findings
 - Always cite sources (PMIDs, accessions, DOIs)
@@ -464,7 +478,7 @@ def create_agent_profile(profile_preset: str = None) -> dict:
     def_example_organisms = ", ".join(preset["organisms"][:4]) if preset["organisms"] else "human, E. coli"
     def_example_proteins = ", ".join(preset["proteins"][:4]) if preset["proteins"] else "p53, insulin"
     def_example_compounds = ", ".join(preset["compounds"][:4]) if preset.get("compounds") else ""
-    def_example_tools = ", ".join(preset["tools"][:6])
+    def_example_tools = ", ".join(preset["tools"])  # show all so tdc, cas, nistwebbook appear in prompt
 
     # Basic info
     name = get_input("Agent name", "ScienceClaw Agent")

@@ -74,10 +74,10 @@ After installation, start your agent via OpenClaw:
 openclaw agent --message "Start exploring biology" --session-id scienceclaw
 
 # Specific task
-openclaw agent --message "Search PubMed for CRISPR delivery and share on Moltbook"
+openclaw agent --message "Search PubMed for CRISPR delivery and share on Moltbook" --session-id scienceclaw
 
-# Interactive session
-openclaw agent --session-id scienceclaw
+# Run TDC BBB prediction (e.g. aspirin)
+openclaw agent --message "Run TDC BBB for aspirin: get SMILES from pubchem then run tdc_predict.py with BBB_Martins-AttentiveFP and report the result." --session-id scienceclaw
 ```
 
 That's it. Your agent will explore science using its configured personality and share discoveries with other agents on Moltbook.
@@ -133,8 +133,8 @@ curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh
 # Start the agent via OpenClaw (inside container)
 openclaw agent --message "Start exploring biology" --session-id scienceclaw
 
-# Or interactive session
-openclaw agent --session-id scienceclaw
+# Ask the agent a question
+openclaw agent --message "Tell me about your research interests" --session-id scienceclaw
 ```
 
 ### Managing the Container
@@ -310,9 +310,11 @@ openclaw agent --message "Look up p53 in UniProt and analyze its sequence"
 openclaw agent --message "Find recent ArXiv preprints on protein folding"
 ```
 
-### Interactive session
+### Ask questions or give tasks
+Each invocation is a one-shot request; the agent responds and exits.
 ```bash
-openclaw agent --session-id scienceclaw
+openclaw agent --message "Tell me about your research interests" --session-id scienceclaw
+openclaw agent --message "Run TDC BBB prediction for caffeine" --session-id scienceclaw
 ```
 
 ### What happens during exploration

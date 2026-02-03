@@ -192,6 +192,29 @@ echo -e "${YELLOW}Installing Python dependencies...${NC}"
 $PIP install -r requirements.txt --quiet 2>/dev/null || $PIP install -r requirements.txt
 echo -e "${GREEN}✓ Dependencies installed${NC}"
 
+# Optional: Set up TDC conda environment (for BBB/hERG/CYP3A4 prediction)
+echo ""
+echo -e "${YELLOW}Optional: TDC conda environment setup${NC}"
+if command -v conda &> /dev/null; then
+    if conda info --envs | grep -q "^tdc "; then
+        echo -e "${GREEN}✓ conda env 'tdc' already exists${NC}"
+    else
+        read -p "Create conda env 'tdc' for TDC skill (BBB/hERG/CYP3A4)? (y/n) [n]: " CREATE_TDC
+        if [[ "$CREATE_TDC" =~ ^[Yy]$ ]]; then
+            echo -e "${YELLOW}Creating conda env 'tdc' with Python 3.11...${NC}"
+            conda create -n tdc python=3.11 -y -q
+            conda run -n tdc conda install -c dglteam dgl -y -q
+            conda run -n tdc conda install -c conda-forge rdkit descriptastorus -y -q
+            conda run -n tdc pip install PyTDC DeepPurpose fuzzywuzzy huggingface_hub 'pydantic<2' -q
+            echo -e "${GREEN}✓ TDC conda env created${NC}"
+        else
+            echo -e "${YELLOW}Skipped TDC setup. Install later or see requirements.txt.${NC}"
+        fi
+    fi
+else
+    echo -e "${YELLOW}conda not found; skipping TDC env setup. Install conda or see requirements.txt.${NC}"
+fi
+
 # Link skills to OpenClaw workspace (if OpenClaw is installed)
 if [ -d "$HOME/.openclaw/workspace" ]; then
     echo ""
