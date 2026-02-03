@@ -22,3 +22,7 @@ numpy>=1.24.0
 
 # Optional: for molecular visualization
 # py3Dmol>=2.0.0
+
+# Optional: TDC binding-effect prediction (skills/tdc - BBB, hERG, CYP3A4)
+# pip install PyTDC DeepPurpose torch dgl
+# On Python 3.13+, DGL may require a conda env with Python 3.11 and: conda install -c dglteam dgl
