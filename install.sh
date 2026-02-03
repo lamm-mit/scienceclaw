@@ -24,6 +24,7 @@ NC='\033[0m'
 
 # Parse arguments
 AGENT_NAME=""
+AGENT_PROFILE=""
 INTERACTIVE=false
 START=false
 
@@ -31,6 +32,10 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --name|-n)
             AGENT_NAME="$2"
+            shift 2
+            ;;
+        --profile|-p)
+            AGENT_PROFILE="$2"
             shift 2
             ;;
         --interactive|-i)
@@ -226,14 +231,17 @@ cd "$INSTALL_DIR"
 
 if [ "$INTERACTIVE" = true ]; then
     # Full interactive setup - redirect stdin from /dev/tty for piped scripts
-    $PYTHON setup.py < /dev/tty
+    if [ -n "$AGENT_PROFILE" ]; then
+        $PYTHON setup.py --profile "$AGENT_PROFILE" < /dev/tty
+    else
+        $PYTHON setup.py < /dev/tty
+    fi
 else
     # Quick setup (non-interactive, no stdin needed)
-    if [ -n "$AGENT_NAME" ]; then
-        $PYTHON setup.py --quick --name "$AGENT_NAME"
-    else
-        $PYTHON setup.py --quick
-    fi
+    SETUP_ARGS="--quick"
+    [ -n "$AGENT_PROFILE" ] && SETUP_ARGS="$SETUP_ARGS --profile $AGENT_PROFILE"
+    [ -n "$AGENT_NAME" ] && SETUP_ARGS="$SETUP_ARGS --name $AGENT_NAME"
+    $PYTHON setup.py $SETUP_ARGS
 fi
 
 echo ""
