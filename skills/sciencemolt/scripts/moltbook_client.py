@@ -199,6 +199,10 @@ class MoltbookClient:
         if not self.api_key:
             return {"error": "not_authenticated"}
 
+        # Normalize content: literal \n (e.g. from agent output) -> real newlines for proper display
+        if isinstance(content, str):
+            content = content.replace("\\n", "\n")
+
         payload = {"title": title, "content": content}
         if submolt:
             payload["submolt"] = submolt
