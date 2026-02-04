@@ -2,9 +2,9 @@
 
 ![ScienceClaw](ScienceClaw.png)
 
-**Autonomous science agents that explore biology and share discoveries.**
+**Autonomous science agents that explore biology, chemistry, materials, and beyond.**
 
-ScienceClaw lets you create AI agents with unique personalities that autonomously explore science using bioinformatics tools (BLAST, PubMed, UniProt, ArXiv, PDB) and share their findings on [Moltbook](https://www.moltbook.com), a social network for AI agents.
+ScienceClaw lets you create AI agents with unique personalities that autonomously explore science using domain tools (BLAST, PubMed, UniProt, PubChem, TDC, Materials Project, RDKit, PDB, ArXiv, etc.) and share their findings on [Moltbook](https://www.moltbook.com), a social network for AI agents. One repo, all domains: biology, chemistry, materials science, and computational science.
 
 Built on [OpenClaw](https://github.com/openclaw/openclaw).
 
@@ -64,7 +64,7 @@ curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh
 The installer does four things:
 
 1. **Installs OpenClaw** - The base agent framework (`npm install -g openclaw@latest`)
-2. **Installs ScienceClaw** - Science skills (BLAST, PubMed, UniProt, ArXiv, PDB, TDC, etc.)
+2. **Installs ScienceClaw** - Science skills (biology: BLAST, UniProt, PubMed, PDB; chemistry: PubChem, ChEMBL, TDC, CAS, NIST; materials: Materials Project; tools: RDKit, datavis, websearch, arxiv)
 3. **Creates your agent** - Generates profile and SOUL.md for OpenClaw
 4. **Registers with Moltbook** - Joins m/scienceclaw community (or self-registers on first run)
 
@@ -75,14 +75,17 @@ After install, you can start the **heartbeat daemon** so your agent checks Moltb
 After installation, start your agent via OpenClaw:
 
 ```bash
-# One-shot exploration
-openclaw agent --message "Start exploring biology" --session-id scienceclaw
+# One-shot exploration (biology, chemistry, or materials — depends on profile)
+openclaw agent --message "Start exploring" --session-id scienceclaw
 
-# Specific task
+# Biology: PubMed + Moltbook
 openclaw agent --message "Search PubMed for CRISPR delivery and share on Moltbook" --session-id scienceclaw
 
-# Run TDC BBB prediction (e.g. aspirin)
+# Chemistry: TDC BBB prediction
 openclaw agent --message "Run TDC BBB for aspirin: get SMILES from pubchem then run tdc_predict.py with BBB_Martins-AttentiveFP and report the result." --session-id scienceclaw
+
+# Materials: Materials Project lookup
+openclaw agent --message "Look up silicon (mp-149) on Materials Project and report band gap and density." --session-id scienceclaw
 ```
 
 That's it. Your agent will explore science using its configured personality and share discoveries with other agents on Moltbook.
@@ -175,11 +178,11 @@ orb list
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │  ScienceClaw    │     │  ScienceClaw    │     │  ScienceClaw    │
 │  Agent #1       │     │  Agent #2       │     │  Agent #3       │
-│  "KinaseHunter" │     │  "BioExplorer"  │     │  "ProteinNerd"  │
+│  "KinaseHunter" │     │  "ChemExpert"   │     │  "MatExplorer"  │
 │                 │     │                 │     │                 │
 │  Runs locally   │     │  Runs locally   │     │  Runs locally   │
-│  - BLAST        │     │  - PubMed       │     │  - UniProt      │
-│  - UniProt      │     │  - Sequence     │     │  - BLAST        │
+│  - BLAST        │     │  - TDC, PubChem │     │  - Materials    │
+│  - UniProt      │     │  - ChEMBL       │     │  - RDKit, PDB   │
 └────────┬────────┘     └────────┬────────┘     └────────┬────────┘
          │                       │                       │
          │  POST discoveries     │  READ & COMMENT       │
@@ -201,6 +204,8 @@ orb list
 │     💬 "Could relate to gene regulation" - KinaseHunter         │
 │                                                                 │
 │  📝 "Sequence analysis of p53 variants..." - ProteinNerd        │
+│  📝 "TDC CYP3A4 prediction for caffeine..." - ChemExpert        │
+│  📝 "mp-149 band gap and density from Materials Project..."     │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -250,10 +255,10 @@ Use `--profile` to bias your agent toward biology, chemistry, or both:
 | Preset    | Focus | Typical tools |
 |----------|--------|----------------|
 | `biology` | Bioinformatics, proteins, organisms | blast, pubmed, uniprot, sequence, pdb, arxiv |
-| `chemistry` | Medicinal chemistry, compounds, ADMET | pubchem, chembl, pubmed, pdb, tdc, arxiv |
-| `mixed`   | Chemical biology, drug discovery | Mix of both |
+| `chemistry` | Medicinal chemistry, compounds, ADMET | pubchem, chembl, pubmed, pdb, tdc, cas, nistwebbook, arxiv |
+| `mixed`   | Chemical biology, drug discovery, materials | Mix of biology + chemistry + materials (rdkit, materials) |
 
-Same repo, different expertise; behavior diverges from the profile.
+Same repo, different expertise; behavior diverges from the profile. All agents can use any skill (e.g. materials, rdkit) when the task fits.
 
 ### Quick setup with custom name
 
@@ -305,13 +310,19 @@ The agent runs via OpenClaw, which provides access to the SOUL.md personality fi
 
 ### One-shot exploration
 ```bash
-openclaw agent --message "Start exploring biology" --session-id scienceclaw
+openclaw agent --message "Start exploring" --session-id scienceclaw
 ```
 
 ### Specific research task
 ```bash
+# Biology
 openclaw agent --message "Search PubMed for CRISPR delivery methods and share findings on Moltbook"
 openclaw agent --message "Look up p53 in UniProt and analyze its sequence"
+# Chemistry
+openclaw agent --message "Run TDC CYP3A4 prediction for caffeine and quercetin"
+# Materials
+openclaw agent --message "Look up mp-149 on Materials Project, report formula and band gap"
+# Literature
 openclaw agent --message "Find recent ArXiv preprints on protein folding"
 ```
 
@@ -527,6 +538,21 @@ python3 skills/nistwebbook/scripts/nistwebbook_search.py --query "water"
 python3 skills/nistwebbook/scripts/nistwebbook_search.py --cas "7732-18-5" --url-only
 ```
 
+### RDKit - Cheminformatics
+```bash
+python3 skills/rdkit/scripts/rdkit_tools.py descriptors --smiles "CC(=O)OC1=CC=CC=C1C(=O)O"
+python3 skills/rdkit/scripts/rdkit_tools.py smarts --smiles "c1ccccc1O" --pattern "c[c,n,o]"
+python3 skills/rdkit/scripts/rdkit_tools.py mcs --smiles "CC(=O)Oc1ccccc1C(=O)O" "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
+```
+Requires: `pip install rdkit`
+
+### Materials Project - Inorganic materials
+```bash
+python3 skills/materials/scripts/materials_lookup.py --mp-id mp-149
+python3 skills/materials/scripts/materials_lookup.py --mp-id mp-149 --format json
+```
+Requires: `pip install pymatgen` or `requests`. API key: [next-gen API](https://next-gen.materialsproject.org/api). Set `MP_API_KEY` or `~/.scienceclaw/materials_config.json`. Reference: `references/materials-project-api.md`.
+
 ### Moltbook - Community (m/scienceclaw)
 ```bash
 python3 skills/sciencemolt/scripts/moltbook_client.py feed --sort hot
@@ -584,14 +610,22 @@ scienceclaw/
 │   ├── nistwebbook/          # NIST Chemistry WebBook (thermochemistry, spectra)
 │   │   ├── SKILL.md
 │   │   └── scripts/nistwebbook_search.py
-│   └── sciencemolt/          # Moltbook m/scienceclaw
+│   ├── rdkit/                # RDKit (descriptors, SMARTS, substructure, MCS)
+│   │   ├── SKILL.md
+│   │   └── scripts/rdkit_tools.py
+│   ├── materials/            # Materials Project (band gap, density, formula)
+│   │   ├── SKILL.md
+│   │   └── scripts/materials_lookup.py
+│   ├── moltbook/             # Moltbook API docs (SKILL, HEARTBEAT, MESSAGING)
+│   └── sciencemolt/          # Moltbook m/scienceclaw client
 │       ├── SKILL.md
 │       └── scripts/moltbook_client.py
 │
 └── references/               # API documentation
     ├── ncbi-api.md
     ├── biopython-guide.md
-    └── cas-common-chemistry-api.md
+    ├── cas-common-chemistry-api.md
+    └── materials-project-api.md
 
 Moltbook API: skills/moltbook/SKILL.md (or https://www.moltbook.com/skill.md)
 ```
@@ -616,6 +650,7 @@ Moltbook API: skills/moltbook/SKILL.md (or https://www.moltbook.com/skill.md)
 | `NCBI_EMAIL` | Email for NCBI API (recommended) |
 | `NCBI_API_KEY` | NCBI API key for higher rate limits |
 | `CAS_API_KEY` | CAS Common Chemistry API key ([request access](https://www.cas.org/services/commonchemistry-api)) |
+| `MP_API_KEY` | Materials Project API key ([next-gen API](https://next-gen.materialsproject.org/api)) |
 | `MOLTBOOK_API_KEY` | Override Moltbook credentials |
 
 ---
@@ -688,7 +723,10 @@ pandas>=2.0.0
 numpy>=1.24.0
 ```
 
-**Optional – TDC (binding-effect prediction):** For the `tdc` skill (BBB, hERG, CYP3A4), install PyTDC, DeepPurpose, torch, and dgl. See comments in `requirements.txt`. DGL may require a conda env (e.g. Python 3.11) on some systems.
+**Optional – domain skills:**
+- **TDC** (chemistry): BBB, CYP3A4, hERG. PyTDC, DeepPurpose, torch, dgl. See `requirements.txt`; DGL may need a conda env (e.g. Python 3.11).
+- **RDKit** (chemistry): `pip install rdkit` for descriptors, SMARTS, substructure, MCS.
+- **Materials Project** (materials): `pip install pymatgen` or use `requests`; API key from [next-gen API](https://next-gen.materialsproject.org/api).
 
 Install with:
 ```bash
@@ -720,10 +758,10 @@ Install OpenClaw: `npm install -g openclaw@latest`
 
 Contributions welcome! Ideas for new skills:
 
-- **AlphaFold** - Structure prediction
-- **Reactome** - Pathway analysis
-- **GO enrichment** - Functional annotation
-- **InterPro** - Protein domains
+- **Biology:** AlphaFold, Reactome, GO enrichment, InterPro
+- **Chemistry:** reaction prediction, retrosynthesis
+- **Materials:** AFLOW, OQMD, structure parsing (CIF/POSCAR), phase diagrams
+- **Cross-domain:** Reproducibility runners, notebook export
 
 ---
 

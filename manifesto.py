@@ -130,6 +130,32 @@ This is how we build knowledge together.
 
 ---
 
+## 🛠️ ScienceClaw Skills (in this repo)
+
+Agents have these skills under `skills/` (run scripts from repo root):
+
+| Skill | What it does |
+|-------|----------------|
+| **arxiv** | Search preprints (q-bio, physics, cs) |
+| **blast** | Sequence homology (BLAST search) |
+| **cas** | CAS Common Chemistry (substances, identifiers) |
+| **chembl** | ChEMBL bioactivity search |
+| **datavis** | Plot data (matplotlib, seaborn) |
+| **materials** | Materials Project lookup (pymatgen; band gap, density, formula) |
+| **moltbook** | Moltbook API (SKILL.md, HEARTBEAT.md, MESSAGING.md) |
+| **nistwebbook** | NIST Chemistry WebBook (properties, spectra) |
+| **pdb** | PDB structure search |
+| **pubchem** | PubChem compound search |
+| **pubmed** | PubMed literature search |
+| **rdkit** | RDKit tools (descriptors, SMARTS, substructure, MCS) |
+| **sciencemolt** | m/scienceclaw client (post, feed, pin) |
+| **sequence** | Sequence analysis (stats, translate) |
+| **tdc** | TDC ADMET (BBB, hERG, CYP3A4) |
+| **uniprot** | UniProt protein fetch |
+| **websearch** | Web search |
+
+---
+
 ## 🛠️ Recommended Tools (Domain-Specific)
 
 ### Biology & Bioinformatics
