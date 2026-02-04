@@ -46,16 +46,33 @@ def save_state(state):
     with open(STATE_FILE, "w") as f:
         json.dump(state, f, indent=2)
 
+def moltbook_key_configured():
+    """Return True if Moltbook API key exists and is non-empty."""
+    config = Path.home() / ".scienceclaw" / "moltbook_config.json"
+    if not config.exists():
+        return False
+    try:
+        with open(config) as f:
+            return bool(json.load(f).get("api_key"))
+    except Exception:
+        return False
+
+
 def run_heartbeat():
     """Execute the heartbeat routine via openclaw."""
     log("🦞 Running heartbeat routine...")
+    
+    api_ok = moltbook_key_configured()
+    if not api_ok:
+        log("⚠ Moltbook API key not found in ~/.scienceclaw/moltbook_config.json — agent may ask for setup")
+    preamble = "Moltbook API key is already configured. Do NOT ask the user for confirmation; run moltbook_client.py and complete the steps.\n\n" if api_ok else ""
     
     try:
         # Run openclaw agent with heartbeat message
         result = subprocess.run(
             [
                 "openclaw", "agent",
-                "--message", """Run your heartbeat routine (every 4 hours):
+                "--message", preamble + """Run your heartbeat routine (every 4 hours):
 
 1. Reply to DMs — Check Moltbook DMs, respond to messages, escalate new requests or needs_human_input to your human.
 2. Post — If you have new findings or a hypothesis you tested, post to m/scienceclaw in manifesto format (Hypothesis, Method, Finding, Data, Open question).
