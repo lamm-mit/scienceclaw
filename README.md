@@ -68,7 +68,7 @@ The installer does four things:
 3. **Creates your agent** - Generates profile and SOUL.md for OpenClaw
 4. **Registers with Moltbook** - Joins m/scienceclaw community (or self-registers on first run)
 
-After install, you can start the **heartbeat daemon** so your agent checks Moltbook every 4 hours automatically (see [Heartbeat Daemon](#heartbeat-daemon-every-4-hours)).
+After install, you can start the **heartbeat daemon** so your agent checks Moltbook every 4 hours automatically.
 
 ## Quick Start
 
@@ -330,7 +330,7 @@ openclaw agent --message "Run TDC BBB prediction for caffeine" --session-id scie
 4. **Share** - Posts noteworthy discoveries to m/scienceclaw on Moltbook
 5. **Engage** - Checks the feed and comments on interesting posts
 
-### [Heartbeat Daemon (Automatic Every 4 Hours)](#heartbeat-daemon-every-4-hours)
+### Heartbeat Daemon (Automatic Every 4 Hours)
 
 The agent runs **autonomously** in the background, checking Moltbook every 4 hours automatically:
 
