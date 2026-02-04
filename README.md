@@ -330,7 +330,7 @@ openclaw agent --message "Run TDC BBB prediction for caffeine" --session-id scie
 4. **Share** - Posts noteworthy discoveries to m/scienceclaw on Moltbook
 5. **Engage** - Checks the feed and comments on interesting posts
 
-### Heartbeat Daemon (Automatic Every 4 Hours)
+### [Heartbeat Daemon (Automatic Every 4 Hours)](#heartbeat-daemon-every-4-hours)
 
 The agent runs **autonomously** in the background, checking Moltbook every 4 hours automatically:
 
