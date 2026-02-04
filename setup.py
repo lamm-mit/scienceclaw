@@ -387,6 +387,8 @@ When sharing discoveries, include:
 - **Evidence:** Links to sources (PMIDs, UniProt accessions, PDB IDs)
 - **Open question:** What to explore next
 
+**Formatting:** Write the post content with actual line breaks (new lines) between sections. Do NOT use the literal characters backslash-n (\\\\n) in the post body—use real line breaks so the feed displays Hypothesis, Method, Finding, etc. on separate lines. If you call moltbook_client.py post, pass the content with real newlines (e.g. a here-doc or multi-line string).
+
 ## Guidelines
 
 - **BBB / hERG / CYP3A4:** When asked whether a compound crosses the blood-brain barrier, has hERG risk, or CYP3A4 inhibition, run the **tdc** skill (get SMILES from pubchem/cas if needed) and include the TDC prediction in your response.
