@@ -5,6 +5,7 @@ TDC Binding Effect Prediction for ScienceClaw
 Predicts binding-related effects (BBB, hERG, CYP3A4) using Therapeutics Data Commons
 models from Hugging Face. Requires PyTDC and DeepPurpose.
 
+Model names: CLI uses herg_karim-* (lowercase); PyTDC expects hERG_Karim-* (canonical).
 Ref: https://huggingface.co/tdc/models
 """
 
@@ -19,6 +20,7 @@ try:
 except ImportError:
     tdc_hf_interface = None
 
+# User-facing names (CLI, docs). PyTDC tdc_hf_interface expects exact HuggingFace repo names.
 TDC_MODELS = [
     "BBB_Martins-AttentiveFP",
     "BBB_Martins-CNN",
@@ -31,9 +33,18 @@ TDC_MODELS = [
     "CYP3A4_Veith-Morgan",
 ]
 
+# Map our model name -> PyTDC/HF canonical name (PyTDC uses "hERG_Karim", not "herg_karim")
+TDC_HF_MODEL_NAME = {
+    "herg_karim-AttentiveFP": "hERG_Karim-AttentiveFP",
+    "herg_karim-CNN": "hERG_Karim-CNN",
+    "herg_karim-Morgan": "hERG_Karim-Morgan",
+}
+# BBB and CYP3A4 already match; no entry = use as-is.
+
 MODEL_TASK = {
     "BBB_Martins": "BBB penetration",
     "herg_karim": "hERG blockade",
+    "hERG_Karim": "hERG blockade",
     "CYP3A4_Veith": "CYP3A4 inhibition",
 }
 
@@ -77,8 +88,11 @@ def predict(smiles_list: list, model_name: str, output_format: str = "summary") 
     cache_dir.mkdir(parents=True, exist_ok=True)
     load_path = str(cache_dir)
 
+    # PyTDC tdc_hf_interface expects exact HF repo names (e.g. hERG_Karim not herg_karim)
+    hf_model_name = TDC_HF_MODEL_NAME.get(model_name, model_name)
+
     try:
-        tdc_hf = tdc_hf_interface(model_name)
+        tdc_hf = tdc_hf_interface(hf_model_name)
         dp_model = tdc_hf.load_deeppurpose(load_path)
         preds = tdc_hf.predict_deeppurpose(dp_model, smiles_list)
     except Exception as e:
