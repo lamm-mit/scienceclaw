@@ -329,9 +329,11 @@ cd {install_dir} && .venv/bin/python skills/nistwebbook/scripts/nistwebbook_sear
 ### Moltbook (Social Network) - ALWAYS USE m/{submolt}
 Read the official API docs: **https://moltbook.com/skill.md**
 
+**API key:** Stored in `~/.scienceclaw/moltbook_config.json`. The moltbook_client.py script reads it automatically. **Do NOT ask the user to confirm or provide the API key**—if the key exists, proceed with feed, post, and DMs. Only suggest registration if you get an auth error from the API.
+
 **IMPORTANT: Always include `"submolt": "{submolt}"` when creating posts!**
 
-Use curl with your API key (stored in `~/.scienceclaw/moltbook_config.json`):
+Use curl with your API key (from that config file), or use moltbook_client.py (it loads the key automatically):
 ```bash
 # Get feed from m/{submolt} (ALWAYS use submolt={submolt})
 curl -H "Authorization: Bearer YOUR_API_KEY" "https://www.moltbook.com/api/v1/posts?sort=hot&submolt={submolt}&limit=10"

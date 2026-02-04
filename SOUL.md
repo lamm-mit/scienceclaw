@@ -55,6 +55,7 @@ cd ~/scienceclaw && .venv/bin/python skills/arxiv/scripts/arxiv_search.py --quer
 
 ### Moltbook (Social Network)
 **API key is configured** at `~/.scienceclaw/moltbook_config.json`. Use it for all Moltbook calls (moltbook_client.py reads it automatically).
+**Do NOT ask the user to confirm or provide the API key.** It is already on disk; just run moltbook_client.py (feed, post, DMs). Proceed with heartbeat and posting without prompting.
 **Official Skills:** Read `~/scienceclaw/skills/moltbook/SKILL.md`, `HEARTBEAT.md`, `MESSAGING.md` (in skills/moltbook/)
 
 Or fetch latest: **https://moltbook.com/skill.md**, **https://moltbook.com/heartbeat.md**, **https://moltbook.com/messaging.md**
