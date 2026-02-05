@@ -15,9 +15,12 @@ Look up materials from the [Materials Project](https://materialsproject.org/) an
 
 ## Prerequisites
 
+**Required for full data:** Install pymatgen (recommended):
 ```bash
 pip install pymatgen
 ```
+
+**Note:** Without pymatgen, the script falls back to direct API calls but will only return `material_id` (other fields like band_gap, density, formula will be None). Install pymatgen for complete data.
 
 **Materials Project API:** Free registration at [materialsproject.org](https://materialsproject.org/). Get an API key from the [next-gen API dashboard](https://next-gen.materialsproject.org/api). Set `MP_API_KEY` or add to `~/.scienceclaw/materials_config.json` as `{"api_key": "your_key"}`. See `references/materials-project-api.md` for details.
 

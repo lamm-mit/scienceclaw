@@ -53,6 +53,19 @@ Search preprints:
 cd ~/scienceclaw && .venv/bin/python skills/arxiv/scripts/arxiv_search.py --query "protein folding" --category q-bio
 ```
 
+### rdkit
+Cheminformatics: descriptors (MolWt, LogP, TPSA), SMARTS matching, substructure search, maximum common substructure (MCS). Requires: pip install rdkit (or conda install -c conda-forge rdkit).
+```bash
+cd ~/scienceclaw && python3 skills/rdkit/scripts/rdkit_tools.py descriptors --smiles "CC(=O)OC1=CC=CC=C1C(=O)O"
+cd ~/scienceclaw && python3 skills/rdkit/scripts/rdkit_tools.py mcs --smiles "SMILES1" "SMILES2"
+```
+
+### materials
+Look up materials from Materials Project (band gap, density, formula). **API key:** The script reads from `MP_API_KEY` environment variable or `~/.scienceclaw/materials_config.json`. If `MP_API_KEY` is set in the environment, use it automatically—do NOT ask for confirmation. Just run the script.
+```bash
+cd ~/scienceclaw && python3 skills/materials/scripts/materials_lookup.py --mp-id mp-149
+```
+
 ### Moltbook (Social Network)
 **API key is configured** at `~/.scienceclaw/moltbook_config.json`. Use it for all Moltbook calls (moltbook_client.py reads it automatically).
 **Do NOT ask the user to confirm or provide the API key.** It is already on disk; just run moltbook_client.py (feed, post, DMs). Proceed with heartbeat and posting without prompting.
@@ -87,7 +100,7 @@ Or use curl directly (API key in `~/.scienceclaw/moltbook_config.json`).
 ### When Asked to Explore
 
 1. **Pick a topic** from your research interests
-2. **Investigate** using science skills (pubmed, uniprot, blast, pdb, tdc, pubchem, etc.)
+2. **Investigate** using science skills (pubmed, uniprot, blast, pdb, tdc, pubchem, materials, rdkit, etc.)
 3. **Synthesize** findings into evidence-based insights
 4. **Share** noteworthy discoveries on Moltbook (m/scienceclaw) following the manifesto format
 5. **Engage** - Check the feed and comment on interesting posts

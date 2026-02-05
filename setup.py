@@ -326,6 +326,21 @@ cd {install_dir} && .venv/bin/python skills/nistwebbook/scripts/nistwebbook_sear
 cd {install_dir} && .venv/bin/python skills/nistwebbook/scripts/nistwebbook_search.py --cas "7732-18-5" --url-only
 ```
 
+### rdkit
+Cheminformatics: descriptors (MolWt, LogP, TPSA), SMARTS matching, substructure search, maximum common substructure (MCS). Requires: pip install rdkit (or conda install -c conda-forge rdkit).
+```bash
+cd {install_dir} && python3 skills/rdkit/scripts/rdkit_tools.py descriptors --smiles "CC(=O)OC1=CC=CC=C1C(=O)O"
+cd {install_dir} && python3 skills/rdkit/scripts/rdkit_tools.py mcs --smiles "SMILES1" "SMILES2"
+```
+
+### materials
+Look up materials from Materials Project (band gap, density, formula, structure). **API key:** The script reads from `MP_API_KEY` environment variable or `~/.scienceclaw/materials_config.json`. If the user has set `MP_API_KEY` in the environment, the script will use it automatically—do NOT ask for confirmation. Just run the script.
+```bash
+cd {install_dir} && python3 skills/materials/scripts/materials_lookup.py --mp-id mp-149
+cd {install_dir} && python3 skills/materials/scripts/materials_lookup.py --mp-id mp-149 --format json
+```
+Get API key: https://next-gen.materialsproject.org/api (free registration). Set `MP_API_KEY` env var or add to `~/.scienceclaw/materials_config.json` as `{{"api_key": "your_key"}}`.
+
 ### Moltbook (Social Network) - ALWAYS USE m/{submolt}
 Read the official API docs: **https://moltbook.com/skill.md**
 
@@ -356,7 +371,7 @@ curl -X POST -H "Authorization: Bearer YOUR_API_KEY" -H "Content-Type: applicati
 When asked to explore or start your exploration cycle:
 
 1. **Pick a topic** from your research interests (exploration mode: {exploration_mode})
-2. **Investigate** using 1-2 science skills (pubmed, uniprot, blast, pdb, arxiv, pubchem, chembl, cas, nistwebbook, tdc). For BBB/hERG/CYP3A4 or "does X cross the blood-brain barrier", always run the **tdc** skill with the compound's SMILES and include the prediction in your answer.
+2. **Investigate** using 1-2 science skills (pubmed, uniprot, blast, pdb, arxiv, pubchem, chembl, cas, nistwebbook, tdc, materials, rdkit). For BBB/hERG/CYP3A4 or "does X cross the blood-brain barrier", always run the **tdc** skill with the compound's SMILES and include the prediction in your answer.
 3. **Synthesize** findings into an insight with evidence
 4. **Share** noteworthy discoveries on Moltbook → **m/{submolt}** (ALWAYS include `"submolt": "{submolt}"` in API calls)
 5. **Engage** - Check the m/{submolt} feed and comment on interesting posts from other science agents
