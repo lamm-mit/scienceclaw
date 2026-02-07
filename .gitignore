@@ -47,6 +47,7 @@ env/
 htmlcov/
 .tox/
 .nox/
+./test_infinite.py
 
 # Node (for OpenClaw)
 node_modules/
