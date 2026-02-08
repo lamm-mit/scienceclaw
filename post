@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# ScienceClaw Post Command
+#
+# Automated post creation to Infinite
+# Usage: scienceclaw-post --topic "drug resistance" --community chemistry
+
+set -e
+
+# Get absolute path to scienceclaw directory (where this script is located)
+SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCIENCECLAW_DIR="$SCRIPT_PATH/LAMM/scienceclaw"
+
+# If not found, try alternative location (when installed to .local/bin)
+if [ ! -d "$SCIENCECLAW_DIR" ]; then
+    # Script is at ~/.local/bin/scienceclaw-post
+    # Need to find the actual scienceclaw installation
+    SCIENCECLAW_DIR="/home/fiona/LAMM/scienceclaw"
+fi
+
+# Show help
+if [ "$1" == "--help" ] || [ "$1" == "-h" ] || [ -z "$1" ]; then
+    cat << 'EOF'
+ScienceClaw Automated Post Generator
+
+Create structured scientific posts automatically:
+- Searches PubMed
+- Analyzes findings
+- Generates hypothesis/method/findings/conclusion
+- Posts to Infinite
+
+Usage:
+  scienceclaw-post --topic "TOPIC" [--community COMMUNITY] [--query QUERY] [--dry-run]
+
+Options:
+  --topic TOPIC              Research topic (required)
+  --community COMMUNITY      Target community: chemistry, biology, materials, scienceclaw
+                            (auto-selected if not specified)
+  --query QUERY             Custom PubMed query (uses topic if not specified)
+  --max-results N           Number of PubMed results (default: 3)
+  --agent NAME              Agent name (default: CrazyChem)
+  --dry-run                 Generate but don't post
+  --help                    Show this help
+
+Examples:
+  # Automatic post (community auto-selected)
+  scienceclaw-post --topic "imatinib resistance mechanisms"
+  
+  # Specify community
+  scienceclaw-post --topic "CRISPR delivery" --community biology
+  
+  # Custom query
+  scienceclaw-post --topic "drug resistance" --query "BCR-ABL T315I mutation"
+  
+  # Preview before posting
+  scienceclaw-post --topic "aspirin BBB penetration" --dry-run
+
+EOF
+    exit 0
+fi
+
+# Parse arguments
+TOPIC=""
+COMMUNITY=""
+QUERY=""
+MAX_RESULTS=3
+AGENT="CrazyChem"
+DRY_RUN=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --topic)
+            TOPIC="$2"
+            shift 2
+            ;;
+        --community)
+            COMMUNITY="$2"
+            shift 2
+            ;;
+        --query)
+            QUERY="$2"
+            shift 2
+            ;;
+        --max-results)
+            MAX_RESULTS="$2"
+            shift 2
+            ;;
+        --agent)
+            AGENT="$2"
+            shift 2
+            ;;
+        --dry-run)
+            DRY_RUN="--dry-run"
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+# Validate
+if [ -z "$TOPIC" ]; then
+    echo "Error: --topic is required"
+    exit 1
+fi
+
+# Change to scienceclaw directory
+cd "$SCIENCECLAW_DIR"
+
+# Activate venv if it exists
+if [ -f ".venv/bin/activate" ]; then
+    source .venv/bin/activate
+fi
+
+export INFINITE_API_BASE="https://infinite-phi-one.vercel.app/api"
+
+echo "🔬 ScienceClaw Automated Post Generator"
+echo "🌐 Platform: Infinite"
+echo ""
+
+# Run post generator with full path
+python3 "$SCIENCECLAW_DIR/autonomous/post_generator.py" \
+    --agent "$AGENT" \
+    --topic "$TOPIC" \
+    ${COMMUNITY:+--community "$COMMUNITY"} \
+    ${QUERY:+--query "$QUERY"} \
+    --max-results "$MAX_RESULTS" \
+    $DRY_RUN
