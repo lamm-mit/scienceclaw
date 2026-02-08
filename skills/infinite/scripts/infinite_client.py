@@ -103,7 +103,7 @@ class InfiniteClient:
         try:
             response = requests.post(
                 f"{self.api_base}/agents/login",
-                json={"api_key": self.api_key},
+                json={"apiKey": self.api_key},
                 headers={"Content-Type": "application/json"},
                 timeout=30
             )
@@ -153,10 +153,11 @@ class InfiniteClient:
         }
 
         if capability_proof:
-            payload["capability_proof"] = capability_proof
+            # API expects camelCase
+            payload["capabilityProof"] = capability_proof
 
         if public_key:
-            payload["public_key"] = public_key
+            payload["publicKey"] = public_key
 
         try:
             response = requests.post(
@@ -174,9 +175,9 @@ class InfiniteClient:
 
             result = response.json()
 
-            # Extract api_key and agent_id
-            api_key = result.get("api_key")
-            agent_id = result.get("agent_id")
+            # Extract api_key and agent_id (API may return camelCase or snake_case)
+            api_key = result.get("api_key") or result.get("apiKey")
+            agent_id = result.get("agent_id") or result.get("agent", {}).get("id") or result.get("agentId")
 
             if api_key and agent_id:
                 self._save_config(api_key, agent_id, name)
@@ -350,6 +351,33 @@ class InfiniteClient:
         except Exception as e:
             return {"error": str(e)}
 
+    def delete_post(self, post_id: str) -> Dict:
+        """
+        Delete own post (soft delete).
+
+        Args:
+            post_id: Post UUID to delete
+
+        Returns:
+            Dict with message on success, or error info
+        """
+        if not self.jwt_token:
+            return {"error": "not_authenticated"}
+        try:
+            response = requests.delete(
+                f"{self.api_base}/posts/{post_id}",
+                headers={"Authorization": f"Bearer {self.jwt_token}"},
+                timeout=30
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json()
+                except Exception:
+                    return {"error": response.text}
+            return response.json() if response.text else {"message": "Post deleted"}
+        except Exception as e:
+            return {"error": str(e)}
+
     def get_posts(
         self,
         community: Optional[str] = None,
@@ -400,6 +428,247 @@ class InfiniteClient:
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {self.jwt_token}"
                 },
+                timeout=30
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json()
+                except Exception:
+                    return {"error": response.text}
+            return response.json()
+        except Exception as e:
+            return {"error": str(e)}
+    
+    # ============================================================================
+    # PHASE 4: COLLABORATION APIs (Comments, Links, Notifications)
+    # ============================================================================
+    
+    def get_comments(self, post_id: str) -> Dict:
+        """Get comments for a post (threaded)."""
+        try:
+            response = requests.get(
+                f"{self.api_base}/posts/{post_id}/comments",
+                timeout=30
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json()
+                except Exception:
+                    return {"error": response.text}
+            return response.json()
+        except Exception as e:
+            return {"error": str(e)}
+    
+    def create_comment(
+        self,
+        post_id: str,
+        content: str,
+        parent_id: Optional[str] = None
+    ) -> Dict:
+        """
+        Create a comment on a post.
+        
+        Args:
+            post_id: ID of the post to comment on
+            content: Comment content (supports @mentions)
+            parent_id: Optional parent comment ID for replies
+        
+        Returns:
+            Comment object or error
+        """
+        if not self.jwt_token:
+            return {"error": "not_authenticated"}
+        
+        payload = {"content": content}
+        if parent_id:
+            payload["parentId"] = parent_id
+        
+        try:
+            response = requests.post(
+                f"{self.api_base}/posts/{post_id}/comments",
+                json=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.jwt_token}"
+                },
+                timeout=30
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json()
+                except Exception:
+                    return {"error": response.text}
+            return response.json()
+        except Exception as e:
+            return {"error": str(e)}
+    
+    def vote_comment(self, comment_id: str, value: int) -> Dict:
+        """
+        Vote on a comment.
+        
+        Args:
+            comment_id: ID of the comment
+            value: 1 for upvote, -1 for downvote
+        
+        Returns:
+            Success message or error
+        """
+        if not self.jwt_token:
+            return {"error": "not_authenticated"}
+        
+        if value not in [1, -1]:
+            return {"error": "value must be 1 or -1"}
+        
+        try:
+            response = requests.post(
+                f"{self.api_base}/comments/{comment_id}/vote",
+                json={"value": value},
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.jwt_token}"
+                },
+                timeout=30
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json()
+                except Exception:
+                    return {"error": response.text}
+            return response.json()
+        except Exception as e:
+            return {"error": str(e)}
+    
+    def get_post_links(self, post_id: str) -> Dict:
+        """Get links to/from a post (citations, contradictions, extensions)."""
+        try:
+            response = requests.get(
+                f"{self.api_base}/posts/{post_id}/links",
+                timeout=30
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json()
+                except Exception:
+                    return {"error": response.text}
+            return response.json()
+        except Exception as e:
+            return {"error": str(e)}
+    
+    def link_post(
+        self,
+        from_post_id: str,
+        to_post_id: str,
+        link_type: str,
+        context: Optional[str] = None
+    ) -> Dict:
+        """
+        Create a link between posts.
+        
+        Args:
+            from_post_id: Source post ID
+            to_post_id: Target post ID
+            link_type: Type of link ('cite', 'contradict', 'extend', 'replicate')
+            context: Optional explanation of the link
+        
+        Returns:
+            Link object or error
+        """
+        if not self.jwt_token:
+            return {"error": "not_authenticated"}
+        
+        valid_types = ['cite', 'contradict', 'extend', 'replicate']
+        if link_type not in valid_types:
+            return {"error": f"link_type must be one of: {', '.join(valid_types)}"}
+        
+        payload = {
+            "toPostId": to_post_id,
+            "linkType": link_type
+        }
+        if context:
+            payload["context"] = context
+        
+        try:
+            response = requests.post(
+                f"{self.api_base}/posts/{from_post_id}/links",
+                json=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.jwt_token}"
+                },
+                timeout=30
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json()
+                except Exception:
+                    return {"error": response.text}
+            return response.json()
+        except Exception as e:
+            return {"error": str(e)}
+    
+    def get_notifications(self, unread_only: bool = False, limit: int = 50) -> Dict:
+        """
+        Get notifications for the authenticated agent.
+        
+        Args:
+            unread_only: If True, only return unread notifications
+            limit: Maximum number of notifications to return (max 100)
+        
+        Returns:
+            Notifications list with unread count
+        """
+        if not self.jwt_token:
+            return {"error": "not_authenticated"}
+        
+        params = {"limit": min(limit, 100)}
+        if unread_only:
+            params["unreadOnly"] = "true"
+        
+        try:
+            response = requests.get(
+                f"{self.api_base}/notifications",
+                params=params,
+                headers={"Authorization": f"Bearer {self.jwt_token}"},
+                timeout=30
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json()
+                except Exception:
+                    return {"error": response.text}
+            return response.json()
+        except Exception as e:
+            return {"error": str(e)}
+    
+    def mark_notification_read(self, notification_id: str) -> Dict:
+        """Mark a notification as read."""
+        if not self.jwt_token:
+            return {"error": "not_authenticated"}
+        
+        try:
+            response = requests.post(
+                f"{self.api_base}/notifications/{notification_id}/read",
+                headers={"Authorization": f"Bearer {self.jwt_token}"},
+                timeout=30
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json()
+                except Exception:
+                    return {"error": response.text}
+            return response.json()
+        except Exception as e:
+            return {"error": str(e)}
+    
+    def delete_notification(self, notification_id: str) -> Dict:
+        """Delete a notification."""
+        if not self.jwt_token:
+            return {"error": "not_authenticated"}
+        
+        try:
+            response = requests.delete(
+                f"{self.api_base}/notifications/{notification_id}",
+                headers={"Authorization": f"Bearer {self.jwt_token}"},
                 timeout=30
             )
             if response.status_code >= 400:
@@ -491,18 +760,35 @@ def main():
     comment_parser.add_argument("post_id", help="Post ID")
     comment_parser.add_argument("--content", "-c", required=True, help="Comment content")
 
+    # Delete
+    delete_parser = subparsers.add_parser("delete", help="Delete a post")
+    delete_parser.add_argument("post_id", help="Post ID to delete")
+
     args = parser.parse_args()
 
     if args.command == "register":
         client = InfiniteClient()
 
-        # Create simple capability proof
+        # Create capability proof (API requires result.success, result.data, result.timestamp)
         proof = None
         if args.proof_tool and args.proof_query:
+            from datetime import datetime, timezone
+            # Build result.data for tool-specific validation (materials needs mp_id or formula)
+            data = {}
+            if args.proof_tool == "materials":
+                data = {"mp_id": args.proof_query, "formula": "MgO"}
+            elif args.proof_tool == "pubmed":
+                data = {"articles": [{"pmid": "123"}]}
+            else:
+                data = {"success": True}
             proof = {
                 "tool": args.proof_tool,
                 "query": args.proof_query,
-                "result": {"success": True}  # Simplified for CLI
+                "result": {
+                    "success": True,
+                    "data": data,
+                    "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                },
             }
 
         result = client.register(
@@ -577,6 +863,19 @@ def main():
             print(f"Error: {result}")
             sys.exit(1)
         print(f"Commented on post {args.post_id}")
+
+    elif args.command == "delete":
+        client = InfiniteClient()
+        if not client.jwt_token:
+            print("Not authenticated. Check registration.")
+            sys.exit(1)
+
+        result = client.delete_post(args.post_id)
+
+        if "error" in result:
+            print(f"Error: {result}")
+            sys.exit(1)
+        print(f"Deleted post {args.post_id}")
 
     else:
         parser.print_help()
