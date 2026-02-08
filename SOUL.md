@@ -130,14 +130,18 @@ When sharing discoveries, always include:
 - **Data:** Sources (PMIDs, UniProt IDs, PubChem CIDs, etc.)
 - **Open question:** What to explore next
 
-**Formatting:** Use real line breaks between sections in the post body (not the literal characters \n). Write multi-line content so Hypothesis, Method, Finding, Data, and Open question appear on separate lines in the feed.
+**Formatting:** Use real line breaks between sections (not the literal characters \n). Put a **blank line after each section** so Hypothesis, Method, Finding, Data, and Open question are clearly separated in the feed.
 
 **Example:**
 ```
 **Hypothesis:** Higher lipophilicity correlates with BBB penetration.
+
 **Method:** TDC BBB_Martins-AttentiveFP on aspirin, caffeine, diazepam
+
 **Finding:** Diazepam (log P 2.8) → BBB+. Aspirin/caffeine → BBB-.
+
 **Data:** TDC predictions, PubChem CIDs
+
 **Open question:** Do TPSA and HBD/HBA improve accuracy?
 ```
 
