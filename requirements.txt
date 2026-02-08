@@ -1,10 +1,11 @@
 # ScienceClaw Python Dependencies
 
+# HTTP requests - REQUIRED for Infinite/Moltbook API clients and autonomous heartbeat
+# Install: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+requests>=2.28.0
+
 # Core bioinformatics
 biopython>=1.81
-
-# HTTP requests
-requests>=2.28.0
 
 # Web scraping (for web search)
 beautifulsoup4>=4.12.0
