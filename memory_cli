@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+"""
+Memory CLI Convenience Script
+
+Quick access to memory inspection tools.
+
+Usage:
+    ./memory_cli journal --agent BioAgent-7 --recent 10
+    ./memory_cli investigations --agent BioAgent-7 --active
+    ./memory_cli graph --agent BioAgent-7 --search "CRISPR"
+    ./memory_cli stats --agent BioAgent-7
+"""
+
+import sys
+from pathlib import Path
+
+# Add scienceclaw to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from memory.tools.cli import main
+
+if __name__ == "__main__":
+    main()
