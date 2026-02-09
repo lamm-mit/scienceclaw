@@ -1,308 +1,141 @@
-# ScienceClaw Memory System
+# Agent Memory System
 
-Persistent memory infrastructure for autonomous science agents.
+The memory system allows agents to track investigations, maintain a journal, and build a knowledge graph across multiple heartbeat cycles.
 
-## Overview
-
-The memory system provides three core components:
-
-1. **AgentJournal** - Append-only JSONL log of observations, hypotheses, experiments, and conclusions
-2. **InvestigationTracker** - Multi-step investigation management across heartbeat cycles
-3. **KnowledgeGraph** - Graph database of scientific concepts and relationships
-
-## Directory Structure
-
-```
-memory/
-├── __init__.py              # Package exports
-├── journal.py               # AgentJournal implementation
-├── investigation_tracker.py # InvestigationTracker implementation
-├── knowledge_graph.py       # KnowledgeGraph implementation
-├── README.md                # This file
-│
-├── tools/                   # CLI and utilities
-│   ├── __init__.py
-│   └── cli.py               # Memory inspection CLI
-│
-└── examples/                # Usage examples
-    ├── __init__.py
-    ├── usage_examples.py    # Basic usage patterns
-    └── integration_example.py # Heartbeat integration
-```
+---
 
 ## Quick Start
 
-### Basic Usage
-
 ```python
 from memory import AgentJournal, InvestigationTracker, KnowledgeGraph
 
-# Initialize for an agent
-journal = AgentJournal("BioAgent-7")
-tracker = InvestigationTracker("BioAgent-7")
-kg = KnowledgeGraph("BioAgent-7")
+# Initialize memory
+journal = AgentJournal("MyAgent")
+tracker = InvestigationTracker("MyAgent")
+kg = KnowledgeGraph("MyAgent")
 
 # Log an observation
 journal.log_observation(
-    content="Interesting post about CRISPR delivery",
-    observation="LNP formulation shows 3x improvement",
-    source="post_123"
+    content="Found CRISPR paper on LNP delivery",
+    source="pmid:12345678",
+    tags=["CRISPR", "delivery"]
 )
 
-# Start an investigation
-inv_id = tracker.create_investigation(
-    hypothesis="DLin-MC3-DMA improves muscle delivery",
-    goal="Test LNP formulation hypothesis",
-    priority="high"
+# Form hypothesis
+journal.log_hypothesis(
+    hypothesis="LNP composition affects delivery efficiency",
+    motivation="Multiple papers show variable results"
 )
-
-# Add knowledge
-kg.add_concept("DLin-MC3-DMA", type="compound")
-kg.add_relationship("DLin-MC3-DMA", "improves", "CRISPR delivery")
-```
-
-### Using the CLI
-
-Inspect agent memory from the command line:
-
-```bash
-# View recent journal entries
-./memory_cli journal --agent BioAgent-7 --recent 10
-
-# Show active investigations
-./memory_cli investigations --agent BioAgent-7 --active
-
-# Search knowledge graph
-./memory_cli graph --agent BioAgent-7 --search "CRISPR"
-
-# Get memory statistics
-./memory_cli stats --agent BioAgent-7
-
-# Export all memory
-./memory_cli export --agent BioAgent-7 --format json
-```
-
-Or use Python module syntax:
-```bash
-python3 -m memory.tools.cli journal --agent BioAgent-7 --recent 10
-```
-
-### Examples
-
-Run example code to see memory system in action:
-
-```bash
-# Basic usage patterns
-python3 memory/examples/usage_examples.py
-
-# Heartbeat integration pattern
-python3 memory/examples/integration_example.py
-```
-
-## Storage
-
-Memory is stored in `~/.scienceclaw/`:
-
-```
-~/.scienceclaw/
-├── journals/
-│   └── {agent_name}/
-│       └── journal.jsonl        # Append-only log
-│
-├── investigations/
-│   └── {agent_name}/
-│       └── tracker.json         # Active/completed investigations
-│
-└── knowledge/
-    └── {agent_name}/
-        └── graph.json           # Concepts and relationships
-```
-
-## Components
-
-### AgentJournal
-
-Append-only log of all agent activities:
-
-```python
-journal = AgentJournal("BioAgent-7")
-
-# Log different entry types
-journal.log_observation(content="...", observation="...", source="...")
-journal.log_hypothesis(content="...", hypothesis="...", testable=True)
-journal.log_experiment(content="...", tool="blast", parameters={}, results={})
-journal.log_conclusion(content="...", conclusion="...", confidence=0.8)
-
-# Query journal
-recent = journal.get_recent_entries(limit=10)
-by_type = journal.get_entries_by_type("hypothesis")
-searched = journal.search_entries("CRISPR")
-```
-
-### InvestigationTracker
-
-Multi-step investigation management:
-
-```python
-tracker = InvestigationTracker("BioAgent-7")
 
 # Create investigation
 inv_id = tracker.create_investigation(
-    hypothesis="Aspirin crosses BBB",
-    goal="Test BBB prediction",
-    priority="medium"
+    hypothesis="LNP composition affects delivery",
+    goal="Identify optimal lipid ratios",
+    planned_experiments=["pubmed_search", "chembl_search"]
+)
+```
+
+---
+
+## CLI Interface
+
+```bash
+# Check agent stats
+python3 memory_cli.py --agent MyAgent stats
+
+# View recent journal entries
+python3 memory_cli.py --agent MyAgent journal --recent 10
+
+# Check active investigations
+python3 memory_cli.py --agent MyAgent investigations --active
+
+# Search knowledge graph
+python3 memory_cli.py --agent MyAgent graph --search "CRISPR"
+```
+
+---
+
+## Storage
+
+Memory is stored as plain-text JSON files in your home directory:
+
+```
+~/.scienceclaw/
+├── journals/MyAgent/journal.jsonl       # All observations and hypotheses
+├── investigations/MyAgent/tracker.json   # Investigation tracking
+└── knowledge/MyAgent/graph.json         # Knowledge graph
+```
+
+You can inspect these files directly!
+
+---
+
+## Common Patterns
+
+### Pattern 1: Multi-Cycle Investigation
+
+```python
+# Heartbeat 1: Start investigation
+inv_id = tracker.create_investigation(
+    hypothesis="...",
+    planned_experiments=["pubmed", "chembl", "tdc"]
 )
 
-# Add experiments
-tracker.add_experiment(inv_id, {
-    "tool": "pubchem",
-    "parameters": {"query": "aspirin"},
-    "results_summary": "SMILES: CC(=O)OC1=..."
-})
+# Heartbeat 2: Continue (fetch active investigations)
+active = tracker.get_active_investigations()
+inv = active[0]
+tracker.add_experiment(inv['id'], experiment_data)
 
-# Mark complete
-tracker.mark_complete(inv_id, conclusion="Hypothesis supported")
-
-# Check for duplicates
-is_dup = tracker.is_duplicate_investigation("Aspirin crosses BBB")
+# Heartbeat 3: Complete
+tracker.mark_complete(
+    inv_id,
+    conclusion="Found optimal concentration is 50mol%",
+    confidence="high"
+)
 ```
 
-### KnowledgeGraph
-
-Graph database of scientific knowledge:
+### Pattern 2: Knowledge Accumulation
 
 ```python
-kg = KnowledgeGraph("BioAgent-7")
+# After each discovery
+kg.add_finding(
+    finding="DLin-MC3-DMA at 50mol% optimal for muscle delivery",
+    related_concepts=[
+        {"name": "DLin-MC3-DMA", "type": "compound"},
+        {"name": "muscle tissue", "type": "organism"}
+    ]
+)
 
-# Add concepts
-kg.add_concept("aspirin", type="compound")
-kg.add_concept("BBB", type="biological_barrier")
-
-# Add relationships
-kg.add_relationship("aspirin", "crosses", "BBB", confidence=0.87)
-
-# Query
-concepts = kg.get_related_concepts("aspirin")
-neighbors = kg.get_neighbors("aspirin")
-shortest = kg.find_shortest_path("aspirin", "brain")
+# Detect contradictions
+contradictions = kg.find_contradictions()
 ```
 
-## Integration with Autonomous Loop
+---
 
-The autonomous heartbeat daemon uses memory to:
+## Components
 
-1. **Check for duplicates** - Avoid re-investigating topics
-2. **Track progress** - Resume multi-step investigations
-3. **Learn from history** - Build on past findings
-4. **Maintain context** - Remember conversations and interactions
+| Component | Purpose | File |
+|-----------|---------|------|
+| **AgentJournal** | Record observations, hypotheses, results | `journal.py` |
+| **InvestigationTracker** | Track multi-cycle investigations | `investigation_tracker.py` |
+| **KnowledgeGraph** | Build semantic knowledge network | `knowledge_graph.py` |
+| **CLI** | Command-line inspection interface | `tools/cli.py` |
 
-Example integration:
-
-```python
-from memory import AgentJournal, InvestigationTracker, KnowledgeGraph
-from autonomous import AutonomousLoopController
-
-# Initialize
-journal = AgentJournal(agent_name)
-tracker = InvestigationTracker(agent_name)
-kg = KnowledgeGraph(agent_name)
-
-controller = AutonomousLoopController(agent_profile)
-
-# Run heartbeat with memory
-controller.run_heartbeat_cycle()
-# → Automatically uses memory for deduplication and context
-```
+---
 
 ## Testing
 
 ```bash
-# Run memory system tests
+# Run test suite
 python3 tests/test_memory.py
 
-# Or use pytest
-pytest tests/test_memory.py -v
+# Check integration with heartbeat
+python3 memory/examples/integration_example.py
 ```
-
-## Performance
-
-- **Journal**: O(1) append, O(n) search
-- **Investigations**: O(1) lookup by ID
-- **Knowledge Graph**: O(edges) for traversal
-
-For typical agent workloads (<10K entries), performance is excellent.
-
-## File Formats
-
-### Journal (JSONL)
-```json
-{"timestamp": "2026-02-08T12:00:00", "type": "observation", "content": "..."}
-{"timestamp": "2026-02-08T12:05:00", "type": "hypothesis", "hypothesis": "..."}
-```
-
-### Investigations (JSON)
-```json
-{
-  "investigations": {
-    "inv_123": {
-      "hypothesis": "...",
-      "status": "active",
-      "experiments": [...]
-    }
-  }
-}
-```
-
-### Knowledge Graph (JSON)
-```json
-{
-  "concepts": {
-    "aspirin": {"type": "compound", "added": "2026-02-08T12:00:00"}
-  },
-  "relationships": [
-    {"from": "aspirin", "to": "BBB", "type": "crosses", "confidence": 0.87}
-  ]
-}
-```
-
-## Best Practices
-
-1. **Use descriptive content** - Make journal entries searchable
-2. **Set priorities** - Mark important investigations as "high"
-3. **Add metadata** - Include source URLs, timestamps, agent info
-4. **Regular cleanup** - Archive old investigations periodically
-5. **Backup storage** - Memory files are precious
-
-## Troubleshooting
-
-**"Permission denied"**
-- Check `~/.scienceclaw/` directory permissions
-- Run: `chmod 700 ~/.scienceclaw`
-
-**"File not found"**
-- Memory is created on first use
-- Run setup: `python3 setup.py --quick`
-
-**Large file sizes**
-- Archive old journal entries: `journal.archive_old_entries(days=90)`
-- Compact knowledge graph: `kg.prune_low_confidence_edges(threshold=0.3)`
-
-## API Reference
-
-See docstrings in:
-- `memory/journal.py` - AgentJournal API
-- `memory/investigation_tracker.py` - InvestigationTracker API
-- `memory/knowledge_graph.py` - KnowledgeGraph API
-
-## Contributing
-
-When adding features to the memory system:
-
-1. Add to appropriate module (journal, tracker, or graph)
-2. Update examples in `memory/examples/`
-3. Add tests to `tests/test_memory.py`
-4. Update this README
 
 ---
 
-**Status**: Production-ready, actively used by Phase 3 autonomous loop.
+## See Also
+
+- [README.md](../README.md) - Main ScienceClaw documentation
+- [Full docstrings](journal.py) - For detailed API reference
