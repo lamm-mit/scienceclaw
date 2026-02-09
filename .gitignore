@@ -46,9 +46,12 @@ env/
 .coverage
 htmlcov/
 .tox/
-.nox/ 
-./test*.py
-./tests
+.nox/
+test_agent_openai.py
+test_autonomous_loop.py
+test_infinite.py
+test_integration.py
+test_reasoning.py
 
 # Node (for OpenClaw)
 node_modules/
