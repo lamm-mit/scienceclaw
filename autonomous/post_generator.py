@@ -27,6 +27,11 @@ from typing import Dict, Optional, List
 from datetime import datetime
 import subprocess
 
+# Add parent directory to Python path for imports
+scienceclaw_root = Path(__file__).parent.parent
+if str(scienceclaw_root) not in sys.path:
+    sys.path.insert(0, str(scienceclaw_root))
+
 # Try to import requests
 try:
     import requests
@@ -120,6 +125,17 @@ class AutomatedPostGenerator:
         print(f"    --capabilities pubmed pubchem \\")
         print(f"    --proof-tool pubmed --proof-query 'test'")
         return False
+    
+    def _get_actual_agent_name(self) -> Optional[str]:
+        """Get the actual agent name from config file."""
+        if self.config_file.exists():
+            try:
+                with open(self.config_file) as f:
+                    config = json.load(f)
+                    return config.get("agent_name")
+            except Exception:
+                pass
+        return None
     
     def run_pubmed_search(self, query: str, max_results: int = 3) -> Dict:
         """
@@ -233,8 +249,8 @@ class AutomatedPostGenerator:
         if detailed and len(papers) >= 2:
             return self._generate_detailed_content(topic, papers, pmids)
         else:
-            # Generate title from topic
-            title = f"Investigation: {topic.title()}"
+            # Generate title from topic (preserve original capitalization)
+            title = f"Investigation: {topic}"
             
             # Generate structured content
             hypothesis = (
@@ -325,12 +341,12 @@ This analysis highlights key opportunities for advancing {topic}:
 - Clinical translation pathways informed by mechanistic understanding
 - Integration with complementary therapeutic strategies"""
             
-            # Generate title
-            title_parts = topic.title().split()
+            # Generate title (preserve original topic capitalization)
+            title_parts = topic.split()
             if len(title_parts) > 2:
                 title = f"{title_parts[0]} {title_parts[1]}: Mechanisms, Applications, and Therapeutic Implications"
             else:
-                title = f"{topic.title()}: Comprehensive Mechanistic Analysis"
+                title = f"{topic}: Comprehensive Mechanistic Analysis"
             
             return {
                 "title": title,
@@ -383,7 +399,12 @@ This analysis highlights key opportunities for advancing {topic}:
             )
             
             if response.status_code in [200, 201]:
-                return response.json()
+                result = response.json()
+                # Ensure post ID is accessible
+                if isinstance(result, dict):
+                    if "post" in result and isinstance(result["post"], dict):
+                        return result["post"]  # Return the post object directly
+                return result
             else:
                 return {
                     "error": f"API error: {response.status_code}",
@@ -396,7 +417,8 @@ This analysis highlights key opportunities for advancing {topic}:
                          topic: str,
                          community: Optional[str] = None,
                          search_query: Optional[str] = None,
-                         max_results: int = 3) -> Dict:
+                         max_results: int = 3,
+                         deep_investigation: bool = True) -> Dict:
         """
         Complete automated workflow: search → analyze → generate → post.
         
@@ -405,47 +427,108 @@ This analysis highlights key opportunities for advancing {topic}:
             community: Target community (auto-selected if None)
             search_query: Custom search query (uses topic if None)
             max_results: Number of results to retrieve
+            deep_investigation: Use multi-tool deep investigation (default: True)
         
         Returns:
             Dictionary with status and post ID (or error)
         """
-        print(f"🔬 {self.agent_name}: Starting automated post generation")
-        print(f"📋 Topic: {topic}")
+        print(f"🔬 ScienceClaw Automated Post Generator")
+        print(f"🌐 Platform: Infinite\n")
         
-        # Run search
-        query = search_query or topic
-        print(f"🔍 Searching PubMed for: {query}")
-        search_results = self.run_pubmed_search(query, max_results)
+        # Get actual agent name from config
+        actual_agent = self._get_actual_agent_name()
+        if actual_agent and actual_agent != self.agent_name:
+            print(f"  ⚠️  Using authenticated agent: {actual_agent}")
+            self.agent_name = actual_agent
         
-        if "error" in search_results:
-            print(f"❌ Search failed: {search_results['error']}")
-            return {"error": f"Search failed: {search_results['error']}"}
+        # Use deep investigation if enabled
+        if deep_investigation:
+            try:
+                from autonomous.deep_investigation import run_deep_investigation
+                
+                # Run comprehensive multi-tool investigation
+                content_data = run_deep_investigation(
+                    agent_name=self.agent_name,
+                    topic=topic,
+                    community=community
+                )
+                
+                # Select community
+                selected_community = community or self.select_community(topic)
+                print(f"  📍 Community: {selected_community}\n")
+                
+                # Post to Infinite
+                print("  📤 Posting to Infinite...")
+                result = self.post_to_infinite(
+                    community=selected_community,
+                    title=content_data["title"],
+                    hypothesis=content_data["hypothesis"],
+                    method=content_data["method"],
+                    findings=content_data["findings"],
+                    content=content_data["content"]
+                )
+                
+                if "error" in result:
+                    print(f"  ❌ Post failed: {result['error']}")
+                    return result
+                
+                print("  ✅ Post created successfully!")
+                post_id = result.get("id", "unknown")
+                print(f"  📎 Post ID: {post_id}")
+                print(f"  🌐 https://infinite-phi-one.vercel.app/post/{post_id}")
+                
+                return {
+                    "success": True,
+                    "post_id": post_id,
+                    "url": f"https://infinite-phi-one.vercel.app/post/{post_id}",
+                    "agent": self.agent_name,
+                    "investigation_type": "deep_multi_tool"
+                }
+                
+            except ImportError as e:
+                print(f"  ⚠️  Deep investigation unavailable: {e}")
+                print(f"  ℹ️  Falling back to simple investigation\n")
+                deep_investigation = False
         
-        papers_count = len(search_results.get("papers", []))
-        print(f"✓ Found {papers_count} papers")
-        
-        # Select community
-        selected_community = community or self.select_community(topic)
-        print(f"📍 Community: {selected_community}")
-        
-        # Generate content
-        print("✍️  Generating structured content...")
-        content = self.generate_content(topic, search_results)
-        
-        # Post to Infinite
-        print("📤 Posting to Infinite...")
-        result = self.post_to_infinite(
-            community=selected_community,
-            title=content["title"],
-            hypothesis=content["hypothesis"],
-            method=content["method"],
-            findings=content["findings"],
-            content=content["content"]
-        )
-        
-        if "error" in result:
-            print(f"❌ Post failed: {result['error']}")
-            return result
+        # Fallback to simple investigation
+        if not deep_investigation:
+            print(f"🔬 {self.agent_name}: Starting automated post generation")
+            print(f"📋 Topic: {topic}")
+            
+            # Run search
+            query = search_query or topic
+            print(f"🔍 Searching PubMed for: {query}")
+            search_results = self.run_pubmed_search(query, max_results)
+            
+            if "error" in search_results:
+                print(f"❌ Search failed: {search_results['error']}")
+                return {"error": f"Search failed: {search_results['error']}"}
+            
+            papers_count = len(search_results.get("papers", []))
+            print(f"✓ Found {papers_count} papers")
+            
+            # Select community
+            selected_community = community or self.select_community(topic)
+            print(f"📍 Community: {selected_community}")
+            
+            # Generate content
+            print("✍️  Generating structured content...")
+            content = self.generate_content(topic, search_results)
+            
+            # Post to Infinite
+            print("📤 Posting to Infinite...")
+            result = self.post_to_infinite(
+                community=selected_community,
+                title=content["title"],
+                hypothesis=content["hypothesis"],
+                method=content["method"],
+                findings=content["findings"],
+                content=content["content"]
+            )
+            
+            if "error" in result:
+                print(f"❌ Post failed: {result['error']}")
+                return result
         
         post_id = result.get("post", {}).get("id")
         if post_id:
