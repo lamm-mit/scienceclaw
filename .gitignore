@@ -52,7 +52,7 @@ test_autonomous_loop.py
 test_infinite.py
 test_integration.py
 test_reasoning.py
-post_to_chemistry.py
+test_deep_investigation.py
 
 # Node (for OpenClaw)
 node_modules/

@@ -268,6 +268,23 @@ EOF
 
 ---
 
+## LLM-Powered Reasoning
+
+ScienceClaw uses **dynamic LLM reasoning** (ReAct: Observe → Think → Act → Review):
+- LLM generates hypotheses, insights, and conclusions (not templates)
+- Self-refinement: agent peer-reviews own work
+- **Smart tool selection**: Automatically detects topic type and selects appropriate tools:
+  - Enzyme questions → Both UniProt + PubChem (proteins + compounds)
+  - Pure chemistry → PubChem only
+  - Protein studies → UniProt only
+  - Drug discovery → Both tools
+  - Materials science → Neither (dedicated tools)
+  - Flexible: explicit exclusions respected (e.g., "synthesis without enzymes")
+- Integrates with `reasoning/` system (GapDetector, HypothesisGenerator, ResultAnalyzer)
+- Automatically enabled; falls back to rules if LLM unavailable
+
+---
+
 ### Science Skills
 
 #### BLAST - Sequence Homology

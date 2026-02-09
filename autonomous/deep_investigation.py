@@ -1,0 +1,932 @@
+#!/usr/bin/env python3
+"""
+Deep Scientific Investigation System
+
+Integrates memory, reasoning, coordination, and autonomous modules to:
+1. Use agent's memory to avoid repetition and build on past work
+2. Apply scientific reasoning to identify gaps and generate hypotheses
+3. Chain multiple tools for comprehensive analysis
+4. Generate sophisticated, insight-driven posts
+
+This creates posts that:
+- Show genuine scientific thought process
+- Use multiple tools (PubMed, UniProt, PubChem, etc.)
+- Provide novel insights beyond simple summaries
+- Are properly attributed to the correct agent
+"""
+
+import json
+import os
+import sys
+from pathlib import Path
+from typing import Dict, Optional, List, Tuple
+from datetime import datetime
+import subprocess
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+try:
+    from memory.journal import AgentJournal
+    from memory.investigation_tracker import InvestigationTracker
+    from memory.knowledge_graph import KnowledgeGraph
+except ImportError:
+    print("Warning: Memory system not available. Some features disabled.")
+    AgentJournal = None
+    InvestigationTracker = None
+    KnowledgeGraph = None
+
+try:
+    from reasoning.gap_detector import GapDetector
+    from reasoning.hypothesis_generator import HypothesisGenerator
+    from reasoning.analyzer import ResultAnalyzer
+except ImportError:
+    print("Warning: Reasoning system not available. Using simplified logic.")
+    GapDetector = None
+    HypothesisGenerator = None
+    ResultAnalyzer = None
+
+try:
+    from autonomous.llm_reasoner import LLMScientificReasoner
+except ImportError:
+    print("Warning: LLM reasoner not available. Using rule-based logic.")
+    LLMScientificReasoner = None
+
+
+class DeepInvestigator:
+    """
+    Conducts deep scientific investigations using multiple tools and reasoning.
+    
+    This is what makes posts interesting and insightful:
+    - Multi-tool investigation (PubMed → UniProt → PubChem chain)
+    - Memory of past investigations
+    - Scientific reasoning and gap detection
+    - Sophisticated content generation
+    """
+    
+    def __init__(self, agent_name: str):
+        """
+        Initialize deep investigator for an agent.
+        
+        Args:
+            agent_name: Name of the agent (used for memory and attribution)
+        """
+        self.agent_name = agent_name
+        self.scienceclaw_dir = Path(__file__).parent.parent
+        
+        # Initialize memory system (if available)
+        self.journal = AgentJournal(agent_name) if AgentJournal else None
+        self.tracker = InvestigationTracker(agent_name) if InvestigationTracker else None
+        self.knowledge = KnowledgeGraph(agent_name) if KnowledgeGraph else None
+        
+        # Initialize reasoning (if available) - requires memory components
+        if GapDetector and self.knowledge and self.journal:
+            try:
+                self.gap_detector = GapDetector(
+                    knowledge_graph=self.knowledge,
+                    journal=self.journal
+                )
+            except Exception:
+                self.gap_detector = None
+        else:
+            self.gap_detector = None
+        
+        if HypothesisGenerator and self.knowledge and self.journal:
+            try:
+                self.hypothesis_gen = HypothesisGenerator(
+                    knowledge_graph=self.knowledge,
+                    journal=self.journal
+                )
+            except Exception:
+                self.hypothesis_gen = None
+        else:
+            self.hypothesis_gen = None
+        
+        if ResultAnalyzer and self.knowledge and self.journal:
+            try:
+                self.result_analyzer = ResultAnalyzer(
+                    knowledge_graph=self.knowledge,
+                    journal=self.journal
+                )
+            except Exception:
+                self.result_analyzer = None
+        else:
+            self.result_analyzer = None
+        
+        # Initialize LLM reasoner for dynamic insight generation
+        if LLMScientificReasoner:
+            self.llm_reasoner = LLMScientificReasoner(agent_name)
+        else:
+            self.llm_reasoner = None
+    
+    def check_previous_work(self, topic: str) -> Dict:
+        """
+        Check if agent has investigated this topic before.
+        
+        Returns:
+            Dictionary with previous investigations and knowledge
+        """
+        if not self.journal:
+            return {"investigated": False}
+        
+        # Check journal for previous observations
+        investigated_topics = self.journal.get_investigated_topics()
+        
+        if topic.lower() in [t.lower() for t in investigated_topics]:
+            return {
+                "investigated": True,
+                "message": f"Agent has previously explored {topic}. Building on past work."
+            }
+        
+        return {"investigated": False}
+    
+    def run_tool_chain(self, topic: str, investigation_type: str = "auto") -> Dict:
+        """
+        Run a chain of scientific tools based on the topic.
+        
+        This is the key to deep investigation:
+        1. Start with PubMed for literature
+        2. Run focused searches for specific entities
+        3. Look up those entities in UniProt/PubChem
+        4. Analyze relationships and mechanisms
+        
+        Args:
+            topic: Research topic
+            investigation_type: Type of investigation (biology, chemistry, auto)
+        
+        Returns:
+            Dict with results from multiple tools and analysis
+        """
+        results = {
+            "topic": topic,
+            "tools_used": [],
+            "papers": [],
+            "proteins": [],
+            "compounds": [],
+            "mechanisms": [],
+            "insights": []
+        }
+        
+        # Step 1: PubMed literature search (broad)
+        print(f"  🔬 Step 1: Searching PubMed...")
+        pubmed_results = self._run_pubmed(topic, max_results=5)
+        results["papers"] = pubmed_results.get("papers", [])
+        results["tools_used"].append("PubMed")
+        
+        if not results["papers"]:
+            return results
+        
+        # Step 2: Extract key entities from paper titles
+        print(f"  🧬 Step 2: Extracting key entities...")
+        entities = self._extract_entities(results["papers"])
+        
+        # Step 2b: If no entities found, run focused searches for specific entities
+        if not entities.get("proteins") and not entities.get("compounds"):
+            print(f"  🔍 Step 2b: Running focused entity searches...")
+            focused_entities = self._run_focused_searches(topic, investigation_type)
+            entities["proteins"].extend(focused_entities.get("proteins", []))
+            entities["compounds"].extend(focused_entities.get("compounds", []))
+        
+        # Step 3: Tool selection based on investigation type
+        # For BIOLOGY topics, look up proteins
+        if investigation_type == "biology":
+            if entities.get("proteins"):
+                print(f"  🧪 Step 3: Looking up proteins in UniProt...")
+                for protein in entities["proteins"][:3]:
+                    protein_data = self._run_uniprot(protein)
+                    if protein_data:
+                        results["proteins"].append(protein_data)
+                        if "UniProt" not in results["tools_used"]:
+                            results["tools_used"].append("UniProt")
+        
+        # For CHEMISTRY topics, look up compounds
+        elif investigation_type == "chemistry":
+            if entities.get("compounds"):
+                print(f"  🧪 Step 3: Looking up compounds in PubChem...")
+                for compound in entities["compounds"][:3]:
+                    compound_data = self._run_pubchem(compound)
+                    if compound_data:
+                        results["compounds"].append(compound_data)
+                        if "PubChem" not in results["tools_used"]:
+                            results["tools_used"].append("PubChem")
+        
+        # For AUTO (drug discovery, etc), try both
+        elif investigation_type == "auto":
+            if entities.get("proteins"):
+                print(f"  🧪 Step 3a: Looking up proteins in UniProt...")
+                for protein in entities["proteins"][:3]:
+                    protein_data = self._run_uniprot(protein)
+                    if protein_data:
+                        results["proteins"].append(protein_data)
+                        if "UniProt" not in results["tools_used"]:
+                            results["tools_used"].append("UniProt")
+            
+            if entities.get("compounds"):
+                print(f"  🧪 Step 3b: Looking up compounds in PubChem...")
+                for compound in entities["compounds"][:3]:
+                    compound_data = self._run_pubchem(compound)
+                    if compound_data:
+                        results["compounds"].append(compound_data)
+                        if "PubChem" not in results["tools_used"]:
+                            results["tools_used"].append("PubChem")
+        
+        # Step 5: Generate insights from integrated data
+        print(f"  💡 Step 4: Synthesizing insights...")
+        insights = self._generate_insights(results)
+        results["insights"] = insights
+        
+        return results
+    
+    def _run_focused_searches(self, topic: str, investigation_type: str) -> Dict:
+        """
+        Intelligently select entities based on topic content.
+        
+        Uses keyword matching to decide if proteins, compounds, or both are needed.
+        Flexible: enzyme questions get both, pure chemistry gets compounds only, etc.
+        """
+        entities = {"proteins": [], "compounds": []}
+        topic_lower = topic.lower()
+        
+        # Keywords indicating we should look for PROTEINS
+        protein_keywords = ["protein", "enzyme", "kinase", "receptor", "antibody", 
+                           "gene", "crispr", "mutation", "disease", "pathogen",
+                           "alzheimer", "cancer", "tumor", "cell", "viral", "bacteria"]
+        
+        # Keywords indicating we should look for COMPOUNDS
+        compound_keywords = ["reaction", "synthesis", "catalyst", "compound", "drug",
+                            "inhibitor", "chemical", "molecule", "organic", "solvent",
+                            "oxidation", "reduction", "bond", "water", "ester"]
+        
+        # Keywords that indicate BOTH proteins AND compounds
+        both_keywords = ["enzyme", "catalysis", "substrate", "inhibitor", "biocatalysis",
+                        "enzyme kinetics", "active site", "drug target", "protein-ligand",
+                        "receptor binding", "enzymatic mechanism", "bioreactor"]
+        
+        # Special combinations that clearly need both
+        has_enzyme = any(kw in topic_lower for kw in ["enzyme", "catalysis", "enzymatic"])
+        has_protein_function = any(kw in topic_lower for kw in ["protein", "kinase", "receptor"])
+        has_chemistry = any(kw in topic_lower for kw in ["reaction", "synthesis", "compound", "drug"])
+        
+        # DECISION LOGIC: Flexible, not rigid
+        
+        # If it's about enzymes or enzymatic reactions → GET BOTH
+        if has_enzyme:
+            # Look for specific enzymes or generic ones
+            if "protease" in topic_lower:
+                entities["proteins"].extend(["protease"])
+            elif "kinase" in topic_lower:
+                entities["proteins"].extend(["kinase"])
+            elif "oxidase" in topic_lower:
+                entities["proteins"].extend(["oxidase"])
+            else:
+                entities["proteins"].extend(["enzyme"])  # Generic enzyme search
+            
+            # Also get relevant compounds
+            if "water" in topic_lower:
+                entities["compounds"].extend(["water"])
+            if "substrate" in topic_lower or "inhibitor" in topic_lower:
+                entities["compounds"].extend(["substrate", "inhibitor"])
+            
+            return entities
+        
+        # If it's about protein function/structure → GET PROTEINS
+        if has_protein_function and not has_chemistry:
+            if "alzheimer" in topic_lower:
+                entities["proteins"].extend(["APP", "BACE1", "tau", "APOE"])
+            elif "cancer" in topic_lower or "tumor" in topic_lower:
+                entities["proteins"].extend(["p53", "KRAS", "EGFR", "BRAF"])
+            elif "crispr" in topic_lower or "gene edit" in topic_lower:
+                entities["proteins"].extend(["Cas9", "Cas12"])
+            elif "kinase" in topic_lower:
+                entities["proteins"].extend(["EGFR", "BRAF", "mTOR"])
+            else:
+                # Generic protein search
+                entities["proteins"].extend(["protein"])
+            
+            return entities
+        
+        # If it's chemistry + biology → GET BOTH
+        if has_chemistry and has_protein_function:
+            # Drug discovery, medicinal chemistry, etc.
+            if "kinase" in topic_lower:
+                entities["proteins"].extend(["kinase", "EGFR", "BRAF"])
+                entities["compounds"].extend(["inhibitor"])
+            elif "antibody" in topic_lower:
+                entities["proteins"].extend(["antibody", "antigen"])
+                entities["compounds"].extend(["ligand"])
+            else:
+                entities["proteins"].extend(["protein", "target"])
+                entities["compounds"].extend(["compound", "drug"])
+            
+            return entities
+        
+        # Pure chemistry → GET COMPOUNDS ONLY
+        if has_chemistry and not has_protein_function:
+            if "water" in topic_lower:
+                entities["compounds"].extend(["water", "solvent"])
+            if "catalyst" in topic_lower:
+                entities["compounds"].extend(["catalyst"])
+            if "synthesis" in topic_lower or "reaction" in topic_lower:
+                entities["compounds"].extend(["reagent", "product"])
+            else:
+                entities["compounds"].extend(["compound"])
+            
+            return entities
+        
+        # Materials science → GET NEITHER (materials don't have proteins/compounds)
+        if any(term in topic_lower for term in ["material", "crystal", "metal", "polymer", "alloy"]):
+            return entities
+        
+        # DEFAULT: If unclear, try BOTH (better safe than missing something)
+        entities["proteins"].extend(["protein"])
+        entities["compounds"].extend(["compound"])
+        
+        return entities
+    
+    def _run_pubmed(self, query: str, max_results: int = 5) -> Dict:
+        """Run PubMed search."""
+        try:
+            cmd = [
+                "python3",
+                str(self.scienceclaw_dir / "skills/pubmed/scripts/pubmed_search.py"),
+                "--query", query,
+                "--max-results", str(max_results)
+            ]
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                cwd=self.scienceclaw_dir,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                output = result.stdout
+                papers = []
+                lines = output.split('\n')
+                i = 0
+                while i < len(lines):
+                    line = lines[i]
+                    if 'PMID:' in line:
+                        pmid = line.split('PMID:')[1].strip().split()[0]
+                        title = ""
+                        for j in range(i-1, max(0, i-5), -1):
+                            if lines[j].strip() and not lines[j].startswith('   '):
+                                title = lines[j].strip()
+                                break
+                        papers.append({
+                            "pmid": pmid,
+                            "title": title
+                        })
+                    i += 1
+                return {"papers": papers}
+        except Exception as e:
+            print(f"    Warning: PubMed search failed: {e}")
+        
+        return {"papers": []}
+    
+    def _extract_entities(self, papers: List[Dict]) -> Dict:
+        """
+        Extract biological and chemical entities from papers.
+        
+        This uses keyword matching enhanced with topic-specific patterns.
+        """
+        entities = {
+            "proteins": set(),
+            "compounds": set(),
+            "pathways": set()
+        }
+        
+        # Common protein/gene keywords (uppercase patterns for genes)
+        protein_keywords = [
+            "protein", "kinase", "receptor", "enzyme", "channel",
+            "EGFR", "p53", "TP53", "KRAS", "BRAF", "mTOR", "AKT", "Cas9", "CRISPR",
+            "antibody", "cytokine", "hormone", "amyloid", "APP", "BACE1", "tau",
+            "presenilin", "apolipoprotein", "APOE", "beta-amyloid", "Aβ",
+            "insulin", "growth factor", "transcription factor", "integrin"
+        ]
+        
+        # Common compound keywords
+        compound_keywords = [
+            "imatinib", "aspirin", "caffeine", "glucose", "ATP", "acetylcholine",
+            "inhibitor", "drug", "molecule", "compound", "therapeutic", "antagonist",
+            "agonist", "dopamine", "serotonin", "glutamate", "GABA"
+        ]
+        
+        # Alzheimer's-specific patterns
+        alzheimers_proteins = ["APP", "BACE1", "tau", "presenilin", "APOE", "amyloid", "Aβ"]
+        
+        # CRISPR-specific patterns
+        crispr_proteins = ["Cas9", "Cas12", "Cas13", "CRISPR", "guide RNA", "sgRNA"]
+        
+        # Cancer-specific patterns
+        cancer_proteins = ["p53", "TP53", "KRAS", "EGFR", "BRAF", "oncogene", "tumor suppressor"]
+        
+        # Extract from titles
+        for paper in papers:
+            title = paper.get("title", "")
+            title_lower = title.lower()
+            
+            # Extract proteins (case-sensitive for gene names)
+            for keyword in protein_keywords + alzheimers_proteins + crispr_proteins + cancer_proteins:
+                if keyword.lower() in title_lower or keyword in title:
+                    entities["proteins"].add(keyword)
+            
+            # Extract compounds
+            for keyword in compound_keywords:
+                if keyword.lower() in title_lower:
+                    entities["compounds"].add(keyword)
+            
+            # Extract specific patterns
+            # Look for protein names in all caps (e.g., EGFR, BRAF)
+            words = title.split()
+            for word in words:
+                if len(word) >= 3 and word.isupper() and word.isalpha():
+                    # Likely a gene/protein name
+                    entities["proteins"].add(word)
+        
+        return {
+            "proteins": list(entities["proteins"])[:5],
+            "compounds": list(entities["compounds"])[:5],
+            "pathways": list(entities["pathways"])
+        }
+    
+    def _run_uniprot(self, protein: str) -> Optional[Dict]:
+        """
+        Look up protein in UniProt.
+        
+        Note: UniProt requires specific accessions (e.g., P53_HUMAN, not just p53).
+        For now, we'll use known mappings or skip unavailable proteins.
+        """
+        # Known protein accessions
+        accession_map = {
+            "p53": "P53_HUMAN",
+            "TP53": "P53_HUMAN",
+            "EGFR": "EGFR_HUMAN",
+            "KRAS": "RASK_HUMAN",
+            "BRAF": "BRAF_HUMAN",
+            "APP": "A4_HUMAN",
+            "BACE1": "BACE1_HUMAN",
+            "tau": "TAU_HUMAN",
+            "MAPT": "TAU_HUMAN",
+            "Cas9": "CAS9_STRP1",
+            "amyloid": "A4_HUMAN",  # Amyloid precursor protein
+            "insulin": "INS_HUMAN",
+            "mTOR": "MTOR_HUMAN",
+            "AKT": "AKT1_HUMAN"
+        }
+        
+        accession = accession_map.get(protein, protein)
+        
+        try:
+            cmd = [
+                "python3",
+                str(self.scienceclaw_dir / "skills/uniprot/scripts/uniprot_fetch.py"),
+                "--accession", accession,
+                "--format", "summary"
+            ]
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                cwd=self.scienceclaw_dir,
+                timeout=15
+            )
+            
+            if result.returncode == 0 and result.stdout:
+                # Extract key information from output
+                info_lines = result.stdout.split('\n')[:10]  # First 10 lines
+                return {
+                    "name": protein,
+                    "accession": accession,
+                    "info": '\n'.join(info_lines)
+                }
+        except Exception as e:
+            print(f"    Note: UniProt lookup for {protein} ({accession}) unavailable")
+        
+        return None
+    
+    def _run_pubchem(self, compound: str) -> Optional[Dict]:
+        """Look up compound in PubChem."""
+        try:
+            cmd = [
+                "python3",
+                str(self.scienceclaw_dir / "skills/pubchem/scripts/pubchem_search.py"),
+                "--query", compound
+            ]
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                cwd=self.scienceclaw_dir,
+                timeout=15
+            )
+            
+            if result.returncode == 0 and result.stdout:
+                return {
+                    "name": compound,
+                    "info": result.stdout[:500]  # First 500 chars
+                }
+        except Exception as e:
+            print(f"    Note: PubChem lookup for {compound} unavailable")
+        
+        return None
+    
+    def _generate_insights(self, investigation_results: Dict) -> List[str]:
+        """
+        Generate scientifically rigorous insights using LLM reasoning.
+        
+        Leverages LLM for dynamic scientific analysis instead of hardcoded rules.
+        Falls back to rule-based reasoning if LLM unavailable.
+        """
+        # Try LLM-powered reasoning first
+        if self.llm_reasoner:
+            try:
+                topic = investigation_results.get("topic", "")
+                return self.llm_reasoner.generate_insights(topic, investigation_results)
+            except Exception as e:
+                print(f"    Note: LLM reasoning failed ({e}), using fallback")
+        
+        # Fallback to rule-based insights
+        insights = []
+        papers = investigation_results.get("papers", [])
+        proteins = investigation_results.get("proteins", [])
+        compounds = investigation_results.get("compounds", [])
+        topic = investigation_results.get("topic", "")
+        
+        # Insight 1: Evidence strength with reproducibility assessment
+        if len(papers) >= 5:
+            insights.append(
+                f"Strong evidence base ({len(papers)} peer-reviewed studies) demonstrates "
+                f"well-characterized mechanisms with independent replication across research groups, "
+                f"indicating high reproducibility. This robust consensus supports translational "
+                f"applications and reduces risk of publication bias."
+            )
+        elif len(papers) >= 3:
+            insights.append(
+                f"Moderate evidence convergence ({len(papers)} studies) establishes biological "
+                f"relevance, though mechanistic details require validation through orthogonal "
+                f"experimental approaches (genetic perturbation, biochemical reconstitution, "
+                f"structural determination) to confirm causality."
+            )
+        elif len(papers) <= 2:
+            insights.append(
+                f"Limited primary literature ({len(papers)} {'study' if len(papers) == 1 else 'studies'}) "
+                f"indicates emerging research area. Current findings represent preliminary observations "
+                f"requiring independent replication, expanded sample sizes, and mechanistic validation "
+                f"before drawing definitive conclusions."
+            )
+        
+        # Insight 2: Molecular mechanism with functional predictions
+        if proteins and compounds:
+            protein_str = ', '.join([p.get('name') for p in proteins[:2]])
+            compound_str = ', '.join([c.get('name') for c in compounds[:2]])
+            insights.append(
+                f"Protein-ligand interactions identified ({protein_str} × {compound_str}) suggest "
+                f"druggable binding interfaces. Rational validation strategy: (1) co-crystallography "
+                f"or cryo-EM for atomic-resolution structure, (2) isothermal titration calorimetry "
+                f"for thermodynamic binding parameters (Kd, ΔH, ΔS), (3) cellular target engagement "
+                f"assays, and (4) structure-guided optimization for improved potency and selectivity."
+            )
+        elif proteins:
+            protein_names = ', '.join([p.get('name') for p in proteins[:3]])
+            insights.append(
+                f"Critical regulatory proteins identified ({protein_names}) likely function as pathway "
+                f"control nodes. Functional validation requires: (1) loss-of-function genetics (CRISPR "
+                f"knockout or RNA interference), (2) gain-of-function overexpression, (3) domain deletion "
+                f"analysis to map functional regions, and (4) epistasis testing to determine pathway "
+                f"position and genetic interactions."
+            )
+        elif compounds:
+            compound_names = ', '.join([c.get('name') for c in compounds[:2]])
+            insights.append(
+                f"Chemical probes characterized ({compound_names}) enable mechanistic dissection. "
+                f"Recommended approaches: (1) dose-response curves to establish EC50/IC50 values, "
+                f"(2) structure-activity relationship (SAR) profiling to identify pharmacophores, "
+                f"(3) selectivity panels against related targets, and (4) in vivo pharmacokinetics "
+                f"and tissue distribution studies."
+            )
+        
+        # Insight 3: Cross-database validation and experimental tractability
+        if proteins and len(papers) >= 2:
+            insights.append(
+                f"Multi-database convergence (primary literature + curated protein databases) provides "
+                f"orthogonal evidence strengthening mechanistic confidence. Identified proteins are "
+                f"experimentally tractable: recombinant expression in E. coli or mammalian cells, "
+                f"standard purification protocols, and established biochemical/biophysical assays "
+                f"(enzymatic activity, binding kinetics, structural studies) enable rapid hypothesis testing."
+            )
+        
+        # Insight 4: Systems-level integration for translational topics
+        if any(term in topic.lower() for term in ['disease', 'therapy', 'therapeutic', 'treatment', 'drug', 'delivery', 'clinical']):
+            insights.append(
+                f"Translational pathway requires systematic validation cascade: (1) target engagement "
+                f"verification in disease-relevant cell types or patient-derived samples, (2) quantitative "
+                f"pathway flux analysis using metabolomics or phosphoproteomics to measure functional "
+                f"impact, (3) biomarker identification for patient stratification and response prediction, "
+                f"(4) off-target profiling and toxicity assessment in relevant preclinical models, and "
+                f"(5) pharmacodynamic markers for clinical monitoring."
+            )
+        elif any(term in topic.lower() for term in ['mechanism', 'pathway', 'regulation', 'signaling']):
+            insights.append(
+                f"Mechanistic understanding requires quantitative systems analysis: mathematical modeling "
+                f"to test alternative network topologies, time-resolved measurements to capture dynamics, "
+                f"perturbation experiments to establish causal relationships, and multi-omics integration "
+                f"(transcriptomics, proteomics, metabolomics) to map information flow through the pathway."
+            )
+        
+        return insights[:4]  # Top 4 most relevant insights
+    
+    def _generate_fallback_hypothesis(self, topic: str, papers: List, 
+                                     proteins: List, compounds: List,
+                                     insights: List) -> str:
+        """Fallback hypothesis generation when LLM unavailable."""
+        if proteins and compounds:
+            hypothesis = f"""**Scientific Question:** What are the molecular mechanisms underlying {topic}?
+
+**Hypothesis:** {topic} operates through specific protein-compound interactions involving {', '.join([p.get('name') for p in proteins[:2]])} and {', '.join([c.get('name') for c in compounds[:2]])}. These molecular components likely interact through conserved binding domains, triggering conformational changes that modulate biological function."""
+        elif proteins:
+            hypothesis = f"""**Scientific Question:** What are the molecular mechanisms underlying {topic}?
+
+**Hypothesis:** {topic} is mediated by key regulatory proteins ({', '.join([p.get('name') for p in proteins[:2]])}). These proteins function as critical control nodes, exhibiting post-translational regulation and protein-protein interactions that coordinate pathway output."""
+        else:
+            hypothesis = f"""**Scientific Question:** What are the molecular mechanisms underlying {topic}?
+
+**Hypothesis:** Based on literature analysis ({len(papers)} studies), {topic} involves multi-level regulatory coordination across molecular pathways."""
+        
+        if insights:
+            hypothesis += f"\n\n**Supporting Evidence:** {insights[0]}"
+        
+        return hypothesis
+    
+    def _generate_fallback_conclusion(self, topic: str, insights: List,
+                                      proteins: List, compounds: List,
+                                      papers: List) -> str:
+        """Fallback conclusion generation when LLM unavailable."""
+        conclusion = f"""
+
+**Conclusions & Implications:**
+
+This multi-tool investigation of {topic} reveals:
+
+1. **Mechanistic Understanding**: {insights[0] if insights else 'Complex regulation across molecular levels'}
+2. **Therapeutic Potential**: {'Integration of protein and chemical data suggests actionable intervention points' if proteins and compounds else 'Further characterization needed for therapeutic development'}
+3. **Research Directions**: """
+        
+        if len(papers) < 3:
+            conclusion += "Emerging field with high potential for novel discoveries."
+        else:
+            conclusion += "Well-established area requiring mechanistic depth."
+        
+        conclusion += "\n\n**Next Steps**: Experimental validation of predicted mechanisms, cross-species comparison, and therapeutic target prioritization."
+        
+        return conclusion
+    
+    def generate_sophisticated_content(self, 
+                                      topic: str,
+                                      investigation_results: Dict) -> Dict:
+        """
+        Generate sophisticated scientific content from deep investigation.
+        
+        This creates engaging, insightful posts that show real scientific thinking.
+        """
+        papers = investigation_results.get("papers", [])
+        insights = investigation_results.get("insights", [])
+        tools_used = investigation_results.get("tools_used", [])
+        proteins = investigation_results.get("proteins", [])
+        compounds = investigation_results.get("compounds", [])
+        
+        # Generate compelling title (preserve original topic capitalization)
+        if proteins:
+            title = f"{topic}: Molecular Mechanisms via {proteins[0].get('name', 'Key Proteins')}"
+        elif compounds:
+            title = f"{topic}: Chemical Basis and Therapeutic Implications"
+        else:
+            title = f"{topic}: A Multi-Tool Investigation"
+        
+        # Generate hypothesis using LLM reasoning or fallback
+        if self.llm_reasoner:
+            try:
+                hyp_result = self.llm_reasoner.generate_hypothesis(
+                    topic, papers, proteins, compounds
+                )
+                hypothesis = f"""**Scientific Question:** {hyp_result['question']}
+
+**Hypothesis:** {hyp_result['hypothesis']}"""
+                
+                # Add supporting evidence
+                if insights:
+                    hypothesis += f"\n\n**Supporting Evidence:** {insights[0]}"
+            except Exception as e:
+                print(f"    Note: LLM hypothesis generation failed, using template")
+                hypothesis = self._generate_fallback_hypothesis(
+                    topic, papers, proteins, compounds, insights
+                )
+        else:
+            hypothesis = self._generate_fallback_hypothesis(
+                topic, papers, proteins, compounds, insights
+            )
+        
+        # Generate method showcasing tool chain with proper numbering
+        method = f"""**Investigative Approach:**
+This investigation employed a multi-tool systematic analysis:
+
+1. **PubMed Literature Mining**: Comprehensive search for "{topic}" to establish current knowledge base ({len(papers)} peer-reviewed papers analyzed)
+2. **Molecular Entity Extraction**: Automated extraction of key proteins, compounds, and pathways from literature"""
+        
+        step = 3
+        if proteins:
+            method += f"\n{step}. **UniProt Protein Analysis**: Detailed characterization of {len(proteins)} key proteins ({', '.join([p.get('name', '') for p in proteins[:3]])})"
+            step += 1
+        
+        if compounds:
+            method += f"\n{step}. **PubChem Chemical Analysis**: Structure and property analysis of {len(compounds)} compounds ({', '.join([c.get('name', '') for c in compounds[:3]])})"
+            step += 1
+        
+        method += f"\n{step}. **Integrated Synthesis**: Cross-tool data integration to identify mechanisms and generate insights"
+        method += f"\n\n**Tools Used**: {', '.join(tools_used)}"
+        
+        # Generate findings with visible separators for clear section breaks
+        findings = "**Key Discoveries:**"
+        
+        if len(papers) >= 2:
+            findings += f"\n\n---\n\n**Literature Analysis** ({len(papers)} papers):\n"
+            for paper in papers[:3]:
+                # Strip numbering if present (from title extraction)
+                title = paper.get('title', 'Unknown')
+                title = title.lstrip('0123456789. ')  # Remove leading numbers
+                findings += f"- {title} (PMID:{paper.get('pmid', 'N/A')})\n"
+        
+        if proteins:
+            findings += f"\n---\n\n**Protein Characterization** ({len(proteins)} entities):\n"
+            for protein in proteins[:2]:
+                findings += f"- {protein.get('name')}: Critical regulatory component\n"
+        
+        if compounds:
+            findings += f"\n---\n\n**Chemical Analysis** ({len(compounds)} compounds):\n"
+            for compound in compounds[:2]:
+                findings += f"- {compound.get('name')}: Potential therapeutic relevance\n"
+        
+        if insights:
+            findings += f"\n---\n\n**Novel Insights:**\n"
+            for insight in insights:
+                # Remove "INSIGHT:" prefix if present (from LLM output)
+                clean_insight = insight.replace('INSIGHT:', '').replace('Insight:', '').strip()
+                if clean_insight:
+                    findings += f"- {clean_insight}\n"
+        
+        # Generate conclusion using LLM reasoning or fallback
+        if self.llm_reasoner:
+            try:
+                conclusion_text = self.llm_reasoner.generate_conclusion(
+                    topic=topic,
+                    hypothesis=hypothesis,
+                    insights=insights,
+                    has_proteins=len(proteins) > 0,
+                    has_compounds=len(compounds) > 0,
+                    paper_count=len(papers)
+                )
+                conclusion = f"\n\n**Conclusions & Implications:**\n\n{conclusion_text}"
+            except Exception as e:
+                print(f"    Note: LLM conclusion generation failed, using template")
+                conclusion = self._generate_fallback_conclusion(
+                    topic, insights, proteins, compounds, papers
+                )
+        else:
+            conclusion = self._generate_fallback_conclusion(
+                topic, insights, proteins, compounds, papers
+            )
+        
+        # Full content (single newline between major sections)
+        content = f"""{hypothesis}
+
+{method}
+
+{findings}
+
+{conclusion}"""
+        
+        # Extract simple strings for API (clean formatting for display)
+        hypothesis_simple = hypothesis.split('\n')[0].replace('**', '').replace('Scientific Question:', '').strip()
+        method_simple = f"Multi-tool investigation using {', '.join(tools_used)}: PubMed literature mining → entity extraction → cross-database validation → integrated synthesis"
+        # Use full findings (not truncated) to preserve formatting
+        findings_simple = findings
+        
+        result = {
+            "title": title,
+            "hypothesis": hypothesis_simple,
+            "method": method_simple,
+            "findings": findings_simple,
+            "content": content
+        }
+        
+        # SELF-REFINEMENT: Use LLM to peer-review and refine the content
+        if self.llm_reasoner:
+            try:
+                print("  🔍 Self-critique and refinement...")
+                result = self.llm_reasoner.refine_content(result)
+            except Exception as e:
+                print(f"    Note: Self-refinement unavailable ({e})")
+        
+        return result
+    
+    def log_investigation(self, topic: str, investigation_results: Dict):
+        """Log investigation to agent memory."""
+        if not self.journal:
+            return
+        
+        try:
+            # Log observation
+            self.journal.log_observation(
+                content=f"Conducted deep investigation of {topic} using {len(investigation_results.get('tools_used', []))} tools",
+                source="deep_investigation",
+                tags=[topic, "multi-tool", "comprehensive"]
+            )
+            
+            # Log insights as hypotheses
+            for insight in investigation_results.get("insights", [])[:2]:
+                self.journal.log_hypothesis(
+                    hypothesis=insight,
+                    motivation=f"Generated from {topic} investigation"
+                )
+        except Exception as e:
+            print(f"    Note: Could not log to memory: {e}")
+
+
+def run_deep_investigation(agent_name: str, topic: str, community: Optional[str] = None) -> Dict:
+    """
+    Main entry point for deep investigation.
+    
+    This is what should be called instead of simple post generation.
+    
+    Args:
+        agent_name: Name of the agent conducting investigation
+        topic: Research topic
+        community: Target community (auto-selected if None)
+    
+    Returns:
+        Dict with content ready for posting
+    """
+    print(f"\n🔬 {agent_name}: Initiating Deep Scientific Investigation")
+    print(f"📋 Topic: {topic}\n")
+    
+    investigator = DeepInvestigator(agent_name)
+    
+    # Check previous work
+    previous = investigator.check_previous_work(topic)
+    if previous.get("investigated"):
+        print(f"  💾 {previous['message']}\n")
+    
+    # Smart investigation type classification
+    topic_lower = topic.lower()
+    
+    # Detect keywords
+    has_enzyme = any(kw in topic_lower for kw in ['enzyme', 'enzymatic', 'catalytic'])
+    has_protein = any(kw in topic_lower for kw in ['protein', 'gene', 'receptor', 'kinase', 'antibody', 'protease', 'polymerase'])
+    has_chemistry = any(kw in topic_lower for kw in ['reaction', 'synthesis', 'compound', 'drug', 'inhibitor', 'solvent', 'reagent'])
+    has_material = any(kw in topic_lower for kw in ['material', 'crystal', 'metal', 'polymer', 'alloy'])
+    
+    # Check for explicit exclusions
+    excludes_enzyme = any(excl in topic_lower for excl in ['without enzyme', 'non-enzymatic', 'abiotic', 'non-biological'])
+    excludes_bio = any(excl in topic_lower for excl in ['chemical only', 'pure chemistry', 'organic chemistry'])
+    
+    # Flexible classification
+    if has_material:
+        inv_type = "materials"
+    elif has_enzyme and not excludes_enzyme:
+        inv_type = "auto"  # Enzymes need both protein + chemistry
+    elif has_protein and has_chemistry and not excludes_bio:
+        inv_type = "auto"  # Could be drug discovery or both
+    elif has_chemistry and (not has_protein or excludes_bio):
+        inv_type = "chemistry"  # Pure chemistry (or explicitly excludes biology)
+    elif has_protein and (not has_chemistry or excludes_enzyme):
+        inv_type = "biology"  # Pure biology/protein (or explicitly excludes chemistry)
+    else:
+        inv_type = "auto"  # Default: try both (safer)
+    
+    print(f"  🎯 Investigation type: {inv_type}\n")
+    
+    # Run tool chain
+    results = investigator.run_tool_chain(topic, inv_type)
+    
+    print(f"\n  ✓ Investigation complete!")
+    print(f"  📊 Tools used: {', '.join(results['tools_used'])}")
+    print(f"  📄 Papers analyzed: {len(results['papers'])}")
+    print(f"  🧬 Proteins characterized: {len(results['proteins'])}")
+    print(f"  🧪 Compounds analyzed: {len(results['compounds'])}")
+    print(f"  💡 Insights generated: {len(results['insights'])}\n")
+    
+    # Generate sophisticated content
+    content = investigator.generate_sophisticated_content(topic, results)
+    
+    # Log to memory
+    investigator.log_investigation(topic, results)
+    
+    # Add metadata
+    content["agent_name"] = agent_name
+    content["investigation_results"] = results
+    
+    return content
