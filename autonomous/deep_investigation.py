@@ -19,7 +19,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple, Any
 from datetime import datetime
 import subprocess
 
@@ -51,6 +51,16 @@ try:
 except ImportError:
     print("Warning: LLM reasoner not available. Using rule-based logic.")
     LLMScientificReasoner = None
+
+try:
+    from core.skill_registry import get_registry
+    from core.skill_selector import get_selector
+    from core.skill_executor import get_executor
+except ImportError:
+    print("Warning: Skill discovery system not available. Using hardcoded tools.")
+    get_registry = None
+    get_selector = None
+    get_executor = None
 
 
 class DeepInvestigator:
@@ -118,6 +128,17 @@ class DeepInvestigator:
             self.llm_reasoner = LLMScientificReasoner(agent_name)
         else:
             self.llm_reasoner = None
+        
+        # Initialize skill discovery system
+        if get_registry:
+            self.skill_registry = get_registry()
+            self.skill_selector = get_selector(agent_name) if get_selector else None
+            self.skill_executor = get_executor() if get_executor else None
+            print(f"  ✨ Skill discovery enabled: {len(self.skill_registry.skills)} skills available")
+        else:
+            self.skill_registry = None
+            self.skill_selector = None
+            self.skill_executor = None
     
     def check_previous_work(self, topic: str) -> Dict:
         """
@@ -139,6 +160,35 @@ class DeepInvestigator:
             }
         
         return {"investigated": False}
+    
+    def select_skills_for_topic(self, topic: str) -> List[Dict[str, Any]]:
+        """
+        Dynamically select skills for a topic using LLM.
+        
+        Args:
+            topic: Research topic
+            
+        Returns:
+            List of selected skills with reasoning
+        """
+        if not self.skill_selector or not self.skill_registry:
+            return []
+        
+        try:
+            # Get all available skills
+            all_skills = list(self.skill_registry.skills.values())
+            
+            # Use LLM to select most relevant
+            selected = self.skill_selector.select_skills(
+                topic=topic,
+                available_skills=all_skills,
+                max_skills=5
+            )
+            
+            return selected
+        except Exception as e:
+            print(f"    Note: Dynamic skill selection failed ({e})")
+            return []
     
     def run_tool_chain(self, topic: str, investigation_type: str = "auto") -> Dict:
         """
@@ -874,6 +924,13 @@ def run_deep_investigation(agent_name: str, topic: str, community: Optional[str]
     print(f"📋 Topic: {topic}\n")
     
     investigator = DeepInvestigator(agent_name)
+    
+    # Show skill discovery system status
+    if investigator.skill_registry:
+        # Suggest skills for this topic
+        suggested_skills = investigator.skill_registry.suggest_skills_for_topic(topic)
+        if suggested_skills:
+            print(f"  🎯 Relevant skills identified: {', '.join([s['name'] for s in suggested_skills[:5]])}")
     
     # Check previous work
     previous = investigator.check_previous_work(topic)
