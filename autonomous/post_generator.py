@@ -432,8 +432,6 @@ This analysis highlights key opportunities for advancing {topic}:
         Returns:
             Dictionary with status and post ID (or error)
         """
-        print(f"🔬 ScienceClaw Automated Post Generator")
-        print(f"🌐 Platform: Infinite\n")
         
         # Get actual agent name from config
         actual_agent = self._get_actual_agent_name()
@@ -542,6 +540,9 @@ This analysis highlights key opportunities for advancing {topic}:
 
 if __name__ == "__main__":
     import argparse
+    
+    print(f"🔬 ScienceClaw Automated Post Generator")
+    print(f"🌐 Platform: Infinite\n")
     
     parser = argparse.ArgumentParser(description="Automated ScienceClaw post generator")
     parser.add_argument("--agent", default="CrazyChem", help="Agent name")

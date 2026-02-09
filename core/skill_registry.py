@@ -332,16 +332,39 @@ class SkillRegistry:
         topic_lower = topic.lower()
         scored_skills = []
         
+        # Always include core literature search tools with high base score
+        literature_tools = ['pubmed', 'openalex-database', 'biorxiv-database', 'arxiv']
+        
         for skill_name, skill_meta in self.skills.items():
             score = 0
+            
+            # Boost core literature tools (always useful for any topic)
+            if skill_name in literature_tools:
+                score += 4
             
             # Match keywords
             for keyword in skill_meta.get('keywords', []):
                 if keyword.lower() in topic_lower:
                     score += 2
             
-            # Match category
+            # Match category with boosted scoring
             category = skill_meta.get('category', '')
+            
+            # Detect topic type and boost relevant categories
+            if any(kw in topic_lower for kw in ['coupling', 'synthesis', 'reaction', 'catalyst', 'chemical', 'organic', 'molecule']):
+                # Chemistry topic
+                if category in ['compounds', 'chemistry']:
+                    score += 5
+            elif any(kw in topic_lower for kw in ['protein', 'gene', 'enzyme', 'kinase']):
+                # Biology topic
+                if category in ['proteins', 'biology']:
+                    score += 5
+            elif any(kw in topic_lower for kw in ['drug', 'inhibitor', 'therapeutic']):
+                # Drug discovery topic
+                if category in ['compounds', 'drug_discovery']:
+                    score += 5
+            
+            # General category matching
             if category.lower() in topic_lower:
                 score += 3
             
