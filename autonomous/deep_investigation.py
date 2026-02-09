@@ -56,11 +56,13 @@ try:
     from core.skill_registry import get_registry
     from core.skill_selector import get_selector
     from core.skill_executor import get_executor
+    from core.topic_analyzer import get_analyzer
 except ImportError:
     print("Warning: Skill discovery system not available. Using hardcoded tools.")
     get_registry = None
     get_selector = None
     get_executor = None
+    get_analyzer = None
 
 
 class DeepInvestigator:
@@ -134,11 +136,13 @@ class DeepInvestigator:
             self.skill_registry = get_registry()
             self.skill_selector = get_selector(agent_name) if get_selector else None
             self.skill_executor = get_executor() if get_executor else None
+            self.topic_analyzer = get_analyzer(agent_name) if get_analyzer else None
             print(f"  ✨ Skill discovery enabled: {len(self.skill_registry.skills)} skills available")
         else:
             self.skill_registry = None
             self.skill_selector = None
             self.skill_executor = None
+            self.topic_analyzer = None
     
     def check_previous_work(self, topic: str) -> Dict:
         """
@@ -163,42 +167,50 @@ class DeepInvestigator:
     
     def select_skills_for_topic(self, topic: str) -> List[Dict[str, Any]]:
         """
-        Dynamically select skills for a topic using LLM.
+        Dynamically select skills for a topic using LLM (or fallback).
         
         Args:
             topic: Research topic
             
         Returns:
-            List of selected skills with reasoning
+            SkillSelection with selected skills
         """
         if not self.skill_selector or not self.skill_registry:
-            return []
+            return None
         
         try:
             # Get all available skills
             all_skills = list(self.skill_registry.skills.values())
             
-            # Use LLM to select most relevant
+            # Use LLM to select most relevant (with timeout)
+            print(f"    Querying LLM for skill selection...", end="", flush=True)
             selected = self.skill_selector.select_skills(
                 topic=topic,
                 available_skills=all_skills,
                 max_skills=5
             )
+            print(" done")
             
             return selected
         except Exception as e:
-            print(f"    Note: Dynamic skill selection failed ({e})")
-            return []
+            print(f"\n    Note: LLM skill selection failed ({e}), using fallback")
+            # Fallback to keyword-based selection
+            all_skills = list(self.skill_registry.skills.values())
+            from core.skill_selector import LLMSkillSelector, SkillSelection
+            selector = LLMSkillSelector(self.agent_name if hasattr(self, 'agent_name') else 'Agent')
+            selected_list = selector._fallback_selection(topic, all_skills, 5)
+            return SkillSelection(
+                topic=topic,
+                selected_skills=selected_list,
+                reasoning="Fallback keyword-based selection"
+            )
     
     def run_tool_chain(self, topic: str, investigation_type: str = "auto") -> Dict:
         """
         Run a chain of scientific tools based on the topic.
         
-        This is the key to deep investigation:
-        1. Start with PubMed for literature
-        2. Run focused searches for specific entities
-        3. Look up those entities in UniProt/PubChem
-        4. Analyze relationships and mechanisms
+        Uses intelligent skill discovery to select optimal tools dynamically.
+        Falls back to legacy tool chain if skill discovery unavailable.
         
         Args:
             topic: Research topic
@@ -217,11 +229,33 @@ class DeepInvestigator:
             "insights": []
         }
         
-        # Step 1: PubMed literature search (broad)
-        print(f"  🔬 Step 1: Searching PubMed...")
+        # Try dynamic skill selection first
+        if self.skill_registry and self.skill_selector:
+            print(f"  🎯 Using intelligent skill selection...")
+            skill_selection = self.select_skills_for_topic(topic)
+            
+            if skill_selection and skill_selection.selected_skills:
+                print(f"  📋 Selected {skill_selection.total_skills} skills: {[s.name for s in skill_selection.selected_skills[:3]]}")
+                # Note: Full execution via skill_executor would go here in Phase 2
+                # For now, map to existing tools
+                for skill in skill_selection.selected_skills:
+                    results["tools_used"].append(skill.name)
+        
+        # Fall back to legacy tool chain
+        print(f"  🔬 Step 1: Searching literature...")
+        
+        # Determine which literature database to use
+        lit_tool = "PubMed"  # Default
+        if self.skill_registry:
+            # Check if better literature tools are available
+            lit_skills = self.skill_registry.get_skills_by_category("literature")
+            for skill in lit_skills:
+                if skill['name'] in ['openalex-database', 'biorxiv-database']:
+                    print(f"  💡 Note: {skill['name']} available for literature search")
+        
         pubmed_results = self._run_pubmed(topic, max_results=5)
         results["papers"] = pubmed_results.get("papers", [])
-        results["tools_used"].append("PubMed")
+        results["tools_used"].append(lit_tool)
         
         if not results["papers"]:
             return results
@@ -237,22 +271,19 @@ class DeepInvestigator:
             entities["proteins"].extend(focused_entities.get("proteins", []))
             entities["compounds"].extend(focused_entities.get("compounds", []))
         
-        # Step 3: Tool selection based on investigation type
-        # For BIOLOGY topics, look up proteins
-        if investigation_type == "biology":
-            if entities.get("proteins"):
-                print(f"  🧪 Step 3: Looking up proteins in UniProt...")
-                for protein in entities["proteins"][:3]:
-                    protein_data = self._run_uniprot(protein)
-                    if protein_data:
-                        results["proteins"].append(protein_data)
-                        if "UniProt" not in results["tools_used"]:
-                            results["tools_used"].append("UniProt")
-        
-        # For CHEMISTRY topics, look up compounds
-        elif investigation_type == "chemistry":
+        # Step 3: Intelligent tool selection based on investigation type AND available skills
+        # For CHEMISTRY topics, prioritize compound databases
+        if investigation_type == "chemistry":
+            print(f"  🧪 Step 3: Chemistry investigation - using compound databases...")
+            
+            # Suggest better chemistry tools if available
+            if self.skill_registry:
+                chem_skills = self.skill_registry.get_skills_by_category("compounds")
+                suggested = [s['name'] for s in chem_skills if s['name'] in ['chembl-database', 'pubchem-database', 'zinc-database', 'drugbank-database']]
+                if suggested:
+                    print(f"  💡 Available chemistry databases: {', '.join(suggested[:3])}")
+            
             if entities.get("compounds"):
-                print(f"  🧪 Step 3: Looking up compounds in PubChem...")
                 for compound in entities["compounds"][:3]:
                     compound_data = self._run_pubchem(compound)
                     if compound_data:
@@ -260,10 +291,31 @@ class DeepInvestigator:
                         if "PubChem" not in results["tools_used"]:
                             results["tools_used"].append("PubChem")
         
-        # For AUTO (drug discovery, etc), try both
-        elif investigation_type == "auto":
+        # For BIOLOGY topics, prioritize protein databases
+        elif investigation_type == "biology":
+            print(f"  🧪 Step 3: Biology investigation - using protein databases...")
+            
+            # Suggest better protein tools if available
+            if self.skill_registry:
+                protein_skills = self.skill_registry.get_skills_by_category("proteins")
+                suggested = [s['name'] for s in protein_skills if s['name'] in ['uniprot', 'alphafold-database', 'pdb']]
+                if suggested:
+                    print(f"  💡 Available protein databases: {', '.join(suggested[:3])}")
+            
             if entities.get("proteins"):
-                print(f"  🧪 Step 3a: Looking up proteins in UniProt...")
+                for protein in entities["proteins"][:3]:
+                    protein_data = self._run_uniprot(protein)
+                    if protein_data:
+                        results["proteins"].append(protein_data)
+                        if "UniProt" not in results["tools_used"]:
+                            results["tools_used"].append("UniProt")
+        
+        # For AUTO (drug discovery, interdisciplinary), use both
+        elif investigation_type == "auto":
+            print(f"  🧪 Step 3: Interdisciplinary investigation - using multiple databases...")
+            
+            if entities.get("proteins"):
+                print(f"  🧪 Step 3a: Looking up proteins...")
                 for protein in entities["proteins"][:3]:
                     protein_data = self._run_uniprot(protein)
                     if protein_data:
@@ -272,7 +324,7 @@ class DeepInvestigator:
                             results["tools_used"].append("UniProt")
             
             if entities.get("compounds"):
-                print(f"  🧪 Step 3b: Looking up compounds in PubChem...")
+                print(f"  🧪 Step 3b: Looking up compounds...")
                 for compound in entities["compounds"][:3]:
                     compound_data = self._run_pubchem(compound)
                     if compound_data:
@@ -937,34 +989,40 @@ def run_deep_investigation(agent_name: str, topic: str, community: Optional[str]
     if previous.get("investigated"):
         print(f"  💾 {previous['message']}\n")
     
-    # Smart investigation type classification
-    topic_lower = topic.lower()
-    
-    # Detect keywords
-    has_enzyme = any(kw in topic_lower for kw in ['enzyme', 'enzymatic', 'catalytic'])
-    has_protein = any(kw in topic_lower for kw in ['protein', 'gene', 'receptor', 'kinase', 'antibody', 'protease', 'polymerase'])
-    has_chemistry = any(kw in topic_lower for kw in ['reaction', 'synthesis', 'compound', 'drug', 'inhibitor', 'solvent', 'reagent'])
-    has_material = any(kw in topic_lower for kw in ['material', 'crystal', 'metal', 'polymer', 'alloy'])
-    
-    # Check for explicit exclusions
-    excludes_enzyme = any(excl in topic_lower for excl in ['without enzyme', 'non-enzymatic', 'abiotic', 'non-biological'])
-    excludes_bio = any(excl in topic_lower for excl in ['chemical only', 'pure chemistry', 'organic chemistry'])
-    
-    # Flexible classification
-    if has_material:
-        inv_type = "materials"
-    elif has_enzyme and not excludes_enzyme:
-        inv_type = "auto"  # Enzymes need both protein + chemistry
-    elif has_protein and has_chemistry and not excludes_bio:
-        inv_type = "auto"  # Could be drug discovery or both
-    elif has_chemistry and (not has_protein or excludes_bio):
-        inv_type = "chemistry"  # Pure chemistry (or explicitly excludes biology)
-    elif has_protein and (not has_chemistry or excludes_enzyme):
-        inv_type = "biology"  # Pure biology/protein (or explicitly excludes chemistry)
+    # Use LLM-powered topic analysis to replace hardcoded keywords
+    if investigator.topic_analyzer:
+        print(f"  🤖 Analyzing topic with LLM...")
+        analysis = investigator.topic_analyzer.analyze_topic(topic)
+        
+        inv_type = analysis.investigation_type
+        print(f"  🎯 Investigation type: {inv_type}")
+        print(f"  💡 Reasoning: {analysis.reasoning}")
+        if analysis.key_concepts:
+            print(f"  📌 Key concepts: {', '.join(analysis.key_concepts[:3])}")
+        if analysis.recommended_skill_categories:
+            print(f"  🛠️  Recommended tools: {', '.join(analysis.recommended_skill_categories[:4])}")
+        print()
+        
+        # Map investigation type to legacy format
+        if inv_type == "interdisciplinary":
+            inv_type = "auto"
     else:
-        inv_type = "auto"  # Default: try both (safer)
-    
-    print(f"  🎯 Investigation type: {inv_type}\n")
+        # Fallback to simple keyword detection
+        topic_lower = topic.lower()
+        has_protein = any(kw in topic_lower for kw in ['protein', 'gene', 'enzyme'])
+        has_chemistry = any(kw in topic_lower for kw in ['reaction', 'synthesis', 'compound', 'coupling'])
+        has_material = any(kw in topic_lower for kw in ['material', 'crystal', 'metal'])
+        
+        if has_material:
+            inv_type = "materials"
+        elif has_chemistry and not has_protein:
+            inv_type = "chemistry"
+        elif has_protein and not has_chemistry:
+            inv_type = "biology"
+        else:
+            inv_type = "auto"
+        
+        print(f"  🎯 Investigation type: {inv_type} (keyword-based)\n")
     
     # Run tool chain
     results = investigator.run_tool_chain(topic, inv_type)

@@ -16,6 +16,32 @@ import subprocess
 import json
 from typing import Dict, List, Optional, Any
 from pathlib import Path
+from pydantic import BaseModel, Field
+
+
+class SelectedSkill(BaseModel):
+    """A skill selected by the LLM for investigation."""
+    name: str = Field(description="Skill name")
+    reason: str = Field(description="Why this skill is needed for this topic")
+    suggested_params: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Suggested parameters for executing this skill"
+    )
+    category: Optional[str] = Field(default=None, description="Skill category")
+    description: Optional[str] = Field(default=None, description="Skill description")
+
+
+class SkillSelection(BaseModel):
+    """LLM-selected skills for a research investigation."""
+    topic: str = Field(description="Research topic")
+    selected_skills: List[SelectedSkill] = Field(description="Selected skills")
+    reasoning: str = Field(default="", description="Overall reasoning for this selection")
+    total_skills: int = Field(default=0, description="Total number of skills selected")
+    
+    def model_post_init(self, __context):
+        """Set total_skills after initialization."""
+        if self.total_skills == 0:
+            self.total_skills = len(self.selected_skills)
 
 
 class LLMSkillSelector:
@@ -41,7 +67,7 @@ class LLMSkillSelector:
     def select_skills(self,
                      topic: str,
                      available_skills: List[Dict[str, Any]],
-                     max_skills: int = 5) -> List[Dict[str, Any]]:
+                     max_skills: int = 5) -> SkillSelection:
         """
         Use LLM to select which skills to use for a topic.
         
@@ -53,7 +79,7 @@ class LLMSkillSelector:
         Returns:
             List of selected skills with suggested parameters
         """
-        # Build skill catalog for LLM
+        # Build skill catalog for LLM with specific skill names
         skill_catalog = self._build_skill_catalog(available_skills)
         
         prompt = f"""You are {self.agent_name}, planning a scientific investigation of: "{topic}"
@@ -61,39 +87,50 @@ class LLMSkillSelector:
 AVAILABLE SKILLS ({len(available_skills)} total):
 {skill_catalog}
 
-TASK: Select 3-{max_skills} most relevant skills for investigating this topic.
+TASK: Select 3-{max_skills} most relevant skills from the list above for investigating this topic.
+Use multiple skills—do not select only one. Pick skill names exactly as they appear in the list.
 
-Consider:
-1. What data sources are needed? (literature, proteins, compounds, pathways)
-2. What analysis tools are needed? (sequence, structure, properties)
-3. What order should skills be used? (e.g., literature first, then entities)
+CRITICAL GUIDANCE FOR SKILL SELECTION:
+
+For ORGANIC/SYNTHETIC CHEMISTRY topics (reactions, synthesis, catalysis, coupling):
+- AVOID: pubmed-database (it's for biomedical literature, not chemistry)
+- PREFER: openalex-database, arxiv, biorxiv-database (chemistry literature)
+- INCLUDE: chembl-database, pubchem-database, zinc-database (compounds)
+- INCLUDE: nistwebbook, cas (chemistry reference data)
+
+For BIOMEDICAL topics (drugs, diseases, proteins):
+- USE: pubmed-database (appropriate for biomedical)
+
+For DRUG DISCOVERY topics:
+- USE: pubmed-database, chembl-database, drugbank-database, uniprot, pytdc
 
 For each selected skill, specify:
-- SKILL NAME
-- WHY it's needed for this topic
-- What PARAMETERS to use
-
-Format your response like this:
-SKILL: skill_name
-REASON: Why this skill is needed
+SKILL: exact_skill_name
+REASON: Why this skill is needed for this topic
 PARAMS: {{"param1": "value1", "param2": "value2"}}
 
-SKILL: another_skill
-REASON: Why this is needed
+SKILL: next_skill_name
+REASON: Why this skill is needed
 PARAMS: {{"param": "value"}}
 
-Select skills now:"""
+Select 3-5 skills now:"""
         
-        response = self._call_llm(prompt)
+        response = self._call_llm(prompt, max_tokens=800)
         
         # Parse LLM response
         selected = self._parse_skill_selection(response, available_skills)
         
-        # Fallback if parsing fails
-        if not selected:
+        # Fallback: intelligently select multiple skills
+        if not selected or len(selected) < 2:
+            print(f"    Note: LLM selection insufficient, using smart fallback")
             selected = self._fallback_selection(topic, available_skills, max_skills)
         
-        return selected[:max_skills]
+        # Return structured SkillSelection
+        return SkillSelection(
+            topic=topic,
+            selected_skills=selected[:max_skills],
+            reasoning="LLM-powered skill selection" if response else "Keyword-based fallback"
+        )
     
     def plan_investigation(self,
                           topic: str,
@@ -175,7 +212,7 @@ Create the plan:"""
                 ],
                 capture_output=True,
                 text=True,
-                timeout=45
+                timeout=60  # Longer timeout for skill selection
             )
             
             if result.returncode == 0 and result.stdout.strip():
@@ -183,14 +220,20 @@ Create the plan:"""
             else:
                 return ""
                 
+        except subprocess.TimeoutExpired:
+            # LLM timeout - fallback will handle it
+            return ""
+        except FileNotFoundError:
+            # openclaw not found - use fallback
+            return ""
         except Exception as e:
-            print(f"    Note: LLM skill selection unavailable ({e})")
+            # Other errors - use fallback silently
             return ""
     
     def _parse_skill_selection(self,
                                response: str,
-                               available_skills: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Parse LLM's skill selection response."""
+                               available_skills: List[Dict[str, Any]]) -> List[SelectedSkill]:
+        """Parse LLM's skill selection response into Pydantic models."""
         selected = []
         
         # Create lookup dict
@@ -207,10 +250,14 @@ Create the plan:"""
             if line_stripped.startswith('SKILL:'):
                 # Save previous skill
                 if current_skill and current_skill in skill_lookup:
-                    skill_copy = skill_lookup[current_skill].copy()
-                    skill_copy['reason'] = current_reason
-                    skill_copy['suggested_params'] = current_params
-                    selected.append(skill_copy)
+                    skill_meta = skill_lookup[current_skill]
+                    selected.append(SelectedSkill(
+                        name=current_skill,
+                        reason=current_reason,
+                        suggested_params=current_params,
+                        category=skill_meta.get('category'),
+                        description=skill_meta.get('description')
+                    ))
                 
                 # Start new skill
                 current_skill = line_stripped.replace('SKILL:', '').strip()
@@ -229,53 +276,65 @@ Create the plan:"""
         
         # Save last skill
         if current_skill and current_skill in skill_lookup:
-            skill_copy = skill_lookup[current_skill].copy()
-            skill_copy['reason'] = current_reason
-            skill_copy['suggested_params'] = current_params
-            selected.append(skill_copy)
+            skill_meta = skill_lookup[current_skill]
+            selected.append(SelectedSkill(
+                name=current_skill,
+                reason=current_reason,
+                suggested_params=current_params,
+                category=skill_meta.get('category'),
+                description=skill_meta.get('description')
+            ))
         
         return selected
     
     def _fallback_selection(self,
                            topic: str,
                            available_skills: List[Dict[str, Any]],
-                           max_skills: int) -> List[Dict[str, Any]]:
+                           max_skills: int) -> List[SelectedSkill]:
         """
-        Fallback skill selection using keyword matching.
+        LLM-powered fallback: Ask LLM to suggest skills based on topic analysis.
         
-        Used when LLM is unavailable.
+        No hardcoded keywords or domain logic - let the LLM decide everything.
         """
-        topic_lower = topic.lower()
-        selected = []
+        # Use topic analyzer to get LLM classification
+        from core.topic_analyzer import get_analyzer
+        analyzer = get_analyzer(self.agent_name)
         
-        # Always start with literature search
-        for skill in available_skills:
-            if skill['name'] in ['pubmed', 'openalex', 'biorxiv', 'arxiv']:
-                skill_copy = skill.copy()
-                skill_copy['reason'] = 'Literature search foundation'
-                skill_copy['suggested_params'] = {'query': topic, 'max_results': 5}
-                selected.append(skill_copy)
-                break
+        # Analyze topic to get investigation type and recommended categories
+        analysis = analyzer.analyze_topic(topic)
         
-        # Add protein tools if biology topic
-        if any(term in topic_lower for term in ['protein', 'gene', 'enzyme', 'kinase']):
-            for skill in available_skills:
-                if skill['name'] in ['uniprot', 'pdb', 'alphafold']:
-                    skill_copy = skill.copy()
-                    skill_copy['reason'] = 'Protein characterization'
-                    selected.append(skill_copy)
-                    break
+        # Build skill catalog
+        skill_catalog = self._build_skill_catalog(available_skills)
         
-        # Add chemistry tools if chemistry topic
-        if any(term in topic_lower for term in ['compound', 'drug', 'synthesis', 'reaction']):
-            for skill in available_skills:
-                if skill['name'] in ['pubchem', 'chembl', 'rdkit']:
-                    skill_copy = skill.copy()
-                    skill_copy['reason'] = 'Chemical analysis'
-                    selected.append(skill_copy)
-                    break
+        # Ask LLM which skills match the analyzed topic
+        prompt = f"""Based on this research analysis, select the most relevant skills:
+
+TOPIC: {topic}
+INVESTIGATION TYPE: {analysis.investigation_type}
+KEY CONCEPTS: {', '.join(analysis.key_concepts)}
+RECOMMENDED CATEGORIES: {', '.join(analysis.recommended_skill_categories)}
+ENTITIES EXPECTED: {', '.join(f"{k}={'yes' if v else 'no'}" for k, v in analysis.entities_expected.items())}
+
+AVAILABLE SKILLS:
+{skill_catalog}
+
+Select 3-5 specific skill names that best match this topic and analysis.
+Format each as:
+SKILL: skill_name
+REASON: Why this skill matches the topic and analysis
+
+Select now:"""
         
-        return selected[:max_skills]
+        response = self._call_llm(prompt, max_tokens=600)
+        
+        # Parse LLM response
+        if response:
+            selected = self._parse_skill_selection(response, available_skills)
+            if selected:
+                return selected[:max_skills]
+        
+        # If LLM fallback fails, just return empty and let caller handle it
+        return []
 
 
 # Global selector instance
