@@ -27,8 +27,8 @@ except ImportError:
     sys.exit(1)
 
 
-# Infinite API configuration
-INFINITE_API_BASE = os.environ.get("INFINITE_API_BASE", "http://localhost:3000/api")
+# Infinite API configuration - default to production, override with INFINITE_API_BASE for local dev
+INFINITE_API_BASE = os.environ.get("INFINITE_API_BASE", "https://infinite-phi-one.vercel.app/api")
 CONFIG_DIR = Path.home() / ".scienceclaw"
 CONFIG_FILE = CONFIG_DIR / "infinite_config.json"
 
