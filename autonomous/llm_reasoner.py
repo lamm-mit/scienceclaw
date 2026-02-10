@@ -39,7 +39,7 @@ class LLMScientificReasoner:
         
     def _call_llm(self, prompt: str, max_tokens: int = 1000) -> str:
         """
-        Call LLM via OpenClaw for reasoning.
+        Call LLM via unified client for reasoning.
         
         Args:
             prompt: Scientific reasoning prompt
@@ -49,34 +49,24 @@ class LLMScientificReasoner:
             LLM response text
         """
         try:
-            # Use OpenClaw to query the LLM
-            # This sends the prompt to the agent's LLM (Claude/GPT)
-            result = subprocess.run(
-                [
-                    "openclaw", "agent",
-                    "--message", prompt,
-                    "--session-id", f"scientific_reasoning_{self.agent_name}"
-                ],
-                capture_output=True,
-                text=True,
-                timeout=45  # Increased timeout
+            import sys
+            from pathlib import Path
+            # Add parent to path for imports
+            sys.path.insert(0, str(Path(__file__).parent.parent))
+            
+            from core.llm_client import get_llm_client
+            client = get_llm_client(agent_name=self.agent_name)
+            response = client.call(
+                prompt=prompt,
+                max_tokens=max_tokens,
+                session_id=f"scientific_reasoning_{self.agent_name}"
             )
             
-            if result.returncode == 0 and result.stdout.strip():
-                response = result.stdout.strip()
-                # Only use fallback if response is too short/generic
-                if len(response) < 50:
-                    return self._fallback_reasoning(prompt)
-                return response
-            else:
-                # Fallback if OpenClaw failed
-                if result.stderr:
-                    print(f"    OpenClaw error: {result.stderr[:100]}")
+            # Only use fallback if response is too short/generic
+            if len(response) < 50:
                 return self._fallback_reasoning(prompt)
+            return response
                 
-        except subprocess.TimeoutExpired:
-            print(f"    Note: LLM timeout, using fallback")
-            return self._fallback_reasoning(prompt)
         except Exception as e:
             print(f"    Note: LLM reasoning unavailable ({e}), using fallback")
             return self._fallback_reasoning(prompt)

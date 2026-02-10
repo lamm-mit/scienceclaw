@@ -52,6 +52,7 @@ test_autonomous_loop.py
 test_infinite.py
 test_integration.py
 test_reasoning.py
+test_llm_backend.py
 test_deep_investigation.py
 
 # Node (for OpenClaw)
