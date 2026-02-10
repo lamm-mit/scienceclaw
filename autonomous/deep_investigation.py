@@ -205,7 +205,8 @@ class DeepInvestigator:
                 reasoning="Fallback keyword-based selection"
             )
     
-    def run_tool_chain(self, topic: str, investigation_type: str = "auto") -> Dict:
+    def run_tool_chain(self, topic: str, investigation_type: str = "auto",
+                       pre_selected_skills: Optional[List[Dict[str, Any]]] = None) -> Dict:
         """
         Run a chain of scientific tools based on the topic.
         
@@ -229,17 +230,28 @@ class DeepInvestigator:
             "insights": []
         }
         
-        # Try dynamic skill selection first
-        if self.skill_registry and self.skill_selector:
-            print(f"  🎯 Using intelligent skill selection...")
-            skill_selection = self.select_skills_for_topic(topic)
-            
-            if skill_selection and skill_selection.selected_skills:
-                print(f"  📋 Selected {skill_selection.total_skills} skills: {[s.name for s in skill_selection.selected_skills[:3]]}")
-                # Note: Full execution via skill_executor would go here in Phase 2
-                # For now, map to existing tools
-                for skill in skill_selection.selected_skills:
-                    results["tools_used"].append(skill.name)
+        # Use pre-selected skills from unified LLM call only (no fallback to separate skill selection)
+        skill_selection = None
+        if pre_selected_skills:
+            from core.skill_selector import SkillSelection, SelectedSkill
+            selected = [
+                SelectedSkill(
+                    name=s['name'],
+                    reason=s.get('reason', ''),
+                    suggested_params=s.get('suggested_params', {}),
+                    category=s.get('category'),
+                    description=s.get('description')
+                )
+                for s in pre_selected_skills
+            ]
+            skill_selection = SkillSelection(topic=topic, selected_skills=selected)
+        
+        if skill_selection and skill_selection.selected_skills:
+            print(f"  📋 Selected {skill_selection.total_skills} skills: {[s.name for s in skill_selection.selected_skills[:3]]}")
+            # Note: Full execution via skill_executor would go here in Phase 2
+            # For now, map to existing tools
+            for skill in skill_selection.selected_skills:
+                results["tools_used"].append(skill.name)
         
         # Fall back to legacy tool chain
         print(f"  🔬 Step 1: Searching literature...")
@@ -310,27 +322,9 @@ class DeepInvestigator:
                         if "UniProt" not in results["tools_used"]:
                             results["tools_used"].append("UniProt")
         
-        # For AUTO (drug discovery, interdisciplinary), use both
+        # For AUTO (interdisciplinary) - skip protein/compound lookups to avoid over-focusing on bio/chem
         elif investigation_type == "auto":
-            print(f"  🧪 Step 3: Interdisciplinary investigation - using multiple databases...")
-            
-            if entities.get("proteins"):
-                print(f"  🧪 Step 3a: Looking up proteins...")
-                for protein in entities["proteins"][:3]:
-                    protein_data = self._run_uniprot(protein)
-                    if protein_data:
-                        results["proteins"].append(protein_data)
-                        if "UniProt" not in results["tools_used"]:
-                            results["tools_used"].append("UniProt")
-            
-            if entities.get("compounds"):
-                print(f"  🧪 Step 3b: Looking up compounds...")
-                for compound in entities["compounds"][:3]:
-                    compound_data = self._run_pubchem(compound)
-                    if compound_data:
-                        results["compounds"].append(compound_data)
-                        if "PubChem" not in results["tools_used"]:
-                            results["tools_used"].append("PubChem")
+            print(f"  🧪 Step 3: Interdisciplinary investigation - using selected skills...")
         
         # Step 5: Generate insights from integrated data
         print(f"  💡 Step 4: Synthesizing insights...")
@@ -977,35 +971,42 @@ def run_deep_investigation(agent_name: str, topic: str, community: Optional[str]
     
     investigator = DeepInvestigator(agent_name)
     
-    # Show skill discovery system status
-    if investigator.skill_registry:
-        # Suggest skills for this topic
-        suggested_skills = investigator.skill_registry.suggest_skills_for_topic(topic)
-        if suggested_skills:
-            print(f"  🎯 Relevant skills identified: {', '.join([s['name'] for s in suggested_skills[:5]])}")
-    
     # Check previous work
     previous = investigator.check_previous_work(topic)
     if previous.get("investigated"):
         print(f"  💾 {previous['message']}\n")
     
-    # Use LLM-powered topic analysis to replace hardcoded keywords
-    if investigator.topic_analyzer:
+    # Use single LLM call: topic analysis + skill selection
+    pre_selected_skills = None
+    if investigator.topic_analyzer and investigator.skill_registry:
+        print(f"  🤖 Analyzing topic and selecting skills (one LLM call)...")
+        all_skills = list(investigator.skill_registry.skills.values())
+        analysis, pre_selected_skills = investigator.topic_analyzer.analyze_and_select_skills(
+            topic=topic, available_skills=all_skills, max_skills=5
+        )
+        
+        inv_type = analysis.investigation_type
+        if inv_type == "interdisciplinary":
+            inv_type = "auto"
+        print(f"  💡 Reasoning: {analysis.reasoning}")
+        if analysis.key_concepts:
+            print(f"  📌 Key concepts: {', '.join(analysis.key_concepts[:3])}")
+        if pre_selected_skills:
+            print(f"  🛠️  Selected skills: {', '.join([s['name'] for s in pre_selected_skills[:5]])}")
+        print()
+    elif investigator.topic_analyzer:
         print(f"  🤖 Analyzing topic with LLM...")
         analysis = investigator.topic_analyzer.analyze_topic(topic)
         
         inv_type = analysis.investigation_type
-        print(f"  🎯 Investigation type: {inv_type}")
+        if inv_type == "interdisciplinary":
+            inv_type = "auto"
         print(f"  💡 Reasoning: {analysis.reasoning}")
         if analysis.key_concepts:
             print(f"  📌 Key concepts: {', '.join(analysis.key_concepts[:3])}")
         if analysis.recommended_skill_categories:
             print(f"  🛠️  Recommended tools: {', '.join(analysis.recommended_skill_categories[:4])}")
         print()
-        
-        # Map investigation type to legacy format
-        if inv_type == "interdisciplinary":
-            inv_type = "auto"
     else:
         # Fallback to simple keyword detection
         topic_lower = topic.lower()
@@ -1021,17 +1022,14 @@ def run_deep_investigation(agent_name: str, topic: str, community: Optional[str]
             inv_type = "biology"
         else:
             inv_type = "auto"
-        
-        print(f"  🎯 Investigation type: {inv_type} (keyword-based)\n")
+        print()
     
-    # Run tool chain
-    results = investigator.run_tool_chain(topic, inv_type)
+    # Run tool chain (with pre-selected skills if available)
+    results = investigator.run_tool_chain(topic, inv_type, pre_selected_skills=pre_selected_skills)
     
     print(f"\n  ✓ Investigation complete!")
     print(f"  📊 Tools used: {', '.join(results['tools_used'])}")
     print(f"  📄 Papers analyzed: {len(results['papers'])}")
-    print(f"  🧬 Proteins characterized: {len(results['proteins'])}")
-    print(f"  🧪 Compounds analyzed: {len(results['compounds'])}")
     print(f"  💡 Insights generated: {len(results['insights'])}\n")
     
     # Generate sophisticated content
@@ -1045,3 +1043,29 @@ def run_deep_investigation(agent_name: str, topic: str, community: Optional[str]
     content["investigation_results"] = results
     
     return content
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Run a deep scientific investigation")
+    parser.add_argument("topic", nargs="?", default=None, help="Research topic to investigate")
+    parser.add_argument("--agent", "-a", default=None, help="Agent name (default: from profile or 'Agent')")
+    parser.add_argument("--community", "-c", default=None, help="Target community")
+    args = parser.parse_args()
+    topic = args.topic
+    if not topic:
+        parser.print_help()
+        sys.exit(1)
+    agent_name = args.agent
+    if not agent_name:
+        try:
+            profile_path = Path.home() / ".scienceclaw" / "agent_profile.json"
+            if profile_path.exists():
+                with open(profile_path) as f:
+                    profile = json.load(f)
+                agent_name = profile.get("name", "Agent")
+            else:
+                agent_name = "Agent"
+        except Exception:
+            agent_name = "Agent"
+    run_deep_investigation(agent_name, topic, args.community)

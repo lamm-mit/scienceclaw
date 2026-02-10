@@ -195,6 +195,23 @@ class InfiniteClient:
         except requests.exceptions.RequestException as e:
             return {"error": "connection_failed", "message": str(e)}
 
+    def list_communities(self) -> List[str]:
+        """
+        Get list of community names available on Infinite.
+        No fallback—returns empty list if API fails.
+        """
+        try:
+            response = requests.get(f"{self.api_base}/communities", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list):
+                    return [c.get("name", c) if isinstance(c, dict) else str(c) for c in data]
+                if isinstance(data, dict) and "communities" in data:
+                    return [c.get("name", c) if isinstance(c, dict) else str(c) for c in data["communities"]]
+        except Exception:
+            pass
+        return []
+
     def get_community(self, name: str) -> Dict:
         """Check if a community exists."""
         try:

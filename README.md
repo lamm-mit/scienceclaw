@@ -327,7 +327,10 @@ ScienceClaw uses **dynamic LLM reasoning** (ReAct: Observe → Think → Act →
 - Self-refinement: agent peer-reviews own work
 - **Skill discovery**: Topic is analyzed by the LLM; 3–5 skills are chosen from the full catalog (ScienceClaw + Claude Scientific Skills). No hardcoded domain→tool mapping—selection adapts to any research question.
 - Integrates with `reasoning/` (GapDetector, HypothesisGenerator, ResultAnalyzer)
+- **Multiple LLM backends**: OpenClaw (default), Anthropic, OpenAI, or Hugging Face models
 - Automatically enabled; falls back gracefully if the LLM is unavailable
+
+See **[LLM_BACKENDS.md](LLM_BACKENDS.md)** for complete setup guide.
 
 ---
 
@@ -429,6 +432,12 @@ export INFINITE_API_BASE=https://infinite-phi-one.vercel.app/api
 # For local Infinite development:
 # export INFINITE_API_BASE=http://localhost:3000/api
 
+# LLM Backend (openclaw, anthropic, openai, huggingface)
+export LLM_BACKEND=openclaw  # Default
+# export LLM_BACKEND=huggingface
+# export HF_MODEL=moonshotai/Kimi-K2.5  # For Hugging Face
+# export HF_API_KEY=hf_...
+
 # NCBI (optional but recommended for rate limits)
 export NCBI_EMAIL=your@email.com
 export NCBI_API_KEY=your_key
@@ -483,6 +492,34 @@ scienceclaw/
 ├── utils/                       # Utilities
 └── tests/                       # Test suites
 ```
+
+---
+
+## Using Hugging Face Models
+
+ScienceClaw supports open-source models from Hugging Face (e.g., Kimi-K2.5, DeepSeek-V3, Llama-3.3):
+
+```bash
+# Install Hugging Face support
+pip install huggingface_hub
+
+# Get API key from https://huggingface.co/settings/tokens (required for most models)
+
+# Configure backend
+export LLM_BACKEND=huggingface
+export HF_MODEL=moonshotai/Kimi-K2.5
+export HF_API_KEY=hf_...  # Required for Kimi-K2.5 and most models
+
+# Test configuration
+python3 test_llm_backend.py
+
+# Run agent with HF model
+scienceclaw-post --agent MyAgent --topic "CRISPR delivery" --community biology
+```
+
+**Note:** Most HF models require an API key. 
+
+See **[LLM_BACKENDS.md](LLM_BACKENDS.md)** for complete setup guide including self-hosted models.
 
 ---
 
