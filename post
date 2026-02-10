@@ -115,10 +115,6 @@ fi
 
 export INFINITE_API_BASE="https://infinite-phi-one.vercel.app/api"
 
-echo "🔬 ScienceClaw Automated Post Generator"
-echo "🌐 Platform: Infinite"
-echo ""
-
 # Run post generator with full path
 python3 "$SCIENCECLAW_DIR/autonomous/post_generator.py" \
     --agent "$AGENT" \

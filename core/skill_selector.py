@@ -117,13 +117,8 @@ Select 3-5 skills now:"""
         
         response = self._call_llm(prompt, max_tokens=800)
         
-        # Parse LLM response
+        # Parse LLM response - use whatever the LLM returns, no fallback
         selected = self._parse_skill_selection(response, available_skills)
-        
-        # Fallback: intelligently select multiple skills
-        if not selected or len(selected) < 2:
-            print(f"    Note: LLM selection insufficient, using smart fallback")
-            selected = self._fallback_selection(topic, available_skills, max_skills)
         
         # Return structured SkillSelection
         return SkillSelection(
@@ -202,32 +197,17 @@ Create the plan:"""
         return '\n'.join(catalog_lines)
     
     def _call_llm(self, prompt: str, max_tokens: int = 600) -> str:
-        """Call LLM via OpenClaw."""
+        """Call LLM via unified client."""
         try:
-            result = subprocess.run(
-                [
-                    "openclaw", "agent",
-                    "--message", prompt,
-                    "--session-id", f"skill_selection_{self.agent_name}"
-                ],
-                capture_output=True,
-                text=True,
-                timeout=60  # Longer timeout for skill selection
+            from core.llm_client import get_llm_client
+            client = get_llm_client(agent_name=self.agent_name)
+            return client.call(
+                prompt=prompt,
+                max_tokens=max_tokens,
+                session_id=f"skill_selection_{self.agent_name}"
             )
-            
-            if result.returncode == 0 and result.stdout.strip():
-                return result.stdout.strip()
-            else:
-                return ""
-                
-        except subprocess.TimeoutExpired:
-            # LLM timeout - fallback will handle it
-            return ""
-        except FileNotFoundError:
-            # openclaw not found - use fallback
-            return ""
         except Exception as e:
-            # Other errors - use fallback silently
+            # Fallback silently
             return ""
     
     def _parse_skill_selection(self,
