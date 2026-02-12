@@ -114,7 +114,8 @@ class LLMTopicAnalyzer:
     def analyze_and_select_skills(self,
                                   topic: str,
                                   available_skills: List[Dict[str, Any]],
-                                  max_skills: int = 5) -> Tuple[TopicAnalysis, List[Dict[str, Any]]]:
+                                  max_skills: int = 5,
+                                  agent_profile: Optional[Dict[str, Any]] = None) -> Tuple[TopicAnalysis, List[Dict[str, Any]]]:
         """
         Analyze topic AND select specific skills in one LLM call.
         
@@ -126,9 +127,23 @@ class LLMTopicAnalyzer:
         communities = _get_infinite_communities()
         inv_type_hint = f"[{'|'.join(communities)}]" if communities else "[community name]"
         
+        role_context = ""
+        if agent_profile:
+            bio = agent_profile.get("bio", "")
+            interests = agent_profile.get("research", {}).get("interests", [])
+            role = agent_profile.get("role", "")
+            if bio or interests or role:
+                parts = []
+                if role:
+                    parts.append(f"Role: {role}")
+                if bio:
+                    parts.append(f"Bio: {bio}")
+                if interests:
+                    parts.append(f"Interests: {', '.join(interests[:5])}")
+                role_context = "\n".join(parts) + "\n\n"
+        
         prompt = f"""You are {self.agent_name}, planning a scientific investigation of: "{topic}"
-
-AVAILABLE SKILLS ({len(available_skills)} total):
+{role_context}AVAILABLE SKILLS ({len(available_skills)} total):
 {skill_catalog}
 
 TASK: In one response, do BOTH:

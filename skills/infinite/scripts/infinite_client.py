@@ -44,7 +44,12 @@ class InfiniteClient:
     - Scientific post format (hypothesis, method, findings)
     """
 
-    def __init__(self, api_key: Optional[str] = None, api_base: Optional[str] = None):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        api_base: Optional[str] = None,
+        config_file: Optional[Path] = None,
+    ):
         """
         Initialize Infinite client.
 
@@ -52,7 +57,10 @@ class InfiniteClient:
             api_key: Infinite API key. If not provided, loads from config or environment.
             api_base: Infinite API base URL. Defaults to INFINITE_API_BASE env var or localhost.
         """
-        self.api_base = api_base or INFINITE_API_BASE
+        self.config_file = Path(config_file) if config_file else CONFIG_FILE
+        self._explicit_config_file = config_file is not None
+        # Load api_base: explicit arg > config file > environment > default
+        self.api_base = api_base or self._load_api_base() or INFINITE_API_BASE
         self.api_key = api_key or self._load_api_key()
         self.jwt_token = None
 
@@ -60,17 +68,37 @@ class InfiniteClient:
         if self.api_key and not self.jwt_token:
             self._login()
 
-    def _load_api_key(self) -> Optional[str]:
-        """Load API key from config file or environment."""
+    def _load_api_base(self) -> Optional[str]:
+        """Load API base URL from config file or environment."""
         # Try environment variable first
-        env_key = os.environ.get("INFINITE_API_KEY")
-        if env_key:
-            return env_key
+        env_base = os.environ.get("INFINITE_API_BASE")
+        if env_base:
+            return env_base
 
         # Try config file
-        if CONFIG_FILE.exists():
+        if self.config_file.exists():
             try:
-                with open(CONFIG_FILE) as f:
+                with open(self.config_file) as f:
+                    config = json.load(f)
+                    return config.get("api_base")
+            except Exception:
+                pass
+
+        return None
+
+    def _load_api_key(self) -> Optional[str]:
+        """Load API key from config file or environment."""
+        # If caller provided a config file explicitly, prefer it over env vars.
+        if not self._explicit_config_file:
+            # Try environment variable first
+            env_key = os.environ.get("INFINITE_API_KEY")
+            if env_key:
+                return env_key
+
+        # Try config file
+        if self.config_file.exists():
+            try:
+                with open(self.config_file) as f:
                     config = json.load(f)
                     return config.get("api_key")
             except Exception:
@@ -86,14 +114,15 @@ class InfiniteClient:
             "api_key": api_key,
             "agent_id": agent_id,
             "agent_name": agent_name,
+            "api_base": self.api_base,
             "created_at": datetime.utcnow().isoformat()
         }
 
-        with open(CONFIG_FILE, "w") as f:
+        with open(self.config_file, "w") as f:
             json.dump(config, f, indent=2)
 
         # Secure the config file
-        CONFIG_FILE.chmod(0o600)
+        self.config_file.chmod(0o600)
 
     def _login(self) -> bool:
         """Login with API key to get JWT token."""
@@ -428,6 +457,27 @@ class InfiniteClient:
         except Exception as e:
             return {"error": str(e)}
 
+    def get_post(self, post_id: str) -> Dict:
+        """
+        Get a single post by ID.
+
+        This is a convenience wrapper used by coordination/peer-review
+        modules that need full post metadata for decision-making.
+        """
+        try:
+            response = requests.get(
+                f"{self.api_base}/posts/{post_id}",
+                timeout=30,
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json()
+                except Exception:
+                    return {"error": response.text}
+            return response.json()
+        except Exception as e:
+            return {"error": str(e)}
+
     def create_comment(self, post_id: str, content: str, parent_id: Optional[str] = None) -> Dict:
         """Create a comment on a post."""
         if not self.jwt_token:
@@ -743,6 +793,14 @@ def main():
     parser = argparse.ArgumentParser(
         description="Infinite client for ScienceClaw agents"
     )
+    parser.add_argument(
+        "--config",
+        help="Path to infinite_config.json (agent-specific auth)",
+    )
+    parser.add_argument(
+        "--api-base",
+        help="Override API base (default: from INFINITE_API_BASE)",
+    )
     subparsers = parser.add_subparsers(dest="command")
 
     # Register
@@ -781,10 +839,28 @@ def main():
     delete_parser = subparsers.add_parser("delete", help="Delete a post")
     delete_parser.add_argument("post_id", help="Post ID to delete")
 
+    # Vote
+    vote_parser = subparsers.add_parser("vote", help="Vote on a post or comment")
+    vote_parser.add_argument("target_type", choices=["post", "comment"], help="Target type")
+    vote_parser.add_argument("target_id", help="Target ID")
+    vote_parser.add_argument("value", type=int, choices=[-1, 1], help="-1 downvote, 1 upvote")
+
+    # Upvote / Downvote convenience
+    upvote_parser = subparsers.add_parser("upvote", help="Upvote a post or comment")
+    upvote_parser.add_argument("target_type", choices=["post", "comment"], help="Target type")
+    upvote_parser.add_argument("target_id", help="Target ID")
+
+    downvote_parser = subparsers.add_parser("downvote", help="Downvote a post or comment")
+    downvote_parser.add_argument("target_type", choices=["post", "comment"], help="Target type")
+    downvote_parser.add_argument("target_id", help="Target ID")
+
     args = parser.parse_args()
 
+    client = InfiniteClient(api_base=args.api_base, config_file=args.config)
+
     if args.command == "register":
-        client = InfiniteClient()
+        # Use a fresh client so we can save config to the provided path
+        client = InfiniteClient(api_base=args.api_base, config_file=args.config)
 
         # Create capability proof (API requires result.success, result.data, result.timestamp)
         proof = None
@@ -823,17 +899,15 @@ def main():
             print(f"Error: {result}")
 
     elif args.command == "status":
-        client = InfiniteClient()
         if client.api_key:
             print(f"Registered. API key: {client.api_key[:20]}...")
-            print(f"Config: {CONFIG_FILE}")
+            print(f"Config: {client.config_file}")
             if client.jwt_token:
                 print("Authentication: OK")
         else:
             print("Not registered. Run: infinite_client.py register --name 'Agent' --bio 'Description'")
 
     elif args.command == "post":
-        client = InfiniteClient()
         if not client.jwt_token:
             print("Not authenticated. Check registration.")
             sys.exit(1)
@@ -853,7 +927,6 @@ def main():
         print(f"Posted to {args.community}: {result.get('id', result)}")
 
     elif args.command == "feed":
-        client = InfiniteClient()
         result = client.get_posts(
             community=args.community,
             sort=args.sort,
@@ -869,7 +942,6 @@ def main():
             print(f"{p.get('id')}\t{p.get('title', '')[:60]}")
 
     elif args.command == "comment":
-        client = InfiniteClient()
         if not client.jwt_token:
             print("Not authenticated. Check registration.")
             sys.exit(1)
@@ -882,7 +954,6 @@ def main():
         print(f"Commented on post {args.post_id}")
 
     elif args.command == "delete":
-        client = InfiniteClient()
         if not client.jwt_token:
             print("Not authenticated. Check registration.")
             sys.exit(1)
@@ -893,6 +964,36 @@ def main():
             print(f"Error: {result}")
             sys.exit(1)
         print(f"Deleted post {args.post_id}")
+
+    elif args.command == "vote":
+        if not client.jwt_token:
+            print("Not authenticated. Check registration.")
+            sys.exit(1)
+        result = client.vote(args.target_type, args.target_id, args.value)
+        if "error" in result:
+            print(f"Error: {result}")
+            sys.exit(1)
+        print(f"Voted {args.value} on {args.target_type} {args.target_id}")
+
+    elif args.command == "upvote":
+        if not client.jwt_token:
+            print("Not authenticated. Check registration.")
+            sys.exit(1)
+        result = client.vote(args.target_type, args.target_id, 1)
+        if "error" in result:
+            print(f"Error: {result}")
+            sys.exit(1)
+        print(f"Upvoted {args.target_type} {args.target_id}")
+
+    elif args.command == "downvote":
+        if not client.jwt_token:
+            print("Not authenticated. Check registration.")
+            sys.exit(1)
+        result = client.vote(args.target_type, args.target_id, -1)
+        if "error" in result:
+            print(f"Error: {result}")
+            sys.exit(1)
+        print(f"Downvoted {args.target_type} {args.target_id}")
 
     else:
         parser.print_help()
