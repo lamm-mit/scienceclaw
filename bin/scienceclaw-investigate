@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+"""
+Command-line interface for autonomous multi-agent investigations.
+
+Usage:
+    scienceclaw-investigate "Alzheimer's disease drug targets"
+    scienceclaw-investigate "CRISPR delivery mechanisms" --community biology
+"""
+
+import sys
+import argparse
+import logging
+
+from coordination.autonomous_orchestrator import AutonomousOrchestrator
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Autonomous multi-agent scientific investigation',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Drug discovery investigation
+  %(prog)s "Alzheimer's disease drug targets"
+
+  # Mechanism investigation
+  %(prog)s "How does CRISPR-Cas9 achieve specificity?"
+
+  # Screening investigation
+  %(prog)s "Screen kinase inhibitors for BBB penetration" --community chemistry
+
+  # Custom community
+  %(prog)s "Materials for battery cathodes" --community materials
+
+The system will:
+  1. Analyze your topic
+  2. Determine investigation strategy
+  3. Spawn 2-5 specialized agents
+  4. Facilitate autonomous collaboration
+  5. Post synthesis to Infinite
+"""
+    )
+
+    parser.add_argument(
+        'topic',
+        help='Research topic to investigate (in quotes)'
+    )
+
+    parser.add_argument(
+        '-c', '--community',
+        default='biology',
+        help='Community to post results to (default: biology)'
+    )
+
+    parser.add_argument(
+        '-v', '--verbose',
+        action='store_true',
+        help='Verbose logging'
+    )
+
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Simulate without posting to Infinite'
+    )
+
+    args = parser.parse_args()
+
+    # Configure logging
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    logging.basicConfig(
+        level=log_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+    logger = logging.getLogger(__name__)
+
+    # Banner
+    print("\n" + "="*80)
+    print("AUTONOMOUS MULTI-AGENT SCIENTIFIC INVESTIGATION")
+    print("="*80)
+    print(f"\nTopic: {args.topic}")
+    print(f"Community: {args.community}")
+    if args.dry_run:
+        print("Mode: DRY RUN (no posting)")
+    print("\n" + "-"*80 + "\n")
+
+    # Create orchestrator
+    orchestrator = AutonomousOrchestrator()
+
+    try:
+        # Run autonomous investigation
+        result = orchestrator.investigate(
+            topic=args.topic,
+            community=args.community
+        )
+
+        # Display results
+        print("\n" + "="*80)
+        print("INVESTIGATION COMPLETE")
+        print("="*80 + "\n")
+
+        print(f"Investigation Type: {result['strategy']['investigation_type']}")
+        print(f"Collaboration Pattern: {result['strategy']['collaboration_pattern']}")
+        print(f"\nAgents Spawned ({len(result['agents'])}):")
+        for agent in result['agents']:
+            print(f"  - {agent}")
+
+        print(f"\nSession ID: {result['session_id']}")
+
+        if not args.dry_run:
+            print(f"\n✓ Posted to m/{args.community}")
+            print(f"Post ID: {result['post_id']}")
+        else:
+            print(f"\n(Dry run - post not created)")
+
+        print(f"\nKey Findings:")
+        for i, finding in enumerate(result['synthesis']['key_findings'][:5], 1):
+            print(f"  {i}. {finding}")
+
+        print(f"\nTools Used: {', '.join(result['synthesis']['tools_used'])}")
+
+        print("\n" + "="*80 + "\n")
+
+        return 0
+
+    except Exception as e:
+        logger.error(f"Investigation failed: {e}", exc_info=True)
+        print(f"\n✗ Investigation failed: {e}\n")
+        return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())
