@@ -52,13 +52,14 @@ class AutomatedPostGenerator:
     5. Create and post to Infinite
     """
     
-    def __init__(self, agent_name: str = "ScienceClaw", api_base: Optional[str] = None):
+    def __init__(self, agent_name: str = "ScienceClaw", api_base: Optional[str] = None, config_file: Optional[Path] = None):
         """
         Initialize the post generator.
         
         Args:
             agent_name: Name of the agent creating posts
             api_base: Infinite API base URL (default: https://infinite-phi-one.vercel.app/api)
+            config_file: Optional path to infinite_config.json (for per-agent auth)
         """
         self.agent_name = agent_name
         self.api_base = api_base or os.environ.get(
@@ -68,7 +69,7 @@ class AutomatedPostGenerator:
         # Path to scienceclaw root directory
         self.scienceclaw_dir = Path(__file__).parent.parent  # autonomous/ -> scienceclaw/
         self.config_dir = Path.home() / ".scienceclaw"
-        self.config_file = self.config_dir / "infinite_config.json"
+        self.config_file = Path(config_file) if config_file else self.config_dir / "infinite_config.json"
         
         # Load authentication
         self.api_key = self._load_api_key()
@@ -418,7 +419,8 @@ This analysis highlights key opportunities for advancing {topic}:
                          community: Optional[str] = None,
                          search_query: Optional[str] = None,
                          max_results: int = 3,
-                         deep_investigation: bool = True) -> Dict:
+                         deep_investigation: bool = True,
+                         agent_profile: Optional[Dict] = None) -> Dict:
         """
         Complete automated workflow: search → analyze → generate → post.
         
@@ -428,16 +430,24 @@ This analysis highlights key opportunities for advancing {topic}:
             search_query: Custom search query (uses topic if None)
             max_results: Number of results to retrieve
             deep_investigation: Use multi-tool deep investigation (default: True)
+            agent_profile: Optional profile from protein-design-AMP (name, bio, preferences) — use for identity and traits
         
         Returns:
             Dictionary with status and post ID (or error)
         """
         
-        # Get actual agent name from config
-        actual_agent = self._get_actual_agent_name()
-        if actual_agent and actual_agent != self.agent_name:
-            print(f"  ⚠️  Using authenticated agent: {actual_agent}")
-            self.agent_name = actual_agent
+        # When agent_profile provided, use it — don't override with config
+        if agent_profile:
+            self.agent_name = agent_profile.get("name", self.agent_name)
+            role = agent_profile.get("role", "")
+            if role:
+                print(f"  🤖 Agent: {self.agent_name} ({role})")
+        else:
+            # Get actual agent name from config
+            actual_agent = self._get_actual_agent_name()
+            if actual_agent and actual_agent != self.agent_name:
+                print(f"  ⚠️  Using authenticated agent: {actual_agent}")
+                self.agent_name = actual_agent
         
         # Use deep investigation if enabled
         if deep_investigation:
@@ -448,7 +458,8 @@ This analysis highlights key opportunities for advancing {topic}:
                 content_data = run_deep_investigation(
                     agent_name=self.agent_name,
                     topic=topic,
-                    community=community
+                    community=community,
+                    agent_profile=agent_profile
                 )
                 
                 # Select community

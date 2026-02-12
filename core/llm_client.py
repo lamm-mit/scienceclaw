@@ -172,6 +172,7 @@ class LLMClient:
             result = subprocess.run(
                 [
                     "openclaw", "agent",
+                    "--local",
                     "--message", prompt,
                     "--session-id", sid
                 ],
@@ -225,42 +226,54 @@ class LLMClient:
             return ""
     
     def _call_huggingface(self, prompt: str, max_tokens: int, temperature: float) -> str:
-        """Call Hugging Face model."""
+        """
+        Call Hugging Face models using the most general syntax.
+        
+        Strategy:
+        - Prefer `text_generation`, which works for most HF models.
+        - If that fails with a task error, fall back to `chat_completion`
+          for chat-style models that support it.
+        """
         try:
-            # Try chat completion first (for chat/instruct models like Kimi-K2.5)
+            # 1) Try generic text generation first (most widely supported)
+            try:
+                response = self.hf_client.text_generation(
+                    prompt,
+                    max_new_tokens=max_tokens,
+                    temperature=temperature,
+                    return_full_text=False,
+                )
+                return str(response) if response else ""
+            except ValueError as ve:
+                # Model doesn't support text_generation; try chat_completion
+                if "not supported for task" not in str(ve):
+                    raise
+                if os.environ.get("DEBUG_LLM_TOPIC"):
+                    print("    [DEBUG] HF text_generation not supported for this model, trying chat_completion...")
+
+            # 2) Fallback: chat_completion for chat/instruct models
             try:
                 response = self.hf_client.chat_completion(
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=max_tokens,
-                    temperature=temperature
+                    temperature=temperature,
                 )
-                # Handle different response formats
                 content = None
-                if hasattr(response, 'choices') and len(response.choices) > 0:
+                if hasattr(response, "choices") and len(response.choices) > 0:
                     content = response.choices[0].message.content
-                elif isinstance(response, dict) and 'choices' in response:
-                    content = response['choices'][0]['message']['content']
+                elif isinstance(response, dict) and "choices" in response:
+                    content = response["choices"][0]["message"]["content"]
                 else:
                     content = str(response) if response else ""
                 if content is None or (isinstance(content, str) and not content.strip()):
                     if os.environ.get("DEBUG_LLM_TOPIC"):
-                        print(f"    [DEBUG] Hugging Face returned empty content (choices present). Check model load/rate limits.")
+                        print("    [DEBUG] Hugging Face returned empty content in chat_completion.")
                 return content or ""
-            except (AttributeError, KeyError, TypeError, IndexError) as inner_e:
-                # Some models don't support chat_completion, try text_generation
-                try:
-                    response = self.hf_client.text_generation(
-                        prompt,
-                        max_new_tokens=max_tokens,
-                        temperature=temperature,
-                        return_full_text=False
-                    )
-                    return str(response) if response else ""
-                except ValueError as ve:
-                    # Model doesn't support text_generation either
-                    if "not supported for task" in str(ve):
-                        raise ValueError(f"Model {self.hf_model} requires chat_completion but the API call failed: {inner_e}")
-                    raise
+            except Exception as inner_e:
+                # If chat_completion also fails, surface a single clear error
+                if os.environ.get("DEBUG_LLM_TOPIC"):
+                    print(f"    [DEBUG] HF chat_completion failed: {inner_e}")
+                raise
         except Exception as e:
             print(f"Hugging Face API error: {e}")
             return ""

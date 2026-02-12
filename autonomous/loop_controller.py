@@ -31,7 +31,7 @@ sys.path.insert(0, str(SCIENCECLAW_DIR / "skills" / "sciencemolt" / "scripts"))
 # Import memory and reasoning components
 from memory import AgentJournal, InvestigationTracker, KnowledgeGraph
 from reasoning import ScientificReasoningEngine
-from coordination import SessionManager
+from coordination import SessionManager, AgentDiscoveryService
 
 
 class AutonomousLoopController:
@@ -78,10 +78,13 @@ class AutonomousLoopController:
         
         # Initialize session manager for multi-agent coordination
         self.session_manager = SessionManager(agent_name=self.agent_name)
-        
+
+        # Initialize discovery service (Phase 2)
+        self.discovery_service = AgentDiscoveryService()
+
         # Determine which platform to use (Infinite or Moltbook)
         self.platform = self._initialize_platform()
-        
+
         print(f"[AutonomousLoopController] Initialized for agent: {self.agent_name}")
         print(f"[AutonomousLoopController] Platform: {self.platform.__class__.__name__}")
         print(f"[AutonomousLoopController] Profile: {agent_profile.get('profile', 'mixed')}")
@@ -154,7 +157,13 @@ class AutonomousLoopController:
             print("\n🤝 Step 1.5: Checking collaborative sessions...")
             self._check_collaborative_sessions()
             summary["steps_completed"].append("check_collaborative_sessions")
-            
+
+            # Step 1.6: Agent discovery (Phase 2)
+            print("\n🔍 Step 1.6: Agent discovery - looking for collaborative opportunities...")
+            discovery_summary = self._discover_and_join_sessions()
+            summary["discovery_summary"] = discovery_summary
+            summary["steps_completed"].append("agent_discovery")
+
             # Step 2: Observe community (read posts, identify gaps)
             print("\n👀 Step 2: Observing community and identifying gaps...")
             gaps = self.observe_community()
@@ -622,7 +631,96 @@ class AutonomousLoopController:
                 filtered.append(gap)
         
         return filtered if filtered else gaps[:3]  # Return all if none match
-    
+
+    def _discover_and_join_sessions(self) -> Dict[str, Any]:
+        """
+        Phase 2: Discover and join collaborative sessions matching agent's skills.
+
+        Process:
+        1. Register agent in discovery index
+        2. Find sessions matching agent's skills
+        3. Find sessions matching agent's interests
+        4. Join most relevant sessions
+        5. Optionally claim investigations if interested
+
+        Returns:
+            Summary of discovery and joining actions
+        """
+        summary = {
+            "registered": False,
+            "sessions_found": 0,
+            "sessions_joined": 0,
+            "investigations_claimed": 0
+        }
+
+        try:
+            # Step 1: Register agent in discovery index
+            print("   Registering agent in discovery index...")
+            self.discovery_service.register_agent(
+                agent_name=self.agent_name,
+                profile=self.agent_profile,
+                status="available"
+            )
+            summary["registered"] = True
+
+            # Step 2: Find sessions by skill match
+            print("   Searching for sessions matching my skills...")
+            skills = self.agent_profile.get("preferred_tools", [])
+            skill_sessions = self.discovery_service.find_sessions_by_skill(skills, limit=5)
+            summary["sessions_found"] += len(skill_sessions)
+
+            # Step 3: Find sessions by interest match
+            print("   Searching for sessions matching my interests...")
+            interests = self.agent_profile.get("interests", [])
+            interest_str = " ".join(interests) if interests else "general science"
+            interest_sessions = self.discovery_service.find_sessions_by_interest(interest_str, limit=5)
+            summary["sessions_found"] += len(interest_sessions)
+
+            # Combine and deduplicate sessions
+            all_sessions = {}
+            for session in skill_sessions + interest_sessions:
+                session_id = session["session_id"]
+                if session_id not in all_sessions:
+                    all_sessions[session_id] = session
+
+            # Step 4: Join top sessions
+            print(f"   Found {len(all_sessions)} open sessions. Joining relevant ones...")
+            for session_id, session_info in list(all_sessions.items())[:3]:  # Join up to 3 sessions
+                try:
+                    # Join session
+                    join_result = self.session_manager.join_session(session_id)
+                    if join_result.get("status") in ("joined", "already_joined"):
+                        summary["sessions_joined"] += 1
+                        print(f"     ✓ Joined: {session_info['topic']}")
+
+                        # Step 5: Optionally claim investigations if very relevant
+                        # (Only claim if high skill/interest match)
+                        suggested_invs = session_info.get("suggestion_count", 0)
+                        if suggested_invs > 0 and self.agent_profile.get("curiosity_style") != "skeptic":
+                            # Try to claim first investigation (if many investigations)
+                            session_data = self.session_manager.get_session(session_id)
+                            if session_data and session_data.get("suggested_investigations"):
+                                first_inv = session_data["suggested_investigations"][0]
+                                claim_result = self.session_manager.claim_investigation(
+                                    session_id,
+                                    first_inv["id"]
+                                )
+                                if claim_result.get("status") == "claimed":
+                                    summary["investigations_claimed"] += 1
+                                    print(f"       - Claimed investigation: {first_inv['description']}")
+
+                except Exception as e:
+                    print(f"     ✗ Error joining session: {e}")
+                    summary["join_errors"] = summary.get("join_errors", 0) + 1
+
+        except Exception as e:
+            print(f"   Error during discovery: {e}")
+            summary["discovery_error"] = str(e)
+            import traceback
+            traceback.print_exc()
+
+        return summary
+
     def _score_hypothesis(self, hypothesis: Dict[str, Any]) -> float:
         """
         Score a hypothesis for selection priority.

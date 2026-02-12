@@ -76,14 +76,16 @@ class DeepInvestigator:
     - Sophisticated content generation
     """
     
-    def __init__(self, agent_name: str):
+    def __init__(self, agent_name: str, agent_profile: Optional[Dict] = None):
         """
         Initialize deep investigator for an agent.
         
         Args:
             agent_name: Name of the agent (used for memory and attribution)
+            agent_profile: Optional profile (bio, preferences) for personality and skill filtering
         """
         self.agent_name = agent_name
+        self.agent_profile = agent_profile
         self.scienceclaw_dir = Path(__file__).parent.parent
         
         # Initialize memory system (if available)
@@ -440,47 +442,62 @@ class DeepInvestigator:
         return entities
     
     def _run_pubmed(self, query: str, max_results: int = 5) -> Dict:
-        """Run PubMed search."""
+        """Run PubMed search. Uses --format json; falls back to text parsing."""
+        pubmed_script = self.scienceclaw_dir / "skills/pubmed/scripts/pubmed_search.py"
+        if not pubmed_script.exists():
+            pubmed_script = self.scienceclaw_dir / "skills/pubmed-database/scripts/pubmed_search.py"
+        if not pubmed_script.exists():
+            return {"papers": []}
+        cmd = [
+            sys.executable,
+            str(pubmed_script),
+            "--query", query,
+            "--max-results", str(max_results),
+            "--format", "json"
+        ]
         try:
-            cmd = [
-                "python3",
-                str(self.scienceclaw_dir / "skills/pubmed/scripts/pubmed_search.py"),
-                "--query", query,
-                "--max-results", str(max_results)
-            ]
-            
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                cwd=self.scienceclaw_dir,
-                timeout=30
+                cwd=str(self.scienceclaw_dir),
+                timeout=60
             )
-            
-            if result.returncode == 0:
-                output = result.stdout
-                papers = []
-                lines = output.split('\n')
-                i = 0
-                while i < len(lines):
-                    line = lines[i]
-                    if 'PMID:' in line:
-                        pmid = line.split('PMID:')[1].strip().split()[0]
-                        title = ""
-                        for j in range(i-1, max(0, i-5), -1):
-                            if lines[j].strip() and not lines[j].startswith('   '):
-                                title = lines[j].strip()
-                                break
-                        papers.append({
-                            "pmid": pmid,
-                            "title": title
-                        })
-                    i += 1
-                return {"papers": papers}
         except Exception as e:
-            print(f"    Warning: PubMed search failed: {e}")
-        
-        return {"papers": []}
+            if os.environ.get("DEBUG_LLM_TOPIC"):
+                print(f"    [DEBUG] PubMed subprocess error: {e}")
+            return {"papers": []}
+        if result.returncode != 0:
+            print("  ⚠ PubMed script failed (run with DEBUG_LLM_TOPIC=1 for stderr)")
+            if os.environ.get("DEBUG_LLM_TOPIC") and result.stderr:
+                print(f"    [DEBUG] PubMed stderr: {result.stderr[:500]}")
+            return {"papers": []}
+        out = (result.stdout or "").strip()
+        if not out:
+            return {"papers": []}
+        # Pubmed script prints progress before JSON; extract from first [
+        start = out.find("[")
+        if start >= 0:
+            try:
+                articles = json.loads(out[start:])
+                if isinstance(articles, list) and articles:
+                    return {"papers": [{"pmid": str(a.get("pmid", "")), "title": a.get("title", "")} for a in articles]}
+            except json.JSONDecodeError:
+                pass
+        # Fallback: parse lines containing "PMID:"
+        papers = []
+        for line in out.split("\n"):
+            if "PMID:" in line:
+                try:
+                    pmid = line.split("PMID:")[1].strip().split()[0]
+                    papers.append({"pmid": pmid, "title": ""})
+                except IndexError:
+                    pass
+        if not papers:
+            print("  ⚠ PubMed returned 0 papers (run with DEBUG_LLM_TOPIC=1 to see script output)")
+            if os.environ.get("DEBUG_LLM_TOPIC"):
+                print(f"    [DEBUG] stdout sample: {out[:400]!r}")
+        return {"papers": papers}
     
     def _extract_entities(self, papers: List[Dict]) -> Dict:
         """
@@ -952,7 +969,7 @@ This investigation employed a multi-tool systematic analysis:
             print(f"    Note: Could not log to memory: {e}")
 
 
-def run_deep_investigation(agent_name: str, topic: str, community: Optional[str] = None) -> Dict:
+def run_deep_investigation(agent_name: str, topic: str, community: Optional[str] = None, agent_profile: Optional[Dict] = None) -> Dict:
     """
     Main entry point for deep investigation.
     
@@ -966,10 +983,15 @@ def run_deep_investigation(agent_name: str, topic: str, community: Optional[str]
     Returns:
         Dict with content ready for posting
     """
-    print(f"\n🔬 {agent_name}: Initiating Deep Scientific Investigation")
+    if agent_profile:
+        agent_name = agent_profile.get("name", agent_name)
+        role = agent_profile.get("role", "")
+        print(f"\n🔬 {agent_name}" + (f" ({role})" if role else "") + ": Initiating Deep Scientific Investigation")
+    else:
+        print(f"\n🔬 {agent_name}: Initiating Deep Scientific Investigation")
     print(f"📋 Topic: {topic}\n")
     
-    investigator = DeepInvestigator(agent_name)
+    investigator = DeepInvestigator(agent_name, agent_profile=agent_profile)
     
     # Check previous work
     previous = investigator.check_previous_work(topic)
@@ -981,8 +1003,14 @@ def run_deep_investigation(agent_name: str, topic: str, community: Optional[str]
     if investigator.topic_analyzer and investigator.skill_registry:
         print(f"  🤖 Analyzing topic and selecting skills (one LLM call)...")
         all_skills = list(investigator.skill_registry.skills.values())
+        # Filter to agent's preferred tools when profile provided
+        if investigator.agent_profile:
+            preferred = set(investigator.agent_profile.get("preferences", {}).get("tools", []))
+            if preferred:
+                all_skills = [s for s in all_skills if s.get("name") in preferred]
+                print(f"  ✨ Using {len(all_skills)} skills from agent profile")
         analysis, pre_selected_skills = investigator.topic_analyzer.analyze_and_select_skills(
-            topic=topic, available_skills=all_skills, max_skills=5
+            topic=topic, available_skills=all_skills, max_skills=5, agent_profile=investigator.agent_profile
         )
         
         inv_type = analysis.investigation_type
