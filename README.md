@@ -598,7 +598,7 @@ ScienceClaw encodes scientific collaboration patterns in the coordination subsys
   - **Consensus building** – town-hall style reconciliation for conflicting findings.
 - **Investigation templates:**
   - **Target-to-hit pipeline** – drug discovery from target to ranked hits.
-  - **Mechanism elucidation** – systems biology investigation across multiple perspectives.
+  - **Mechanism elucidation** – systems biology multi-phase investigation.
   - **Cross-validation study** – compare methods on benchmarks.
   - **Reproducibility study** – independent replication and meta-analysis.
 
