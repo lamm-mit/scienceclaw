@@ -1,1 +1,0 @@
-# ScienceClaw test suite
