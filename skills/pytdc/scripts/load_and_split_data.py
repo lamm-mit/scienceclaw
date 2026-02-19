@@ -8,6 +8,12 @@ splitting strategies for model training and evaluation.
 Usage:
     python load_and_split_data.py
 """
+import sys
+if '--help' in sys.argv or '-h' in sys.argv:
+    print("TDC Data Loading and Splitting - ADME/DTI datasets")
+    print("Usage: python load_and_split_data.py")
+    print("Install: pip install PyTDC")
+    sys.exit(0)
 
 from tdc.single_pred import ADME
 from tdc.multi_pred import DTI

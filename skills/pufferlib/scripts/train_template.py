@@ -6,8 +6,36 @@ This template provides a complete training script for reinforcement learning
 with PufferLib. Customize the environment, policy, and training configuration
 as needed for your use case.
 """
-
 import argparse
+import sys
+
+# Parse args first so --help works without pufferlib
+_parser = argparse.ArgumentParser(description='PufferLib Training')
+_parser.add_argument('--env-name', type=str, default='procgen-coinrun', help='Environment name')
+_parser.add_argument('--num-envs', type=int, default=256, help='Number of parallel environments')
+_parser.add_argument('--num-workers', type=int, default=8, help='Number of vectorization workers')
+_parser.add_argument('--num-iterations', type=int, default=10000, help='Number of training iterations')
+_parser.add_argument('--learning-rate', type=float, default=3e-4, help='Learning rate')
+_parser.add_argument('--batch-size', type=int, default=32768, help='Batch size for training')
+_parser.add_argument('--n-epochs', type=int, default=4, help='Number of training epochs per batch')
+_parser.add_argument('--device', type=str, default='cuda', choices=['cuda', 'cpu'], help='Device to use')
+_parser.add_argument('--gamma', type=float, default=0.99, help='Discount factor')
+_parser.add_argument('--gae-lambda', type=float, default=0.95, help='GAE lambda')
+_parser.add_argument('--clip-coef', type=float, default=0.2, help='PPO clipping coefficient')
+_parser.add_argument('--ent-coef', type=float, default=0.01, help='Entropy coefficient')
+_parser.add_argument('--vf-coef', type=float, default=0.5, help='Value function coefficient')
+_parser.add_argument('--max-grad-norm', type=float, default=0.5, help='Maximum gradient norm')
+_parser.add_argument('--logger', type=str, default='none', choices=['wandb', 'neptune', 'none'], help='Logger to use')
+_parser.add_argument('--project', type=str, default='pufferlib-training', help='Project name for logging')
+_parser.add_argument('--exp-name', type=str, default='experiment', help='Experiment name')
+_parser.add_argument('--neptune-token', type=str, default=None, help='Neptune API token')
+_parser.add_argument('--log-freq', type=int, default=10, help='Logging frequency (iterations)')
+_parser.add_argument('--checkpoint-dir', type=str, default='checkpoints', help='Directory to save checkpoints')
+_parser.add_argument('--save-freq', type=int, default=100, help='Checkpoint save frequency (iterations)')
+_parser.add_argument('--seed', type=int, default=42, help='Random seed')
+_parser.add_argument('--compile', action='store_true', help='Use torch.compile for faster training')
+_ARGS = _parser.parse_args()
+
 import torch
 import torch.nn as nn
 import pufferlib
@@ -164,75 +192,9 @@ def train(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='PufferLib Training')
-
-    # Environment
-    parser.add_argument('--env-name', type=str, default='procgen-coinrun',
-                        help='Environment name')
-    parser.add_argument('--num-envs', type=int, default=256,
-                        help='Number of parallel environments')
-    parser.add_argument('--num-workers', type=int, default=8,
-                        help='Number of vectorization workers')
-
-    # Training
-    parser.add_argument('--num-iterations', type=int, default=10000,
-                        help='Number of training iterations')
-    parser.add_argument('--learning-rate', type=float, default=3e-4,
-                        help='Learning rate')
-    parser.add_argument('--batch-size', type=int, default=32768,
-                        help='Batch size for training')
-    parser.add_argument('--n-epochs', type=int, default=4,
-                        help='Number of training epochs per batch')
-    parser.add_argument('--device', type=str, default='cuda',
-                        choices=['cuda', 'cpu'], help='Device to use')
-
-    # PPO Parameters
-    parser.add_argument('--gamma', type=float, default=0.99,
-                        help='Discount factor')
-    parser.add_argument('--gae-lambda', type=float, default=0.95,
-                        help='GAE lambda')
-    parser.add_argument('--clip-coef', type=float, default=0.2,
-                        help='PPO clipping coefficient')
-    parser.add_argument('--ent-coef', type=float, default=0.01,
-                        help='Entropy coefficient')
-    parser.add_argument('--vf-coef', type=float, default=0.5,
-                        help='Value function coefficient')
-    parser.add_argument('--max-grad-norm', type=float, default=0.5,
-                        help='Maximum gradient norm')
-
-    # Logging
-    parser.add_argument('--logger', type=str, default='none',
-                        choices=['wandb', 'neptune', 'none'],
-                        help='Logger to use')
-    parser.add_argument('--project', type=str, default='pufferlib-training',
-                        help='Project name for logging')
-    parser.add_argument('--exp-name', type=str, default='experiment',
-                        help='Experiment name')
-    parser.add_argument('--neptune-token', type=str, default=None,
-                        help='Neptune API token')
-    parser.add_argument('--log-freq', type=int, default=10,
-                        help='Logging frequency (iterations)')
-
-    # Checkpointing
-    parser.add_argument('--checkpoint-dir', type=str, default='checkpoints',
-                        help='Directory to save checkpoints')
-    parser.add_argument('--save-freq', type=int, default=100,
-                        help='Checkpoint save frequency (iterations)')
-
-    # Misc
-    parser.add_argument('--seed', type=int, default=42,
-                        help='Random seed')
-    parser.add_argument('--compile', action='store_true',
-                        help='Use torch.compile for faster training')
-
-    args = parser.parse_args()
-
-    # Create checkpoint directory
     import os
-    os.makedirs(args.checkpoint_dir, exist_ok=True)
-
-    # Run training
-    train(args)
+    os.makedirs(_ARGS.checkpoint_dir, exist_ok=True)
+    train(_ARGS)
 
 
 if __name__ == '__main__':

@@ -51,14 +51,21 @@ class ReactomeClient:
         response.raise_for_status()
         return response.json()
 
-    def search_pathways(self, term: str) -> List[Dict]:
-        """Search for pathways by name"""
+    def search_pathways(self, term: str, species: str = "Homo sapiens") -> List[Dict]:
+        """Search for pathways, proteins, and reactions by keyword"""
         response = requests.get(
-            f"{self.CONTENT_BASE}/data/query",
-            params={"name": term}
+            f"{self.CONTENT_BASE}/search/query",
+            params={"query": term, "species": species, "cluster": "true"}
         )
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        # Flatten grouped results into a single list
+        entries = []
+        for group in data.get("results", []):
+            for entry in group.get("entries", []):
+                entry["typeName"] = group.get("typeName", "")
+                entries.append(entry)
+        return entries
 
     def analyze_genes(self, gene_list: List[str]) -> Dict:
         """Perform pathway enrichment analysis on gene list"""
@@ -158,7 +165,10 @@ def command_search(term: str):
         print(f"Search results for '{term}': {len(results)} found\n")
 
         for result in results[:20]:  # Show first 20
-            print(f"{result['stId']}: {result['displayName']}")
+            rid = result.get('stId') or result.get('id', '')
+            raw_name = result.get('name') or result.get('displayName', '')
+            name = raw_name.replace('<span class="highlighting" >', '').replace('</span>', '')
+            print(f"{rid}: {name}")
             if 'species' in result and result['species']:
                 species = result['species'][0]['displayName']
                 print(f"  Species: {species}")
@@ -243,7 +253,50 @@ def main():
         print_usage()
         sys.exit(1)
 
+    # Flag-based interface for skill executor (--query / --term / --limit / --format)
+    if sys.argv[1].startswith('--') and sys.argv[1] not in ('--help', '-h'):
+        import argparse
+        parser = argparse.ArgumentParser(description='Search Reactome pathways')
+        parser.add_argument('--query', '--term', dest='query', help='Search term')
+        parser.add_argument('--command', default='search', help='Command (search, version)')
+        parser.add_argument('--limit', '-l', type=int, default=20, help='Max results')
+        parser.add_argument('--format', '-f', default='json', choices=['summary', 'json'])
+        args = parser.parse_args()
+
+        if args.query:
+            client = ReactomeClient()
+            try:
+                results = client.search_pathways(args.query)
+                limited = results[:args.limit]
+                if args.format == 'json':
+                    output = [
+                        {
+                            "id": r.get("stId"),
+                            "name": r.get("name", "").replace('<span class="highlighting" >', '').replace('</span>', ''),
+                            "type": r.get("typeName") or r.get("type") or r.get("schemaClass"),
+                            "species": r.get("species", [None])[0] if r.get("species") else None
+                        }
+                        for r in limited
+                    ]
+                    print(json.dumps({"query": args.query, "pathways": output, "total": len(results)}))
+                else:
+                    print(f"Reactome search for '{args.query}': {len(results)} results")
+                    for r in limited:
+                        raw = r.get("name") or r.get("displayName", "")
+                        name = raw.replace('<span class="highlighting" >', '').replace('</span>', '')
+                        print(f"  {r.get('stId')}: {name}")
+            except Exception as e:
+                print(json.dumps({"error": str(e), "query": args.query}))
+                sys.exit(1)
+        else:
+            print_usage()
+            sys.exit(1)
+        return
+
     command = sys.argv[1].lower()
+    if command in ("--help", "-h"):
+        print_usage()
+        sys.exit(0)
 
     if command == "version":
         command_version()

@@ -40,6 +40,7 @@ class SkillRegistry:
         self.scienceclaw_dir = Path(scienceclaw_dir)
         self.skills_dir = self.scienceclaw_dir / "skills"
         self.cache_file = Path.home() / ".scienceclaw" / "skill_registry.json"
+        self.config_file = Path.home() / ".scienceclaw" / "skill_config.json"
         
         # Skill catalog (loaded from cache or discovered)
         self.skills: Dict[str, Dict[str, Any]] = {}
@@ -49,6 +50,9 @@ class SkillRegistry:
             self._load_cache()
         else:
             self.discover_skills()
+        
+        # Filter out hidden skills (e.g. require credentials you don't have yet)
+        self._apply_hidden_skills()
     
     def discover_skills(self, force_refresh: bool = False):
         """
@@ -71,8 +75,38 @@ class SkillRegistry:
             
             print(f"  ✓ Discovered {len(self.skills)} skills")
             self._save_cache()
+            self._apply_hidden_skills()
         
         return self.skills
+    
+    def _get_hidden_skills(self) -> List[str]:
+        """
+        Load list of skill names to hide (e.g. require credentials).
+        Sources: ~/.scienceclaw/skill_config.json, or SCIENCECLAW_HIDDEN_SKILLS env.
+        Default: adaptyv, drugbank-database (require API/DB credentials).
+        """
+        # Env override (comma-separated)
+        env_val = os.environ.get("SCIENCECLAW_HIDDEN_SKILLS", "").strip()
+        if env_val:
+            return [s.strip() for s in env_val.split(",") if s.strip()]
+        # Config file
+        if self.config_file.exists():
+            try:
+                with open(self.config_file) as f:
+                    cfg = json.load(f)
+                return list(cfg.get("hidden_skills", []))
+            except Exception:
+                pass
+        # Default: skills that commonly require credentials
+        return ["adaptyv", "drugbank-database", "pubchem", "pytdc"]
+    
+    def _apply_hidden_skills(self):
+        """Remove hidden skills from the registry (in-place)."""
+        hidden = self._get_hidden_skills()
+        if not hidden:
+            return
+        for name in hidden:
+            self.skills.pop(name, None)
     
     def _parse_skill(self, skill_dir: Path) -> Optional[Dict[str, Any]]:
         """

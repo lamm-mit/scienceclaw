@@ -9,6 +9,16 @@ Usage:
     python transfer_learning.py --model chemberta --data my_data.csv --target activity
     python transfer_learning.py --model grover --dataset bbbp
 """
+import sys
+if '--help' in sys.argv or '-h' in sys.argv:
+    import argparse
+    p = argparse.ArgumentParser(description='Transfer learning with pretrained molecular models')
+    p.add_argument('--model', choices=['chemberta', 'grover', 'molformer'])
+    p.add_argument('--data', type=str)
+    p.add_argument('--dataset', type=str)
+    p.add_argument('--target', type=str)
+    p.parse_args()
+    sys.exit(0)
 
 import argparse
 import deepchem as dc

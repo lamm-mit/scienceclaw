@@ -277,6 +277,36 @@ class RoleManager:
 
         return "acceptable: workable composition"
 
+    def suggest_role_from_thread(
+        self,
+        agent_name: str,
+        profile: Dict[str, Any],
+        thread: List[Dict[str, Any]],
+    ) -> Dict[str, str]:
+        """
+        Suggest a role for an agent based on what is missing from the current thread.
+
+        Delegates to EmergentSession.suggest_next_role() so the logic lives in
+        one place. This method is the RoleManager entry-point for callers that
+        already hold a RoleManager instance.
+
+        Args:
+            agent_name: Name of the agent about to act.
+            profile: Agent profile dict (domain, skills, personality, …).
+            thread: List of existing thread contributions from EmergentSession.
+
+        Returns:
+            Dict with keys: role, reasoning, focus
+            role="none_needed" when no contribution is needed.
+        """
+        # Import here to avoid circular dependency
+        from coordination.emergent_session import EmergentSession
+
+        # Create a lightweight session proxy (no client needed for role suggestion)
+        proxy = EmergentSession(client=None, dry_run=True)
+        proxy.thread = thread  # share the same thread reference
+        return proxy.suggest_next_role(agent_name, profile, thread)
+
     def _get_composition_recommendations(self, role_counts: Dict[str, int]) -> List[str]:
         """Get recommendations to improve team composition."""
         recommendations = []

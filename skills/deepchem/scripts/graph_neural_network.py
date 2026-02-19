@@ -10,6 +10,17 @@ Usage:
     python graph_neural_network.py --dataset bbbp --model attentivefp
     python graph_neural_network.py --data custom.csv --task-type regression
 """
+import sys
+if '--help' in sys.argv or '-h' in sys.argv:
+    import argparse
+    p = argparse.ArgumentParser(description='Train graph neural networks for molecular property prediction')
+    p.add_argument('--model', choices=['gcn', 'gat', 'attentivefp', 'mpnn', 'dmpnn'], default='gcn')
+    p.add_argument('--dataset', choices=['tox21', 'bbbp', 'bace', 'hiv', 'delaney', 'freesolv', 'lipo'])
+    p.add_argument('--data', type=str, help='Path to custom CSV')
+    p.add_argument('--task-type', choices=['classification', 'regression'])
+    p.add_argument('--epochs', type=int, default=50)
+    p.parse_args()
+    sys.exit(0)
 
 import argparse
 import deepchem as dc

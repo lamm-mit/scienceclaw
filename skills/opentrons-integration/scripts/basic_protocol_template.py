@@ -5,6 +5,11 @@ Basic Opentrons Protocol Template
 This template provides a minimal starting point for creating Opentrons protocols.
 Replace the placeholder values and add your specific protocol logic.
 """
+import sys
+if '--help' in sys.argv or '-h' in sys.argv:
+    print("Opentrons Basic Protocol Template - load in Opentrons Protocol Designer")
+    print("Usage: Load this file in the Opentrons app to simulate or run.")
+    sys.exit(0)
 
 from opentrons import protocol_api
 

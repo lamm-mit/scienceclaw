@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+"""
+scienceclaw-watch — Live multi-agent collaboration in your terminal.
+
+Usage:
+    scienceclaw-watch "CRISPR delivery mechanisms"
+    scienceclaw-watch "Alzheimer's drug targets" --agents 4
+    scienceclaw-watch "kinase inhibitor ADMET" --agents 2 --no-dashboard
+    scienceclaw-watch "protein folding" --output ./my_results --timeout 60
+
+The dashboard shows all agents working in parallel:
+  - Which tool each agent is currently running
+  - Tool results streaming in real-time
+  - Agents agreeing or challenging each other's findings
+  - Figures saved to the output directory
+"""
+
+import argparse
+import sys
+import json
+from pathlib import Path
+
+# Add scienceclaw root to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from collaboration.live_runner import LiveCollaborationSession
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Watch ScienceClaw agents collaborate in real-time",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+    parser.add_argument("topic", help="Research topic to investigate")
+    parser.add_argument(
+        "--agents", "-n", type=int, default=3, metavar="N",
+        help="Number of agents to spawn (1–5, default: 3)"
+    )
+    parser.add_argument(
+        "--output", "-o", default=None, metavar="DIR",
+        help="Output directory for results and figures (default: ./collab_<timestamp>)"
+    )
+    parser.add_argument(
+        "--no-dashboard", action="store_true",
+        help="Run without the Rich terminal UI (useful for logging)"
+    )
+    parser.add_argument(
+        "--timeout", "-t", type=int, default=45, metavar="SEC",
+        help="Per-tool timeout in seconds (default: 45)"
+    )
+    parser.add_argument(
+        "--session-id", default=None,
+        help="Custom session ID (default: auto-generated)"
+    )
+
+    args = parser.parse_args()
+
+    n_agents = max(1, min(5, args.agents))
+    dashboard = not args.no_dashboard
+
+    print(f"\n🔬 Starting live collaboration session")
+    print(f"   Topic:   {args.topic}")
+    print(f"   Agents:  {n_agents}")
+    print(f"   Dashboard: {'yes' if dashboard else 'no'}")
+    if args.output:
+        print(f"   Output:  {args.output}")
+    print()
+
+    session = LiveCollaborationSession(
+        topic=args.topic,
+        n_agents=n_agents,
+        output_dir=args.output,
+        session_id=args.session_id,
+        timeout_per_tool=args.timeout,
+    )
+
+    try:
+        results = session.run(dashboard=dashboard)
+    except KeyboardInterrupt:
+        print("\n\n⚠  Session interrupted by user.")
+        sys.exit(1)
+
+    # Print summary
+    print("\n" + "=" * 60)
+    print("SESSION COMPLETE")
+    print("=" * 60)
+    print(f"Topic:    {results['topic']}")
+    print(f"Agents:   {', '.join(results['agents'])}")
+    print(f"Findings: {len(results['findings'])}")
+    print(f"Figures:  {len(results['figures'])}")
+    print(f"Challenges/Agreements: {results['challenges']}/{results['agreements']}")
+    print(f"\nResults saved to: {results['output_dir']}")
+    print(f"Summary: {results['output_dir']}/session_summary.json")
+
+    if results["figures"]:
+        print("\nGenerated figures:")
+        for fig in results["figures"]:
+            print(f"  📊 {fig['path']}")
+
+    print("\nKey Findings:")
+    for i, finding in enumerate(results["findings"], 1):
+        agent = finding.get("sources", ["?"])[0] if finding.get("sources") else "?"
+        text = finding.get("text", "")[:200]
+        print(f"  {i}. [{agent}] {text}")
+        if len(finding.get("text", "")) > 200:
+            print("     ...")
+
+    print()
+
+
+if __name__ == "__main__":
+    main()

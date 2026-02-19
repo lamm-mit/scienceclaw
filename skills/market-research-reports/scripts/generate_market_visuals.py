@@ -402,7 +402,8 @@ def main():
         description="Generate visuals for a market research report (default: 5-6 core visuals)"
     )
     parser.add_argument(
-        "--topic", "-t",
+        "--topic", "--query", "-t",
+        dest="topic",
         required=True,
         help="Market topic (e.g., 'Electric Vehicle Charging Infrastructure')"
     )

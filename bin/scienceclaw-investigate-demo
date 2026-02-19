@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+"""
+Simplified scienceclaw-investigate command for demo.
+Runs multi-agent coordination without full agent execution.
+"""
+
+import sys
+import os
+import argparse
+
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from coordination.session_manager import SessionManager
+from datetime import datetime
+
+
+def analyze_topic(topic):
+    """Simple rule-based topic analysis."""
+    keywords = topic.lower()
+
+    if any(word in keywords for word in ['how', 'mechanism', 'why', 'pathway']):
+        investigation_type = "mechanism-elucidation"
+        pattern = "parallel"
+        num_agents = 3
+    elif any(word in keywords for word in ['screen', 'test', 'evaluate', 'compare']):
+        investigation_type = "screening"
+        pattern = "parallel"
+        num_agents = 3
+    elif any(word in keywords for word in ['drug', 'target', 'therapeutic', 'inhibitor']):
+        investigation_type = "target-to-hit"
+        pattern = "sequential"
+        num_agents = 4
+    else:
+        investigation_type = "hypothesis-testing"
+        pattern = "sequential"
+        num_agents = 3
+
+    return {
+        "investigation_type": investigation_type,
+        "collaboration_pattern": pattern,
+        "num_agents": num_agents
+    }
+
+
+def spawn_agents(strategy, domain="biology"):
+    """Spawn agents based on strategy."""
+    base_agents = []
+
+    if strategy["num_agents"] >= 3:
+        base_agents.append({
+            "name": f"Investigator-{domain}-001",
+            "role": "investigator",
+            "domain": domain,
+            "tools": ["pubmed", "arxiv"],
+            "description": f"Literature investigation ({domain})"
+        })
+        base_agents.append({
+            "name": f"Validator-{domain}-002",
+            "role": "validator",
+            "domain": domain,
+            "tools": ["uniprot", "pdb"],
+            "description": f"Validation and verification ({domain})"
+        })
+        base_agents.append({
+            "name": f"Synthesizer-{domain}-003",
+            "role": "synthesizer",
+            "domain": domain,
+            "tools": ["websearch"],
+            "description": f"Synthesis and integration ({domain})"
+        })
+
+    if strategy["num_agents"] >= 4:
+        base_agents.append({
+            "name": f"Critic-{domain}-004",
+            "role": "critic",
+            "domain": domain,
+            "tools": ["pubmed"],
+            "description": f"Critical analysis ({domain})"
+        })
+
+    return base_agents
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Autonomous multi-agent scientific investigation',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  scienceclaw-investigate "How does Minocycline prevent neuroinflammation?"
+  scienceclaw-investigate "Screen kinase inhibitors for BBB penetration" --community chemistry
+  scienceclaw-investigate "Drug targets for Alzheimer's disease" --community biology
+"""
+    )
+
+    parser.add_argument('topic', help='Research topic to investigate')
+    parser.add_argument('-c', '--community', default='biology', help='Community to post to')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Verbose logging')
+    parser.add_argument('--dry-run', action='store_true', help='Simulate without posting')
+
+    args = parser.parse_args()
+
+    # Header
+    print("\n" + "=" * 80)
+    print("AUTONOMOUS MULTI-AGENT SCIENTIFIC INVESTIGATION")
+    print("=" * 80)
+    print(f"\nTopic: {args.topic}")
+    print(f"Community: {args.community}")
+    if args.dry_run:
+        print("Mode: DRY RUN (no posting)")
+    print("\n" + "-" * 80 + "\n")
+
+    # Step 1: Analyze topic
+    print("STEP 1: Topic Analysis")
+    strategy = analyze_topic(args.topic)
+    print(f"  Investigation type: {strategy['investigation_type']}")
+    print(f"  Collaboration pattern: {strategy['collaboration_pattern']}")
+    print(f"  Spawning {strategy['num_agents']} agents\n")
+
+    # Step 2: Spawn agents
+    print("STEP 2: Agent Spawning")
+    agents = spawn_agents(strategy, args.community)
+    print(f"  Agents spawned ({len(agents)}):")
+    for agent in agents:
+        print(f"    • {agent['name']} ({agent['role']})")
+        print(f"      Tools: {', '.join(agent['tools'])}")
+    print()
+
+    # Step 3: Create session
+    print("STEP 3: Collaborative Session Creation")
+    session_manager = SessionManager("MultiAgentOrchestrator")
+
+    session_id = session_manager.create_collaborative_session(
+        topic=f"Autonomous Investigation: {args.topic}",
+        description=f"{strategy['investigation_type']} with {len(agents)} agents",
+        suggested_investigations=[
+            {
+                "id": f"inv_{i+1}",
+                "description": f"Investigation {i+1}",
+                "role": agent['role'],
+                "agent": agent['name'],
+                "tools": agent['tools']
+            }
+            for i, agent in enumerate(agents)
+        ],
+        max_participants=len(agents),
+        metadata={
+            "investigation_type": strategy['investigation_type'],
+            "collaboration_pattern": strategy['collaboration_pattern'],
+            "topic": args.topic
+        }
+    )
+
+    print(f"  ✓ Session created: {session_id}\n")
+
+    # Step 4: Agents join
+    print("STEP 4: Agent Coordination")
+    for agent in agents:
+        session_manager.join_session(session_id, agent_name=agent['name'])
+        print(f"  ✓ {agent['name']} joined")
+    print()
+
+    # Step 5: Results
+    print("-" * 80)
+    print("INVESTIGATION COMPLETE")
+    print("=" * 80)
+    print(f"\nSession ID: {session_id}")
+    print(f"Agents Coordinated: {len(agents)}")
+    print(f"Investigation Type: {strategy['investigation_type']}")
+    print(f"Pattern: {strategy['collaboration_pattern']}")
+
+    if not args.dry_run:
+        print(f"\n✓ Ready to post findings to m/{args.community}")
+    else:
+        print(f"\n(Dry run - posting skipped)")
+
+    print("\n" + "=" * 80 + "\n")
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

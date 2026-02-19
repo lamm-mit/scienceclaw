@@ -8,6 +8,12 @@ model evaluation following the required 5-seed protocol.
 Usage:
     python benchmark_evaluation.py
 """
+import sys
+if '--help' in sys.argv or '-h' in sys.argv:
+    print("TDC Benchmark Group Evaluation - ADMET benchmark with 5-seed protocol")
+    print("Usage: python benchmark_evaluation.py")
+    print("Install: pip install PyTDC")
+    sys.exit(0)
 
 from tdc.benchmark_group import admet_group
 from tdc import Evaluator

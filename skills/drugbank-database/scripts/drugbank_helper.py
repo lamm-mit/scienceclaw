@@ -16,8 +16,27 @@ Usage:
     interactions = db.get_interactions('DB00001')
 """
 
+import os
+import zipfile
+from pathlib import Path
 from typing import Dict, List, Optional, Any
 import xml.etree.ElementTree as ET
+
+# Default DrugBank version (bioversions no longer has "drugbank" getter; explicit version avoids lookup)
+DEFAULT_DRUGBANK_VERSION = "5.1.14"
+
+
+def _load_root_from_local(path: str):
+    """Load DrugBank root from a local .zip or .xml file."""
+    p = Path(path).expanduser().resolve()
+    if not p.exists():
+        raise FileNotFoundError(f"DRUGBANK_XML_PATH not found: {p}")
+    if p.suffix.lower() == ".zip":
+        with zipfile.ZipFile(p) as z:
+            with z.open("full database.xml") as f:
+                return ET.fromstring(f.read())
+    # .xml or other
+    return ET.parse(str(p)).getroot()
 
 
 class DrugBankHelper:
@@ -31,6 +50,7 @@ class DrugBankHelper:
 
         Args:
             root: Pre-loaded XML root element. If None, will load from drugbank-downloader
+                   or from local file if DRUGBANK_XML_PATH is set.
         """
         self.root = root
         self._drug_cache = {}
@@ -38,8 +58,13 @@ class DrugBankHelper:
     def _get_root(self):
         """Lazy load DrugBank root element"""
         if self.root is None:
-            from drugbank_downloader import get_drugbank_root
-            self.root = get_drugbank_root()
+            local_path = os.environ.get("DRUGBANK_XML_PATH") or os.environ.get("DRUGBANK_ZIP_PATH")
+            if local_path:
+                self.root = _load_root_from_local(local_path)
+            else:
+                from drugbank_downloader import get_drugbank_root
+                version = os.environ.get("DRUGBANK_VERSION", DEFAULT_DRUGBANK_VERSION)
+                self.root = get_drugbank_root(version=version)
         return self.root
 
     def _get_text_safe(self, element) -> Optional[str]:
@@ -304,47 +329,43 @@ class DrugBankHelper:
         return results
 
 
-# Example usage
+# CLI and example usage
 if __name__ == "__main__":
-    # Initialize helper
-    db = DrugBankHelper()
+    import sys
+    if len(sys.argv) >= 2 and sys.argv[1] in ("--help", "-h"):
+        print("Usage: drugbank_helper.py [--help] | drugbank_helper.py <drugbank_id>")
+        print("  --help, -h  Show this message")
+        print("  <drugbank_id>  e.g. DB00001 - print drug info (requires DrugBank XML)")
+        print("\nLibrary: from drugbank_helper import DrugBankHelper")
+        sys.exit(0)
 
-    # Example: Get drug information
-    print("Example 1: Get drug information")
-    drug_info = db.get_drug_info('DB00001')
-    print(f"Drug: {drug_info.get('name')}")
-    print(f"Type: {drug_info.get('type')}")
-    print(f"Indication: {drug_info.get('indication', 'N/A')[:100]}...")
-    print()
+    if len(sys.argv) < 2:
+        print("Pass a DrugBank ID (e.g. DB00001) to query, or --help. Requires DrugBank XML.")
+        sys.exit(0)
 
-    # Example: Get interactions
-    print("Example 2: Get drug interactions")
-    interactions = db.get_interactions('DB00001')
-    print(f"Found {len(interactions)} interactions")
-    if interactions:
-        print(f"First interaction: {interactions[0]['partner_name']}")
-    print()
+    drug_id = sys.argv[1].strip()
+    if not drug_id.upper().startswith("DB") and drug_id != drug_id.upper():
+        drug_id = "DB" + drug_id.lstrip("0") if drug_id.isdigit() else drug_id
 
-    # Example: Get targets
-    print("Example 3: Get drug targets")
-    targets = db.get_targets('DB00001')
-    print(f"Found {len(targets)} targets")
-    if targets:
-        print(f"First target: {targets[0]['name']}")
-    print()
-
-    # Example: Check drug pair interaction
-    print("Example 4: Check specific drug pair")
-    interaction = db.check_interaction('DB00001', 'DB00002')
-    if interaction:
-        print("Interaction found!")
-        print(f"Description: {interaction['description'][:100]}...")
-    else:
-        print("No interaction found")
-    print()
-
-    # Example: Search by name
-    print("Example 5: Search drugs by name")
-    results = db.search_by_name('aspirin', exact=True)
-    if results:
-        print(f"Found: {results[0]['id']} - {results[0]['name']}")
+    try:
+        db = DrugBankHelper()
+        drug_info = db.get_drug_info(drug_id)
+        if not drug_info:
+            print(f"No drug found for {drug_id}")
+            sys.exit(1)
+        print(f"Drug: {drug_info.get('name')}")
+        print(f"Type: {drug_info.get('type')}")
+        print(f"Indication: {(drug_info.get('indication') or 'N/A')[:200]}...")
+        interactions = db.get_interactions(drug_id)
+        print(f"Interactions: {len(interactions)}")
+        targets = db.get_targets(drug_id)
+        print(f"Targets: {len(targets)}")
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        if "credentials were either invalid" in str(e) or "not been approved" in str(e):
+            print("\n1. Check DRUGBANK_USERNAME and DRUGBANK_PASSWORD (echo them in this shell).", file=sys.stderr)
+            print("2. Visit https://go.drugbank.com/releases/5.1.14#full – if it says 'Ineligible for download', request approval.", file=sys.stderr)
+            print("3. Or download the zip manually from that page, then set DRUGBANK_XML_PATH=/path/to/full database.xml.zip", file=sys.stderr)
+        else:
+            print("Optional: set DRUGBANK_XML_PATH to a local full database.xml.zip or .xml to skip download.", file=sys.stderr)
+        sys.exit(1)

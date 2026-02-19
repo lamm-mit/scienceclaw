@@ -48,16 +48,6 @@ htmlcov/
 .tox/
 .nox/
 tests/
-test_agent_openai.py
-test_autonomous_loop.py
-test_infinite.py
-test_integration.py
-test_reasoning.py
-test_llm_backend.py
-test_deep_investigation.py
-test_autonomous_orchestration.py
-test_orchestrator_quick.py
-protein-design-AMP/
 
 # Node (for OpenClaw)
 node_modules/

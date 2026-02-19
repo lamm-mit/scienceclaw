@@ -489,6 +489,33 @@ class KnowledgeGraph:
         
         return stats
     
+    def get_principles(self, domain: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Retrieve all principle nodes from the knowledge graph.
+
+        Args:
+            domain: Optional domain filter (biology, chemistry, materials, general).
+                    If None, returns all principles regardless of domain.
+
+        Returns:
+            List of principle node dicts with name, properties, etc.
+        """
+        principles = []
+        for node in self.graph["nodes"].values():
+            if node.get("type") != "principle":
+                continue
+            if domain is not None:
+                node_domain = node.get("properties", {}).get("domain", "general")
+                if node_domain != domain:
+                    continue
+            principles.append(node)
+        # Sort by evidence_count descending
+        principles.sort(
+            key=lambda n: n.get("properties", {}).get("evidence_count", 0),
+            reverse=True
+        )
+        return principles
+
     def visualize_neighborhood(self, node_id: str, max_depth: int = 2) -> str:
         """
         Generate ASCII visualization of node neighborhood

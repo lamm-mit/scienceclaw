@@ -118,7 +118,7 @@ class LLMTopicAnalyzer:
                                   agent_profile: Optional[Dict[str, Any]] = None) -> Tuple[TopicAnalysis, List[Dict[str, Any]]]:
         """
         Analyze topic AND select specific skills in one LLM call.
-        
+
         Returns:
             (TopicAnalysis, list of selected skill dicts with name, reason, suggested_params)
         """
@@ -126,7 +126,7 @@ class LLMTopicAnalyzer:
         skill_lookup = {s['name']: s for s in available_skills}
         communities = _get_infinite_communities()
         inv_type_hint = f"[{'|'.join(communities)}]" if communities else "[community name]"
-        
+
         role_context = ""
         if agent_profile:
             bio = agent_profile.get("bio", "")
@@ -141,14 +141,28 @@ class LLMTopicAnalyzer:
                 if interests:
                     parts.append(f"Interests: {', '.join(interests[:5])}")
                 role_context = "\n".join(parts) + "\n\n"
-        
+
+        # NEW: Add usage history context to prevent repetitive patterns
+        usage_context = ""
+        try:
+            from autonomous.skill_usage_tracker import get_usage_tracker
+            tracker = get_usage_tracker(self.agent_name)
+            usage_context = tracker.enhance_llm_prompt(topic, available_skills)
+            if usage_context:
+                usage_context = "\n" + usage_context + "\n"
+        except Exception:
+            pass  # Fail silently if tracker unavailable
+
         prompt = f"""You are {self.agent_name}, planning a scientific investigation of: "{topic}"
-{role_context}AVAILABLE SKILLS ({len(available_skills)} total):
+{role_context}{usage_context}AVAILABLE SKILLS ({len(available_skills)} total):
 {skill_catalog}
 
 TASK: In one response, do BOTH:
 1. Analyze the topic (investigation type = Infinite community, concepts, entities)
 2. Select 3-{max_skills} specific skills from the list above
+
+IMPORTANT: Select skills based on what THIS SPECIFIC TOPIC needs.
+Don't default to the same tools every time - explore different approaches.
 
 Respond in this EXACT format:
 INVESTIGATION_TYPE: {inv_type_hint}
@@ -172,7 +186,10 @@ Select 3-{max_skills} skills now (use exact names from the list):"""
         if not response:
             if DEBUG:
                 print("    [DEBUG] LLM returned empty response")
-            return (self._fallback_analysis(topic), [])
+            analysis = self._fallback_analysis(topic)
+            # Select skills based on fallback analysis categories
+            fallback_skills = self._fallback_skill_selection(analysis, available_skills, max_skills)
+            return (analysis, fallback_skills)
         
         if DEBUG:
             preview = response[:500] + "..." if len(response) > 500 else response
@@ -380,10 +397,71 @@ Analyze now:"""
             reasoning=reasoning
         )
     
+    def _fallback_skill_selection(self,
+                                   analysis: TopicAnalysis,
+                                   available_skills: List[Dict[str, Any]],
+                                   max_skills: int) -> List[Dict[str, Any]]:
+        """
+        Select skills based on topic analysis when LLM unavailable.
+
+        Uses the recommended skill categories from analysis to pick relevant skills.
+        """
+        selected = []
+        categories = set(analysis.recommended_skill_categories)
+        inv_type = analysis.investigation_type
+
+        # Build skill lookup by category
+        category_skills = {}
+        for skill in available_skills:
+            skill_cat = skill.get('category', 'tools')
+            if skill_cat not in category_skills:
+                category_skills[skill_cat] = []
+            category_skills[skill_cat].append(skill)
+
+        # Always include literature search - prefer skills with executables
+        lit_skills = category_skills.get('literature', [])
+        if lit_skills:
+            # Prefer skills with executables
+            executable_lit_skills = [s for s in lit_skills if s.get('executables')]
+            skill = executable_lit_skills[0] if executable_lit_skills else lit_skills[0]
+            selected.append({
+                'name': skill['name'],
+                'reason': 'Literature search for topic background',
+                'suggested_params': {'query': analysis.key_concepts[0] if analysis.key_concepts else '', 'max_results': 5},
+                'category': 'literature'
+            })
+
+        # Add skills for recommended categories
+        for cat in categories:
+            if cat == 'literature':
+                continue  # Already added
+
+            cat_skills = category_skills.get(cat, [])
+            if cat_skills and len(selected) < max_skills:
+                # Prefer skills with executables
+                executable_skills = [s for s in cat_skills if s.get('executables')]
+                skill = executable_skills[0] if executable_skills else cat_skills[0]
+
+                # Determine appropriate params
+                params = {}
+                if 'search' in skill.get('capabilities', []):
+                    params = {'query': analysis.key_concepts[0] if analysis.key_concepts else '', 'max_results': 3}
+                elif 'lookup' in skill.get('capabilities', []):
+                    params = {'query': analysis.key_concepts[0] if analysis.key_concepts else ''}
+
+                selected.append({
+                    'name': skill['name'],
+                    'reason': f'{cat.capitalize()} analysis for investigation',
+                    'suggested_params': params,
+                    'category': cat
+                })
+
+        return selected[:max_skills]
+
     def _fallback_analysis(self, topic: str) -> TopicAnalysis:
         """
         Fallback analysis using keyword matching.
-        
+
         Used when LLM is unavailable.
         """
         topic_lower = topic.lower()

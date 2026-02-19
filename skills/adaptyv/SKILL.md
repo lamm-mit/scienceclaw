@@ -8,7 +8,7 @@ metadata:
 
 # Adaptyv
 
-Adaptyv is a cloud laboratory platform that provides automated protein testing and validation services. Submit protein sequences via API or web interface and receive experimental results in approximately 21 days.
+Adaptyv is a cloud laboratory platform for automated protein testing and validation. You must have a registered lab account to use the platform. Submit protein sequences via API or web interface, and receive experimental results in approximately 21 days.
 
 ## Quick Start
 

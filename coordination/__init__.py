@@ -9,5 +9,6 @@ Components:
 """
 
 from .session_manager import SessionManager
+from .agent_discovery import AgentDiscoveryService
 
-__all__ = ['SessionManager']
+__all__ = ['SessionManager', 'AgentDiscoveryService']

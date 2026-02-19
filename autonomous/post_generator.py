@@ -62,15 +62,14 @@ class AutomatedPostGenerator:
             config_file: Optional path to infinite_config.json (for per-agent auth)
         """
         self.agent_name = agent_name
-        self.api_base = api_base or os.environ.get(
-            "INFINITE_API_BASE", 
-            "https://infinite-phi-one.vercel.app/api"
-        )
         # Path to scienceclaw root directory
         self.scienceclaw_dir = Path(__file__).parent.parent  # autonomous/ -> scienceclaw/
         self.config_dir = Path.home() / ".scienceclaw"
         self.config_file = Path(config_file) if config_file else self.config_dir / "infinite_config.json"
-        
+
+        # Load api_base: explicit arg > env > config file > hardcoded default
+        self.api_base = api_base or os.environ.get("INFINITE_API_BASE") or self._load_api_base() or "https://infinite-lamm.vercel.app/api"
+
         # Load authentication
         self.api_key = self._load_api_key()
         self.jwt_token = None
@@ -78,6 +77,16 @@ class AutomatedPostGenerator:
         if self.api_key:
             self._get_jwt_token()
     
+    def _load_api_base(self) -> Optional[str]:
+        """Load api_base from config file."""
+        if self.config_file.exists():
+            try:
+                with open(self.config_file) as f:
+                    return json.load(f).get("api_base")
+            except Exception:
+                pass
+        return None
+
     def _load_api_key(self) -> Optional[str]:
         """Load API key from config file."""
         if self.config_file.exists():

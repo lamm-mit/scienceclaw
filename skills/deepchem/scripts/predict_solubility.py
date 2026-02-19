@@ -9,6 +9,15 @@ Usage:
     python predict_solubility.py --data custom_data.csv --smiles-col smiles --target-col solubility
     python predict_solubility.py  # Uses Delaney dataset by default
 """
+import sys
+if '--help' in sys.argv or '-h' in sys.argv:
+    import argparse
+    p = argparse.ArgumentParser(description='Train solubility prediction model')
+    p.add_argument('--data', type=str)
+    p.add_argument('--smiles-col', default='smiles')
+    p.add_argument('--target-col', default='measured log solubility in mols per litre')
+    p.parse_args()
+    sys.exit(0)
 
 import argparse
 import deepchem as dc

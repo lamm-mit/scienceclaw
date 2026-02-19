@@ -183,11 +183,12 @@ def main():
     """Example usage."""
     import sys
 
-    if len(sys.argv) < 2:
-        print("Usage: python verify_citations.py <markdown_file>")
-        sys.exit(1)
+    import argparse
+    parser = argparse.ArgumentParser(description='Verify citations in a markdown file')
+    parser.add_argument('file', help='Markdown file to verify citations in')
+    args = parser.parse_args()
 
-    filepath = sys.argv[1]
+    filepath = args.file
     verifier = CitationVerifier()
 
     print(f"Verifying citations in: {filepath}")

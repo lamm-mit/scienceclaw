@@ -8,6 +8,12 @@ tasks including goal-directed generation and distribution learning.
 Usage:
     python molecular_generation.py
 """
+import sys
+if '--help' in sys.argv or '-h' in sys.argv:
+    print("TDC Molecular Generation - oracles and ChEMBL")
+    print("Usage: python molecular_generation.py")
+    print("Install: pip install PyTDC")
+    sys.exit(0)
 
 from tdc.generation import MolGen
 from tdc import Oracle
