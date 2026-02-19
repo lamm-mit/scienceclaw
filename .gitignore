@@ -49,6 +49,12 @@ htmlcov/
 .nox/
 tests/
 
+# Large data files (should not be in git)
+data/
+*.csv
+!**/requirements.csv
+!**/test_*.csv
+
 # Node (for OpenClaw)
 node_modules/
 npm-debug.log
