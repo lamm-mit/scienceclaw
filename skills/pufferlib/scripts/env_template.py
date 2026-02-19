@@ -5,6 +5,11 @@ PufferLib Environment Template
 This template provides a starting point for creating custom PufferEnv environments.
 Customize the observation space, action space, and environment logic for your task.
 """
+import sys
+if '--help' in sys.argv or '-h' in sys.argv:
+    print("PufferLib Environment Template - custom PufferEnv")
+    print("Usage: Load and extend MyEnvironment or MultiAgentEnvironment classes.")
+    sys.exit(0)
 
 import numpy as np
 import pufferlib

@@ -368,26 +368,37 @@ def get_target_associations(ensembl_id: str, min_score: float = 0.0) -> List[Dic
 
 # Example usage
 if __name__ == "__main__":
-    # Example 1: Search for a gene
-    print("Searching for BRCA1...")
-    results = search_entities("BRCA1", entity_types=["target"])
-    for result in results[:3]:
-        print(f"  {result['name']} ({result['id']})")
+    import argparse
+    parser = argparse.ArgumentParser(description='Query Open Targets database')
+    parser.add_argument('--query', help='Search query (gene name, disease name, or drug name)')
+    parser.add_argument('--type', choices=['target', 'disease', 'drug'], default='target',
+                      help='Entity type to search for')
+    args = parser.parse_args()
 
-    # Example 2: Get target information
-    if results:
-        ensembl_id = results[0]['id']
-        print(f"\nGetting info for {ensembl_id}...")
-        target_info = get_target_info(ensembl_id, include_diseases=True)
-        print(f"  Symbol: {target_info.get('approvedSymbol')}")
-        print(f"  Name: {target_info.get('approvedName')}")
+    if not args.query:
+        # Run example queries if no arguments provided
+        print("No query provided. Running examples...")
 
-        # Show top diseases
-        diseases = target_info.get('associatedDiseases', {}).get('rows', [])
-        if diseases:
-            print(f"\n  Top associated diseases:")
-            for disease in diseases[:3]:
-                print(f"    - {disease['disease']['name']} (score: {disease['score']:.2f})")
+        # Example 1: Search for a gene
+        print("\nSearching for BRCA1...")
+        results = search_entities("BRCA1", entity_types=["target"])
+        for result in results[:3]:
+            print(f"  {result['name']} ({result['id']})")
+
+        # Example 2: Get target information
+        if results:
+            ensembl_id = results[0]['id']
+            print(f"\nGetting info for {ensembl_id}...")
+            target_info = get_target_info(ensembl_id, include_diseases=True)
+            print(f"  Symbol: {target_info.get('approvedSymbol')}")
+            print(f"  Name: {target_info.get('approvedName')}")
+
+            # Show top diseases
+            diseases = target_info.get('associatedDiseases', {}).get('rows', [])
+            if diseases:
+                print(f"\n  Top associated diseases:")
+                for disease in diseases[:3]:
+                    print(f"    - {disease['disease']['name']} (score: {disease['score']:.2f})")
 
     # Example 3: Search for a disease
     print("\n\nSearching for Alzheimer's disease...")

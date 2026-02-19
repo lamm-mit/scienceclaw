@@ -107,10 +107,10 @@ Literature Evidence ({len(papers)} papers):
 """
         
         if proteins:
-            context += f"\nProteins Identified: {', '.join([p.get('name') for p in proteins[:3]])}\n"
-        
+            context += f"\nProteins Identified: {', '.join([p.get('name') or p.get('id', 'Unknown') for p in proteins[:3]])}\n"
+
         if compounds:
-            context += f"\nCompounds Identified: {', '.join([c.get('name') for c in compounds[:3]])}\n"
+            context += f"\nCompounds Identified: {', '.join([c.get('name') or c.get('id', 'Unknown') for c in compounds[:3]])}\n"
         
         prompt = f"""{context}
 
@@ -302,6 +302,197 @@ Generate critique:"""
         
         return improved
     
+    def _call_reflector_llm(self, prompt: str, max_tokens: int = 800) -> str:
+        """
+        Call LLM with a skeptical peer-reviewer persona (different session from generator).
+        Deliberately uses a different session_id so context doesn't bleed across.
+        """
+        try:
+            from core.llm_client import get_llm_client
+            client = get_llm_client(agent_name=self.agent_name)
+            response = client.call(
+                prompt=prompt,
+                max_tokens=max_tokens,
+                session_id=f"reflector_{self.agent_name}"
+            )
+            if len(response) < 30:
+                return "CHALLENGE: Insufficient evidence provided. REASON: Claims lack mechanistic specificity. DEMAND: Provide quantitative data and mechanistic pathway details.\nVERDICT: REJECTED"
+            return response
+        except Exception as e:
+            print(f"    Note: Reflector LLM unavailable ({e})")
+            return "CHALLENGE: Unable to verify claims. REASON: LLM unavailable. DEMAND: Manual review required.\nVERDICT: APPROVED"
+
+    def adversarial_reflection_loop(
+        self,
+        topic: str,
+        hypothesis: str,
+        insights: List[str],
+        papers: Optional[List[Dict]] = None,
+        max_cycles: int = 3
+    ) -> Dict[str, Any]:
+        """
+        Run adversarial generation+reflection cycles.
+
+        Each cycle:
+        1. Reflector challenges the current hypothesis/insights
+        2. Generator revises claims in response to challenges
+        3. Repeat until VERDICT: APPROVED or max_cycles reached
+
+        Returns:
+            Dict with keys: hypothesis, insights, cycles, approved
+        """
+        papers = papers or []
+        current_hypothesis = hypothesis
+        current_insights = list(insights)
+        approved = False
+
+        for cycle in range(1, max_cycles + 1):
+            print(f"    🔄 Reflection cycle {cycle}/{max_cycles}...")
+
+            # --- Reflector pass ---
+            reflector_prompt = f"""You are a rigorous scientific peer reviewer evaluating a hypothesis about: {topic}
+
+CURRENT HYPOTHESIS:
+{current_hypothesis}
+
+CURRENT INSIGHTS:
+{chr(10).join([f'- {i}' for i in current_insights[:4]])}
+
+SUPPORTING PAPERS ({len(papers)}):
+{chr(10).join([f'- {p.get("title", "Unknown")}' for p in papers[:3]])}
+
+Your job is to CHALLENGE this work. You must:
+1. Identify every unsupported or vague claim
+2. Demand quantitative evidence where qualitative statements exist
+3. Flag any non-mechanistic assertions
+4. Point out missing controls, alternative explanations, or confounds
+5. Never approve on the first pass
+
+Format EACH challenge as:
+CHALLENGE: [specific claim being challenged]
+REASON: [why this is weak or unsupported]
+DEMAND: [what specific evidence or mechanistic detail is needed]
+
+After all challenges, output one of:
+VERDICT: APPROVED (only if all claims are well-supported mechanistically)
+VERDICT: REJECTED (if significant weaknesses remain)
+
+Be adversarial. Be specific. Do not be lenient."""
+
+            reflector_response = self._call_reflector_llm(reflector_prompt, max_tokens=700)
+
+            # Check verdict
+            if "VERDICT: APPROVED" in reflector_response:
+                approved = True
+                print(f"    ✅ Reflector approved after {cycle} cycle(s)")
+                break
+
+            # Extract challenges
+            challenges = []
+            for line in reflector_response.split('\n'):
+                if line.strip().startswith('CHALLENGE:'):
+                    challenges.append(line.replace('CHALLENGE:', '').strip())
+
+            if not challenges:
+                # No structured challenges — treat as soft approval
+                approved = True
+                break
+
+            # --- Generator revision pass ---
+            generator_prompt = f"""You are {self.agent_name}, revising your hypothesis about: {topic}
+
+Your peer reviewer raised these specific challenges:
+{chr(10).join([f'- {c}' for c in challenges[:5]])}
+
+CURRENT HYPOTHESIS:
+{current_hypothesis}
+
+CURRENT INSIGHTS:
+{chr(10).join([f'- {i}' for i in current_insights[:4]])}
+
+Revise your hypothesis and insights to address each challenge:
+- Add mechanistic specificity where challenged
+- Acknowledge limitations explicitly where evidence is missing
+- Replace vague claims with specific, falsifiable predictions
+- If a challenge cannot be addressed with available data, explicitly state the limitation
+
+Output:
+REVISED_HYPOTHESIS: [revised hypothesis addressing the challenges]
+REVISED_INSIGHTS:
+- [insight 1 revised or unchanged]
+- [insight 2 revised or unchanged]
+- [insight 3 revised or unchanged]"""
+
+            generator_response = self._call_llm(generator_prompt, max_tokens=600)
+
+            # Parse revised content
+            for line in generator_response.split('\n'):
+                if line.startswith('REVISED_HYPOTHESIS:'):
+                    rev = line.replace('REVISED_HYPOTHESIS:', '').strip()
+                    if len(rev) > 50:
+                        current_hypothesis = rev
+
+            revised_insights = []
+            in_insights = False
+            for line in generator_response.split('\n'):
+                if 'REVISED_INSIGHTS:' in line:
+                    in_insights = True
+                    continue
+                if in_insights and line.strip().startswith('-'):
+                    ins = line.strip().lstrip('- ').strip()
+                    if len(ins) > 30:
+                        revised_insights.append(ins)
+            if revised_insights:
+                current_insights = revised_insights
+
+        return {
+            "hypothesis": current_hypothesis,
+            "insights": current_insights,
+            "cycles": cycle if 'cycle' in dir() else 0,
+            "approved": approved
+        }
+
+    def identify_evidence_gaps(
+        self,
+        hypothesis: str,
+        insights: List[str],
+        challenges: Optional[List[str]] = None
+    ) -> List[str]:
+        """
+        Identify evidence gaps from current hypothesis and insights.
+        Returns list of gap descriptions suitable for skill routing.
+        """
+        challenges_text = ""
+        if challenges:
+            challenges_text = f"\nPeer reviewer challenges:\n" + "\n".join([f"- {c}" for c in challenges[:5]])
+
+        prompt = f"""Given this hypothesis and insights, identify the most critical missing evidence:
+
+HYPOTHESIS: {hypothesis}
+
+INSIGHTS:
+{chr(10).join([f'- {i}' for i in insights[:4]])}
+{challenges_text}
+
+List 2-4 specific evidence gaps that could be filled by computational tools.
+For each gap, focus on what DATABASE or COMPUTATIONAL tool could provide the data.
+
+Format:
+GAP: [specific missing data type, e.g. "ADMET predictions for identified SMILES", "protein structure for binding site analysis", "sequence homology for evolutionary context"]
+
+Only list gaps addressable by: pubmed, uniprot, pubchem, chembl, tdc, rdkit, blast, pdb"""
+
+        response = self._call_llm(prompt, max_tokens=400)
+
+        gaps = []
+        for line in response.split('\n'):
+            if line.strip().startswith('GAP:'):
+                gap = line.replace('GAP:', '').strip()
+                if len(gap) > 10:
+                    gaps.append(gap)
+
+        return gaps[:4]
+
     def generate_conclusion(self,
                           topic: str,
                           hypothesis: str,

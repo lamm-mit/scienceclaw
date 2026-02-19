@@ -464,24 +464,25 @@ class AutonomousLoopController:
     
     def engage_with_peers(self) -> Dict[str, int]:
         """
-        Engage with community posts (upvote, comment).
-        
+        Engage with community posts (upvote, comment, and follow-up investigations).
+
         Strategy:
         - Read recent posts from relevant communities
         - Upvote high-quality, evidence-based posts
         - Comment on posts related to agent's expertise
-        - Peer review posts with methodology issues
-        
+        - For interesting peer posts, run a complementary DeepInvestigation and
+          post the findings as a follow-up comment or new post
+
         Returns:
-            Engagement summary (upvotes, comments counts)
+            Engagement summary (upvotes, comments, follow_ups counts)
         """
-        engagement = {"upvotes": 0, "comments": 0}
-        
+        engagement = {"upvotes": 0, "comments": 0, "follow_ups": 0}
+
         try:
             # Get relevant communities
             profile = self.agent_profile.get("profile", "mixed")
             communities = self._get_relevant_communities(profile)
-            
+
             for community in communities:
                 try:
                     # Fetch recent posts
@@ -491,8 +492,18 @@ class AutonomousLoopController:
                         limit=5
                     )
                     posts = result.get("posts", result if isinstance(result, list) else [])
-                    
+
                     for post in posts[:3]:  # Engage with top 3
+                        post_author = post.get("author", {})
+                        post_author_name = (
+                            post_author.get("name") if isinstance(post_author, dict)
+                            else str(post_author)
+                        )
+
+                        # Skip own posts
+                        if post_author_name == self.agent_name:
+                            continue
+
                         # Upvote if high quality
                         if self._should_upvote(post):
                             try:
@@ -500,7 +511,7 @@ class AutonomousLoopController:
                                 engagement["upvotes"] += 1
                             except Exception as e:
                                 print(f"   Warning: Upvote failed: {e}")
-                        
+
                         # Comment if relevant
                         if self._should_comment(post):
                             comment_text = self._generate_comment(post)
@@ -513,16 +524,104 @@ class AutonomousLoopController:
                                     engagement["comments"] += 1
                                 except Exception as e:
                                     print(f"   Warning: Comment failed: {e}")
-                
+
+                        # ── Peer-aware follow-up investigation ──────────────
+                        if self._should_follow_up(post):
+                            self._run_peer_followup(post, community, engagement)
+
                 except Exception as e:
                     print(f"   Warning: Engagement failed for m/{community}: {e}")
-        
+
         except Exception as e:
             print(f"   Error during peer engagement: {e}")
             import traceback
             traceback.print_exc()
-        
+
         return engagement
+
+    def _should_follow_up(self, post: Dict[str, Any]) -> bool:
+        """Return True if this post is interesting enough for a complementary investigation."""
+        interests = [i.lower() for i in self.agent_profile.get("interests", [])]
+        post_text = (
+            post.get("title", "") + " " +
+            post.get("hypothesis", "") + " " +
+            post.get("findings", "")
+        ).lower()
+
+        # Must match at least one interest
+        relevant = any(i in post_text for i in interests)
+
+        # Avoid posts we already commented on with a follow-up (check title prefix)
+        post_title = post.get("title", "")
+        already_following = post_title.startswith("[Follow-up]")
+
+        # 30 % random chance to avoid spamming every single post
+        import random
+        return relevant and not already_following and random.random() < 0.30
+
+    def _run_peer_followup(self, post: Dict[str, Any], community: str,
+                           engagement: Dict[str, int]):
+        """
+        Run a complementary DeepInvestigation on the peer's topic and post the
+        findings as a follow-up, referencing the original post.
+        """
+        try:
+            from autonomous.deep_investigation import run_deep_investigation
+
+            peer_topic = post.get("title", "").strip()
+            if not peer_topic:
+                return
+
+            # Build a complementary angle based on this agent's profile
+            profile_type = self.agent_profile.get("profile", "mixed")
+            angle_map = {
+                "biology":   "protein structure and gene-level mechanisms of",
+                "chemistry": "chemical properties and drug-target interactions for",
+                "mixed":     "multi-disciplinary mechanistic insights into",
+            }
+            angle = angle_map.get(profile_type, "computational insights into")
+            followup_topic = f"{angle} {peer_topic}"
+
+            print(f"   🔁 Follow-up investigation: {followup_topic[:80]}...")
+            content = run_deep_investigation(
+                agent_name=self.agent_name,
+                topic=followup_topic,
+                community=community,
+                agent_profile=self.agent_profile,
+            )
+
+            if not content or not content.get("title"):
+                return
+
+            # Post the follow-up as a new post referencing the original
+            post_id_ref = post.get("id", "")
+            followup_title = f"[Follow-up] {content['title'][:100]}"
+            followup_content = (
+                f"> In response to post by {post.get('author', {}).get('name', 'a peer agent')}.\n\n"
+                + content.get("content", "")
+            )
+
+            # Attach figure paths if generated
+            figures = content.get("figures", [])
+            if figures:
+                followup_content += "\n\n**Generated Figures:**\n"
+                for fp in figures:
+                    followup_content += f"- `{fp}`\n"
+
+            result = self.platform.create_post(
+                title=followup_title,
+                content=followup_content,
+                community=community,
+                hypothesis=content.get("hypothesis", ""),
+                method=content.get("method", ""),
+                findings=content.get("findings", ""),
+            )
+            if result.get("id") or result.get("post_id"):
+                engagement["follow_ups"] += 1
+                print(f"   ✅ Follow-up posted to m/{community}")
+
+        except Exception as e:
+            print(f"   Warning: Follow-up investigation failed: {e}")
     
     def _check_notifications(self):
         """Check for DMs and notifications."""

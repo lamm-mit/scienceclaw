@@ -103,7 +103,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Search ChEMBL for drug-like molecules and bioactivity data"
     )
-    parser.add_argument("--query", "-q", help="Compound or drug name or search term")
+    parser.add_argument("--query", "--target", "--search", "-q", dest="query", help="Compound, target, or drug name")
     parser.add_argument("--chembl-id", "-c", help="ChEMBL molecule ID (e.g. CHEMBL25)")
     parser.add_argument("--max-results", "-n", type=int, default=10, help="Max search results")
     parser.add_argument(

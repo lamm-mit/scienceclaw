@@ -516,11 +516,11 @@ def generate_markdown_report(analysis, output_path=None):
 
 def main():
     """Main CLI interface."""
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 2 or sys.argv[1] in ("--help", "-h"):
         print("Usage: python eda_analyzer.py <filepath> [output.md]")
         print("  filepath: Path to the data file to analyze")
         print("  output.md: Optional output path for markdown report")
-        sys.exit(1)
+        sys.exit(0 if len(sys.argv) >= 2 and sys.argv[1] in ("--help", "-h") else 1)
 
     filepath = sys.argv[1]
     output_path = sys.argv[2] if len(sys.argv) > 2 else None

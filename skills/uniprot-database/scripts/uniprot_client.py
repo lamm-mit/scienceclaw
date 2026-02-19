@@ -261,7 +261,7 @@ Examples:
 
     # Main operation arguments (mutually exclusive)
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--search', '-s', help='Search query string')
+    group.add_argument('--query', '--search', '-s', dest='search', help='Search query string')
     group.add_argument('--get', '-g', help='Get protein by accession number')
     group.add_argument('--map', '-m', help='Map IDs (comma-separated)')
     group.add_argument('--stream', help='Stream large result sets')

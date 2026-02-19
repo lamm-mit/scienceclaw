@@ -10,6 +10,7 @@ Documentation: https://www.kegg.jp/kegg/rest/keggapi.html
 IMPORTANT: KEGG API is made available only for academic use by academic users.
 """
 
+import sys
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -238,14 +239,67 @@ def kegg_ddi(drug_entries: Union[str, List[str]]) -> str:
         return f"Error: {e.code} - {e.reason}"
 
 
+def _cli():
+    """CLI for KEGG API (enables --help and scriptable use)."""
+    import argparse
+    p = argparse.ArgumentParser(
+        description="KEGG REST API helper. Academic use only.",
+        epilog="Examples: kegg_api.py info pathway | kegg_api.py list pathway | kegg_api.py get hsa00010",
+    )
+    sub = p.add_subparsers(dest="cmd", help="Command")
+    # info
+    info_p = sub.add_parser("info", help="Database info (e.g. pathway, kegg)")
+    info_p.add_argument("database", help="KEGG database name")
+    # list
+    list_p = sub.add_parser("list", help="List entries")
+    list_p.add_argument("database", help="Database or entry list")
+    list_p.add_argument("--org", "-o", help="Organism code (e.g. hsa)")
+    # find
+    find_p = sub.add_parser("find", help="Search by keyword or property")
+    find_p.add_argument("database", help="Database to search")
+    find_p.add_argument("query", help="Search term")
+    find_p.add_argument("--option", choices=["formula", "exact_mass", "mol_weight"], help="Search option")
+    # get
+    get_p = sub.add_parser("get", help="Get entry/entries")
+    get_p.add_argument("entries", nargs="+", help="Entry ID(s), max 10")
+    get_p.add_argument("--format", "-f", choices=["aaseq", "ntseq", "mol", "kcf", "image", "kgml", "json"], help="Output format")
+    # conv
+    conv_p = sub.add_parser("conv", help="Convert IDs")
+    conv_p.add_argument("target_db", help="Target DB (e.g. ncbi-geneid, uniprot)")
+    conv_p.add_argument("source_db", help="Source DB or entry")
+    # link
+    link_p = sub.add_parser("link", help="Link between databases")
+    link_p.add_argument("target_db", help="Target database")
+    link_p.add_argument("source_db", help="Source database or entry")
+    # ddi
+    ddi_p = sub.add_parser("ddi", help="Drug-drug interactions")
+    ddi_p.add_argument("drugs", nargs="+", help="Drug ID(s), e.g. D00001")
+    args = p.parse_args()
+    if not args.cmd:
+        p.print_help()
+        return 0
+    try:
+        if args.cmd == "info":
+            print(kegg_info(args.database))
+        elif args.cmd == "list":
+            print(kegg_list(args.database, getattr(args, "org", None) or None))
+        elif args.cmd == "find":
+            print(kegg_find(args.database, args.query, getattr(args, "option", None) or None))
+        elif args.cmd == "get":
+            opt = getattr(args, "format", None) or None
+            entries = args.entries[:10]
+            print(kegg_get(entries[0] if len(entries) == 1 else entries, opt))
+        elif args.cmd == "conv":
+            print(kegg_conv(args.target_db, args.source_db))
+        elif args.cmd == "link":
+            print(kegg_link(args.target_db, args.source_db))
+        elif args.cmd == "ddi":
+            print(kegg_ddi(args.drugs[0] if len(args.drugs) == 1 else args.drugs[:10]))
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+    return 0
+
+
 if __name__ == "__main__":
-    # Example usage
-    print("KEGG Info Example:")
-    print(kegg_info('pathway')[:200] + "...\n")
-
-    print("KEGG List Example (first 3 pathways):")
-    pathways = kegg_list('pathway')
-    print('\n'.join(pathways.split('\n')[:3]) + "\n")
-
-    print("KEGG Find Example:")
-    print(kegg_find('genes', 'p53')[:200] + "...")
+    sys.exit(_cli())

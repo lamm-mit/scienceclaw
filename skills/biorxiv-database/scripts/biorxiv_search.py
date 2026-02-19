@@ -310,6 +310,8 @@ def main():
 
     # Search type arguments
     search_group = parser.add_argument_group("Search options")
+    search_group.add_argument("--query", "-q",
+                            help="Search query string (split into keywords)")
     search_group.add_argument("--keywords", "-k", nargs="+",
                             help="Keywords to search for")
     search_group.add_argument("--author", "-a",
@@ -344,10 +346,18 @@ def main():
                             default=True, help="Include abstracts in output")
     output_group.add_argument("--download-pdf",
                             help="Download PDF to specified path (requires --doi)")
-    output_group.add_argument("--limit", type=int,
+    output_group.add_argument("--limit", "--max-results", dest="limit", type=int,
                             help="Limit number of results")
 
     args = parser.parse_args()
+
+    # --query is an alias: split string into keywords list
+    if args.query and not args.keywords:
+        args.keywords = args.query.split()
+
+    # Default to 365 days back when using --query for convenience
+    if args.query and not args.days_back and not args.start_date:
+        args.days_back = 365
 
     # Initialize searcher
     searcher = BioRxivSearcher(verbose=args.verbose)

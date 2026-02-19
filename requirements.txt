@@ -26,11 +26,134 @@ seaborn>=0.12.0
 pandas>=2.0.0
 numpy>=1.24.0
 
+# K-Dense-AI Scientific Skills Dependencies
+bioservices>=1.11.0        # For bioservices skill (KEGG, UniProt, ChEMBL queries)
+easydev>=0.13.0            # Dependency for bioservices
+colorlog>=6.0.0            # Dependency for bioservices
+gget>=0.28.0               # For gget skill (genomic data retrieval)
+markitdown>=0.0.1          # For markitdown skill (document conversion)
+python-dotenv>=1.0.0       # Dependency for markitdown
+chembl-webresource-client>=0.10.0  # For ChEMBL database skill
+url-normalize>=2.0.0       # Dependency for chembl-database
+drugbank-downloader>=0.1.0 # For DrugBank database skill
+pystow>=0.7.0              # Dependency for drugbank-downloader
+bioversions>=0.8.0         # Dependency for drugbank-downloader
+psutil>=5.9.0              # For system resource detection
+simpy>=4.0.0               # For simulation skills
+stable-baselines3>=2.0.0   # For reinforcement learning skills
+cloudpickle>=3.0.0         # Dependency for stable-baselines3
+rdkit>=2025.0.0            # For cheminformatics (rdkit skill)
+
+# Additional scientific computing dependencies
+scipy>=1.7.0               # For statistical-analysis skill
+scikit-learn>=1.0.0        # For scikit-learn skill
+joblib>=1.0.0              # Dependency for scikit-learn
+threadpoolctl>=3.0.0       # Dependency for scikit-learn
+torch>=2.0.0               # For torch_geometric and PyTDC skills
+networkx>=3.0.0            # For torch_geometric skill
+gymnasium>=1.0.0           # For stable-baselines3 skill
+# pufferlib>=3.0.0         # Optional: requires CUDA_HOME for build; pip install pufferlib after setting CUDA_HOME
+# PyTDC>=1.0.0             # Optional: pip install PyTDC (pins scikit-learn 1.2.2; cellxgene-census may lack aarch64 wheel)
+arboreto>=0.1.0            # For arboreto skill (gene regulatory networks)
+distributed>=2024.0.0      # For arboreto skill
+dask>=2024.0.0             # Dependency for distributed
+# deepchem[torch]>=2.5.0   # Optional: pip install "deepchem[torch]" (may need Python 3.11-3.12)
+lightning>=2.0.0           # For pytorch-lightning skill
+lightning-utilities>=0.15.0 # Dependency for lightning
+pymoo>=0.6.0               # For pymoo skill (multi-objective optimization)
+moocore>=0.2.0             # Dependency for pymoo
+pymc>=5.0.0                # For pymc skill (Bayesian statistics)
+arviz>=0.20.0              # For pymc skill (Bayesian statistics)
+platformdirs>=4.0.0        # Dependency for pymc
+ete3>=3.1.3                # For etetoolkit skill (phylogenetic trees)
+# pyqt5>=5.15.0            # Optional: For ete3 visualization (requires system Qt: sudo apt install python3-pyqt5)
+ipython>=9.0.0             # For gget skill
+traitlets>=5.0.0           # Dependency for ipython
+stack-data>=0.6.0          # Dependency for ipython
+lxml>=6.0.0                # For drugbank-database skill (XML parsing)
+magika>=1.0.0              # For markitdown skill (file type detection)
+sympy>=1.13.0              # For symbolic mathematics
+attrs>=25.0.0              # General dependency
+probeinterface>=0.3.0      # For neuropixels-analysis skill
+xarray>=2024.0.0           # For data array manipulation
+onnxruntime>=1.0.0         # For ONNX model inference
+# spikeinterface>=0.103.0  # Optional: neuropixels-analysis; conflicts with numcodecs on some platforms
+zict>=3.0.0                # For arboreto skill (distributed caching)
+pygments>=2.19.0           # For gget skill (syntax highlighting)
+xarray_einstats>=0.9.0     # For pymc skill (xarray integration)
+mpmath>=1.3.0              # For symbolic mathematics (sympy dependency)
+scanpy>=1.12.0             # For single-cell RNA-seq analysis
+cffi>=2.0.0                # For pymoo skill (C foreign function interface)
+# tensorflow>=2.20.0       # Optional: for deepchem[tensorflow]; use deepchem[torch] to avoid
+grequests>=0.7.0           # For bioservices skill (async requests)
+rich-click>=1.9.0          # For bioservices skill (CLI formatting)
+suds-community>=1.2.0      # For bioservices skill (SOAP client)
+xmltodict>=1.0.0           # For bioservices skill (XML parsing)
+decorator>=5.2.0           # For ipython dependency
+ipython-pygments-lexers>=1.1.0  # For ipython syntax highlighting
+jedi>=0.19.0               # For ipython autocompletion
+matplotlib-inline>=0.2.0   # For ipython inline plotting
+pexpect>=4.9.0             # For ipython REPL
+prompt_toolkit>=3.0.0      # For ipython prompts
+alive_progress>=3.3.0      # For pymoo skill (progress bars)
+autograd>=1.8.0            # For pymoo skill (automatic differentiation)
+cma>=4.4.0                 # For pymoo skill (CMA-ES optimizer)
+Deprecated>=1.3.0          # For general deprecation warnings
+h5netcdf>=1.8.0            # For arviz skill (HDF5 NetCDF)
+jinja2>=3.1.0              # For distributed skill (templating)
+sortedcontainers>=2.4.0    # For distributed skill (sorted data structures)
+ipywidgets>=8.1.0          # For gget skill (Jupyter widgets)
+mysql-connector-python>=9.6.0  # For gget skill (MySQL access)
+farama-notifications>=0.0.4  # For gymnasium skill (notifications)
+colorama>=0.4.6            # For easydev skill (colored terminal output)
+neo>=0.14.0                # For spikeinterface skill (neurophysiology I/O)
+pyarrow>=23.0.0            # For arboreto skill (Arrow data format)
+torchmetrics>=1.8.0        # For pytorch-lightning skill (metrics)
+pytorch-lightning>=2.6.0   # For lightning wrapper (PyTorch Lightning)
+opentrons>=8.8.0           # For opentrons-integration skill (lab automation)
+pyserial>=3.5              # For opentrons-integration skill (serial communication)
+pydantic-settings>=2.13.0  # For opentrons-integration skill (settings management)
+jsonschema>=3.0.1,<4.18.0  # For opentrons-integration skill (JSON validation)
+fuzzywuzzy>=0.18.0         # For pytdc skill (fuzzy string matching)
+opentrons-shared-data>=8.8.0  # For opentrons-integration skill (shared data)
+setuptools<70              # For pytdc skill (provides pkg_resources - newer versions deprecated it)
+
 # Optional: for enhanced sequence analysis
 # scikit-bio>=0.5.8
 
-# Optional: for molecular visualization
-# py3Dmol>=2.0.0
+# Molecular visualization
+py3Dmol>=2.0.3             # 3D molecular visualization
+# nglview>=3.0.0           # Optional: Jupyter molecular visualization (requires ipywidgets)
+
+# Additional scientific computing packages
+ase>=3.22.0                # Atomic Simulation Environment (materials/chemistry)
+astropy>=6.0.0             # Astronomy and astrophysics
+cobra>=0.29.0              # Constraint-based metabolic modeling
+pydicom>=3.0.0             # DICOM medical imaging
+pymatgen>=2024.0.0         # Materials science
+polars>=1.0.0              # Fast dataframes
+plotly>=5.0.0              # Interactive plotting
+pubchempy>=1.0.4           # PubChem API client
+litellm>=1.0.0             # LLM API wrapper for Perplexity
+datamol>=0.12.0            # Molecular manipulation (for medchem skill)
+medchem>=2.0.0             # Medicinal chemistry toolkit
+pydeseq2>=0.4.0            # DESeq2 in Python (differential expression)
+
+# Packages requiring Python dev headers (install python3-dev first: sudo apt install python3-dev)
+# prody>=2.4.0             # Protein dynamics (requires compilation)
+# mdanalysis>=2.7.0        # Molecular dynamics analysis (requires compilation)
+
+# Quantum computing
+qutip>=5.0.0               # Quantum Toolbox in Python
+cirq>=1.3.0                # Google Quantum computing
+qiskit>=1.0.0              # IBM Quantum (large install)
+pennylane>=0.35.0          # Quantum ML (large install)
+
+# Molecular dynamics (optional - very large)
+# openmm>=8.1.0            # OpenMM MD engine (requires CUDA for GPU)
+
+# Protein modeling (optional - requires license)
+# pyrosetta                # PyRosetta (requires academic/commercial license)
 
 # Optional: Materials Project (skills/materials - band gap, density, formula)
 # mp-api>=0.0.30     # Recommended: next-gen client, full data in place

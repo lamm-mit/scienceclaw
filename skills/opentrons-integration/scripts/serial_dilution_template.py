@@ -5,6 +5,11 @@ Serial Dilution Protocol Template
 This template demonstrates how to perform a serial dilution across a plate row.
 Useful for creating concentration gradients for assays.
 """
+import sys
+if '--help' in sys.argv or '-h' in sys.argv:
+    print("Opentrons Serial Dilution Template - load in Opentrons Protocol Designer")
+    print("Usage: Load this file in the Opentrons app to simulate or run.")
+    sys.exit(0)
 
 from opentrons import protocol_api
 

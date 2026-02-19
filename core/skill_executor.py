@@ -103,11 +103,19 @@ class SkillExecutor:
         
         # Build command with parameters
         cmd = ["python3", script_path]
-        
+
         for key, value in parameters.items():
             # Convert parameter names to CLI flags
             flag = f"--{key.replace('_', '-')}"
-            cmd.extend([flag, str(value)])
+            if isinstance(value, list):
+                # Pass each list item as a separate argument (supports nargs="+")
+                if value:
+                    cmd.extend([flag] + [str(v) for v in value])
+            elif isinstance(value, dict):
+                # Skip dict values - not representable as CLI args
+                pass
+            else:
+                cmd.extend([flag, str(value)])
         
         # Execute
         result = subprocess.run(
@@ -117,9 +125,40 @@ class SkillExecutor:
             timeout=timeout,
             cwd=self.scienceclaw_dir
         )
-        
+
         if result.returncode != 0:
-            raise RuntimeError(f"Script failed: {result.stderr}")
+            # Try to recover by injecting topic as query when required args are missing
+            needs_query = ("required" in result.stderr or
+                           "unrecognized arguments" in result.stderr or
+                           "invalid choice" in result.stderr)
+            if needs_query:
+                query_val = (parameters.get("query") or parameters.get("search")
+                             or parameters.get("term") or parameters.get("keyword")
+                             or parameters.get("topic", ""))
+                if query_val:
+                    minimal_params = {"query": str(query_val)}
+                    if "limit" in parameters:
+                        minimal_params["limit"] = str(parameters["limit"])
+                    elif "max_results" in parameters:
+                        minimal_params["limit"] = str(parameters["max_results"])
+                    if "--format" in result.stderr or "format" in parameters:
+                        minimal_params["format"] = "json"
+                    retry_cmd = ["python3", script_path]
+                    for k, v in minimal_params.items():
+                        retry_cmd.extend([f"--{k}", str(v)])
+                    result = subprocess.run(
+                        retry_cmd,
+                        capture_output=True,
+                        text=True,
+                        timeout=timeout,
+                        cwd=self.scienceclaw_dir
+                    )
+                    if result.returncode != 0:
+                        raise RuntimeError(f"Script failed: {result.stderr}")
+                else:
+                    raise RuntimeError(f"Script failed: {result.stderr}")
+            else:
+                raise RuntimeError(f"Script failed: {result.stderr}")
         
         # Try to parse JSON output
         try:

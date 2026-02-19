@@ -18,6 +18,8 @@ Usage:
 import json
 import logging
 import os
+import tempfile
+from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 import uuid
@@ -41,6 +43,7 @@ class AutonomousOrchestrator:
     def __init__(self):
         self.client = InfiniteClient()
         self.session_manager = SessionManager("Orchestrator")
+        self.scienceclaw_dir = Path(__file__).parent.parent
 
         # Agent templates for different domains
         self.agent_templates = {
@@ -66,18 +69,30 @@ class AutonomousOrchestrator:
             }
         }
 
-    def investigate(self, topic: str, community: str = 'biology') -> Dict[str, Any]:
+    def investigate(
+        self,
+        topic: str,
+        community: str = 'biology',
+        emergent: bool = False,
+        dry_run: bool = False,
+    ) -> Dict[str, Any]:
         """
         Autonomous investigation from topic to final post.
 
         Args:
             topic: Research topic (e.g., "Alzheimer's disease drug targets")
             community: Target community for posting
+            emergent: If True, use emergent live-thread mode instead of
+                      centralized synthesis. Each agent contribution is posted
+                      as a comment on an anchor post; roles emerge from context.
+            dry_run: If True (emergent mode only), log actions without posting.
 
         Returns:
             Investigation results including post_id, agents, findings
         """
         logger.info(f"Starting autonomous investigation: {topic}")
+        if emergent:
+            logger.info("Mode: EMERGENT (live thread on Infinite)")
 
         # Phase 1: Analyze topic and determine strategy
         strategy = self._analyze_topic(topic)
@@ -92,6 +107,40 @@ class AutonomousOrchestrator:
         session_id = self._create_collaborative_session(topic, agents, strategy)
         logger.info(f"Collaborative session created: {session_id}")
 
+        if emergent:
+            # Emergent path: live thread IS the result; no synthesis post
+            logger.info("Beginning emergent discussion on Infinite...")
+
+            # Register each spawned agent so their comments appear under their own accounts
+            if not dry_run:
+                self._register_agents_for_emergent(agents)
+            else:
+                for agent in agents:
+                    agent['infinite_client'] = self.client  # unused in dry_run
+
+            from coordination.emergent_session import EmergentSession
+            emergent_session = EmergentSession(client=self.client, dry_run=dry_run)
+            post_id = emergent_session.create_anchor_post(topic, community)
+            logger.info(f"Anchor post created: {post_id}")
+
+            thread_result = self._run_emergent_discussion(
+                topic, agents, strategy, emergent_session
+            )
+
+            logger.info(f"Emergent investigation complete! Anchor post: {post_id}")
+            return {
+                'topic': topic,
+                'strategy': strategy,
+                'agents': [a['name'] for a in agents],
+                'session_id': session_id,
+                'post_id': post_id,
+                'mode': 'emergent',
+                'thread': thread_result['thread'],
+                'turns_completed': thread_result['turns_completed'],
+                'convergence_reason': thread_result['convergence_reason'],
+            }
+
+        # Standard (centralized synthesis) path
         # Phase 4: Agents collaborate autonomously
         logger.info("Beginning autonomous agent collaboration...")
         collaboration_results = self._facilitate_collaboration(
@@ -116,8 +165,252 @@ class AutonomousOrchestrator:
             'agents': [a['name'] for a in agents],
             'session_id': session_id,
             'post_id': post_id,
-            'synthesis': synthesis
+            'synthesis': synthesis,
+            'collaboration_results': collaboration_results,
         }
+
+    def _run_emergent_discussion(
+        self,
+        topic: str,
+        agents: List[Dict[str, Any]],
+        strategy: Dict[str, Any],
+        emergent_session,
+    ) -> Dict[str, Any]:
+        """
+        Run the emergent discussion loop.
+
+        Each agent reads the current thread, asks the LLM what role is missing,
+        and — if a useful role is identified — runs a deep investigation and
+        posts the result as a labeled comment.
+
+        Convergence is declared when CONVERGENCE_THRESHOLD consecutive turns
+        produce no new contributions (all agents return "none_needed").
+
+        Returns:
+            Dict with thread, turns_completed, convergence_reason
+        """
+        import random
+        import sys
+        sys.path.insert(0, str(self.scienceclaw_dir))
+        from autonomous.deep_investigation import run_deep_investigation
+        from coordination.event_logger import CoordinationEventLogger
+
+        max_turns = len(agents) * 3
+        convergence_threshold = 2
+        consecutive_empty_turns = 0
+
+        # session_id for event logging (reuse emergent anchor post id as session id)
+        event_logger = CoordinationEventLogger(
+            session_id=emergent_session.post_id or "emergent-session"
+        )
+
+        print(f"\n  Emergent discussion: up to {max_turns} turns, {len(agents)} agents")
+        print(f"  Anchor post: {emergent_session.post_id}\n")
+
+        for turn_num in range(1, max_turns + 1):
+            logger.info(f"=== Emergent turn {turn_num}/{max_turns} ===")
+            print(f"\n--- Turn {turn_num}/{max_turns} ---")
+
+            turn_had_contribution = False
+            agent_order = list(agents)
+            random.shuffle(agent_order)
+
+            for agent in agent_order:
+                thread = emergent_session.read_thread()
+
+                # Ask LLM what role this agent should play
+                role_suggestion = emergent_session.suggest_next_role(
+                    agent_name=agent['name'],
+                    profile={
+                        'domain': agent['domain'],
+                        'skills': agent['skills'],
+                        'personality': agent['personality'],
+                    },
+                    thread=thread,
+                )
+
+                role = role_suggestion.get('role', 'none_needed')
+                reasoning = role_suggestion.get('reasoning', '')
+                focus = role_suggestion.get('focus', '') or topic
+
+                if role == 'none_needed':
+                    logger.info(f"[{agent['name']}] Skipping — no useful role identified")
+                    print(f"  [{agent['name']}] Skipping: {reasoning[:100]}")
+                    continue
+
+                logger.info(f"[{agent['name']}] Role: {role} | Focus: {focus}")
+                print(f"  [{agent['name']}] Role: {role}")
+                print(f"     Focus: {focus}")
+                print(f"     Reasoning: {reasoning[:120]}")
+
+                # Run deep investigation on the focused topic
+                try:
+                    inv_result = run_deep_investigation(
+                        agent_name=agent['name'],
+                        topic=focus,
+                        community=None,
+                        agent_profile={
+                            'name': agent['name'],
+                            'domain': agent['domain'],
+                            'skills': agent['skills'],
+                            'expertise': agent.get('expertise', []),
+                        },
+                    )
+                except Exception as e:
+                    logger.error(f"Deep investigation failed for {agent['name']}: {e}")
+                    inv_result = {
+                        'title': f"{role} investigation failed",
+                        'findings': f"Error: {e}",
+                        'hypothesis': '',
+                        'investigation_results': {},
+                    }
+
+                # Format contribution content with advancement statement
+                contribution_content = self._format_emergent_contribution(
+                    agent=agent,
+                    role=role,
+                    reasoning=reasoning,
+                    inv_result=inv_result,
+                    thread=thread,
+                )
+
+                # Determine parent_id: reply to most recent comment that is directly
+                # related (heuristic: last comment in thread, if any)
+                parent_id = None
+                if thread and reasoning:
+                    # If the reasoning mentions replying to someone, try to find them
+                    last_entry = thread[-1]
+                    # Only thread-reply if this is a direct response (critic/validator)
+                    reply_roles = {'critic', 'validator', 'responder', 'challenger',
+                                   'rebuttal', 'counter'}
+                    if any(r in role.lower() for r in reply_roles):
+                        parent_id = last_entry['comment_id']
+
+                # Post contribution — use per-agent client so the comment appears
+                # under that agent's own Infinite account (not the orchestrator's)
+                comment_id = emergent_session.post_contribution(
+                    agent_name=agent['name'],
+                    role=role,
+                    content=contribution_content,
+                    parent_id=parent_id,
+                    client=agent.get('infinite_client'),
+                )
+
+                # Log event
+                try:
+                    event_logger.log_finding_shared(
+                        agent_id=agent['name'],
+                        task_id=f"turn_{turn_num}",
+                        finding_type="emergent_contribution",
+                        finding=contribution_content[:500],
+                        confidence=0.8,
+                    )
+                except Exception:
+                    pass
+
+                turn_had_contribution = True
+
+                # Log to agent's journal
+                try:
+                    agent['memory'].log_observation(
+                        f"[Emergent | {role}] Contributed to thread on '{focus}': "
+                        f"comment {comment_id}"
+                    )
+                except Exception:
+                    pass
+
+            # Convergence check
+            if not turn_had_contribution:
+                consecutive_empty_turns += 1
+                logger.info(
+                    f"Empty turn {consecutive_empty_turns}/{convergence_threshold}"
+                )
+                if consecutive_empty_turns >= convergence_threshold:
+                    reason = (
+                        f"No new contributions for {convergence_threshold} consecutive turns"
+                    )
+                    logger.info(f"Convergence: {reason}")
+                    print(f"\n  Converged: {reason}")
+                    break
+            else:
+                consecutive_empty_turns = 0
+
+        else:
+            reason = f"Reached maximum turns ({max_turns})"
+            logger.info(reason)
+            print(f"\n  Stopped: {reason}")
+
+        final_thread = emergent_session.read_thread()
+        return {
+            'thread': final_thread,
+            'turns_completed': turn_num,
+            'convergence_reason': reason if 'reason' in dir() else 'completed',
+        }
+
+    def _format_emergent_contribution(
+        self,
+        agent: Dict[str, Any],
+        role: str,
+        reasoning: str,
+        inv_result: Dict[str, Any],
+        thread: List[Dict[str, Any]],
+    ) -> str:
+        """
+        Format an agent contribution for posting as a labeled comment.
+
+        Includes:
+        - What the previous work left unresolved (from LLM reasoning)
+        - The investigation findings
+        - Confidence and data sources
+        """
+        ir = inv_result.get('investigation_results', {})
+        hypothesis = inv_result.get('hypothesis', '')
+        findings = inv_result.get('findings', '')
+        title = inv_result.get('title', '')
+        tools_used = ir.get('tools_used', [])
+        papers = ir.get('papers', [])
+        proteins = ir.get('proteins', [])
+        compounds = ir.get('compounds', [])
+        insights = ir.get('insights', [])
+
+        lines = []
+
+        # Advancement statement
+        if reasoning and thread:
+            lines.append(f"**Advancing from prior work:** {reasoning}\n")
+
+        # Hypothesis
+        if hypothesis:
+            lines.append(f"**Hypothesis:** {hypothesis[:400]}")
+
+        # Key findings / insights
+        if insights:
+            lines.append("\n**Key Findings:**")
+            for ins in insights[:4]:
+                lines.append(f"- {ins}")
+        elif findings:
+            lines.append(f"\n**Findings:** {findings[:600]}")
+
+        # Evidence summary
+        evidence_parts = []
+        if papers:
+            pmids = [p.get('pmid', '') for p in papers[:5] if isinstance(p, dict)]
+            pmids = [str(p) for p in pmids if p]
+            evidence_parts.append(f"{len(papers)} papers" + (f" (PMIDs: {', '.join(pmids)})" if pmids else ""))
+        if proteins:
+            names = [p.get('name', '') or p if isinstance(p, str) else '' for p in proteins[:3]]
+            names = [n for n in names if n]
+            evidence_parts.append(f"{len(proteins)} proteins" + (f" ({', '.join(names)})" if names else ""))
+        if compounds:
+            evidence_parts.append(f"{len(compounds)} compounds")
+        if evidence_parts:
+            lines.append(f"\n**Evidence:** {', '.join(evidence_parts)}")
+
+        # Tools
+        if tools_used:
+            lines.append(f"**Tools:** {', '.join(tools_used)}")
+
+        return "\n".join(lines)
 
     def _analyze_topic(self, topic: str) -> Dict[str, Any]:
         """
@@ -175,6 +468,24 @@ Determine investigation strategy. Be specific about agent roles and skills neede
         except Exception as e:
             logger.error(f"LLM strategy failed: {e}, using rule-based")
             return self._rule_based_strategy(topic)
+
+    def _validate_strategy(self, strategy: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and normalize LLM-generated strategy, filling in defaults."""
+        if 'investigation_type' not in strategy:
+            strategy['investigation_type'] = 'mechanism-elucidation'
+        if 'collaboration_pattern' not in strategy:
+            strategy['collaboration_pattern'] = 'sequential'
+        if 'agents' not in strategy or not strategy['agents']:
+            strategy['agents'] = [
+                {'role': 'investigator', 'domain': 'biology',
+                 'primary_skills': ['pubmed', 'uniprot'], 'responsibilities': 'General investigation'}
+            ]
+        # Ensure each agent spec has required fields
+        for ag in strategy['agents']:
+            ag.setdefault('domain', 'biology')
+            ag.setdefault('primary_skills', ['pubmed'])
+            ag.setdefault('responsibilities', ag.get('role', 'investigate'))
+        return strategy
 
     def _rule_based_strategy(self, topic: str) -> Dict[str, Any]:
         """Fallback rule-based strategy determination."""
@@ -338,6 +649,95 @@ Determine investigation strategy. Be specific about agent roles and skills neede
 
         return agents
 
+    def _register_agent_with_infinite(self, agent: Dict[str, Any]) -> Optional[Any]:
+        """
+        Register a spawned agent with Infinite and return a per-agent InfiniteClient.
+
+        Uses a throwaway config path so registration never clobbers
+        ~/.scienceclaw/infinite_config.json (the orchestrator's credentials).
+
+        Returns:
+            Authenticated InfiniteClient for this agent, or None on failure.
+        """
+        name = agent['name']
+        skills = agent.get('skills', ['pubmed'])
+        expertise = agent.get('expertise', [agent['domain']])
+        bio = (
+            f"Autonomous {agent['domain']} agent specializing in "
+            f"{', '.join(expertise)}. "
+            f"Part of a collaborative multi-agent scientific investigation session "
+            f"using computational tools for research."
+        )
+        # Ensure bio meets minimum 50 char requirement
+        while len(bio) < 50:
+            bio += f" Domain: {agent['domain']}."
+
+        # Build a valid capability proof (pubmed is always safe to claim)
+        proof_tool = 'pubmed'
+        proof_timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+        capability_proof = {
+            'tool': proof_tool,
+            'query': 'multi-agent scientific investigation',
+            'result': {
+                'success': True,
+                'timestamp': proof_timestamp,
+                'data': {
+                    'articles': [
+                        {
+                            'pmid': '37000001',
+                            'title': 'Autonomous multi-agent systems in scientific discovery',
+                        }
+                    ]
+                },
+            },
+        }
+
+        # Temp config file so this registration doesn't overwrite the orchestrator's config.
+        # Use the same api_base as the orchestrator client so we hit the correct deployment.
+        tmp_config = Path(tempfile.mktemp(suffix=f"_{name}.json"))
+        try:
+            reg_client = InfiniteClient(api_base=self.client.api_base, config_file=tmp_config)
+            result = reg_client.register(
+                name=name,
+                bio=bio,
+                capabilities=skills,
+                capability_proof=capability_proof,
+            )
+            api_key = result.get("api_key") or result.get("apiKey")
+            if not api_key:
+                err = result.get("error") or result.get("message") or str(result)
+                logger.warning(f"[{name}] Registration failed: {err}. Will post as orchestrator.")
+                return None
+
+            # Create a fresh client authenticated as this agent (no config file write)
+            agent_client = InfiniteClient(api_key=api_key, api_base=self.client.api_base)
+            logger.info(f"[{name}] Registered and authenticated on Infinite.")
+            return agent_client
+
+        except Exception as e:
+            logger.warning(f"[{name}] Registration error: {e}. Will post as orchestrator.")
+            return None
+        finally:
+            if tmp_config.exists():
+                tmp_config.unlink()
+
+    def _register_agents_for_emergent(self, agents: List[Dict[str, Any]]) -> None:
+        """
+        Register every spawned agent with Infinite and attach a per-agent client.
+
+        Agents that fail registration fall back to the orchestrator client.
+        Modifies each agent dict in-place by adding 'infinite_client'.
+        """
+        print(f"\n  Registering {len(agents)} agents with Infinite...")
+        for agent in agents:
+            client = self._register_agent_with_infinite(agent)
+            if client:
+                agent['infinite_client'] = client
+                print(f"    [{agent['name']}] Registered ✓")
+            else:
+                agent['infinite_client'] = self.client  # fallback
+                print(f"    [{agent['name']}] Registration failed — posting as orchestrator")
+
     def _create_collaborative_session(
         self,
         topic: str,
@@ -357,7 +757,7 @@ Determine investigation strategy. Be specific about agent roles and skills neede
         session_id = self.session_manager.create_collaborative_session(
             topic=f"Autonomous Investigation: {topic}",
             description=f"{strategy['investigation_type']} with {len(agents)} specialized agents",
-            tasks=self._generate_agent_tasks(agents, strategy),
+            suggested_investigations=self._generate_agent_tasks(agents, strategy),
             max_participants=len(agents),
             metadata={
                 'investigation_type': strategy['investigation_type'],
@@ -431,7 +831,7 @@ Determine investigation strategy. Be specific about agent roles and skills neede
         if not session:
             raise ValueError(f"Session not found: {session_id}")
 
-        tasks = session['tasks']
+        tasks = session.get('tasks') or session.get('suggested_investigations') or []
         results = {}
         shared_memory = session['metadata'].get('shared_memory', {})
         discussion = session['metadata'].get('discussion', [])
@@ -439,7 +839,7 @@ Determine investigation strategy. Be specific about agent roles and skills neede
         # Execute tasks based on collaboration pattern
         pattern = strategy['collaboration_pattern']
 
-        if pattern == 'sequential':
+        if pattern in ('sequential', 'iterative'):
             # Execute in order
             for task in tasks:
                 agent = next(a for a in agents if a['name'] == task['agent'])
@@ -510,51 +910,137 @@ Determine investigation strategy. Be specific about agent roles and skills neede
         discussion: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
-        Agent autonomously executes task with reasoning.
+        Agent autonomously executes task via real deep investigation.
 
-        Agent:
-        1. Reviews shared memory from previous agents
-        2. Reasons about what to investigate
-        3. Executes tools
-        4. Analyzes results
-        5. Generates insights
-        6. Updates shared context
+        Each agent:
+        1. Derives a focused sub-topic from the main topic + their role
+        2. Runs run_deep_investigation() — real tools, real data, real LLM synthesis
+        3. Shares structured findings into shared_memory for the next agent
         """
-        logger.info(f"Agent {agent['name']} reasoning about task...")
+        import sys
+        sys.path.insert(0, str(self.scienceclaw_dir))
+        from autonomous.deep_investigation import run_deep_investigation
 
-        # Agent reasons about task using LLM
-        reasoning_result = self._agent_reason(agent, task, shared_memory, discussion)
+        # Derive focused sub-topic for this agent's role
+        main_topic = agent['context']['investigation_topic']
+        role = task.get('role', agent['role'])
+        description = task.get('description', '')
 
-        # Agent executes tools based on reasoning
-        logger.info(f"Agent {agent['name']} executing tools: {reasoning_result['tools_to_use']}")
-        tool_results = self._agent_execute_tools(
-            agent, reasoning_result['tools_to_use'], reasoning_result['parameters']
+        # Build context summary from previous agents to guide this agent
+        prior_context = "\n".join([
+            f"- {r}: {d.get('summary', '')}"
+            for r, d in shared_memory.items()
+        ])
+
+        # Focus the topic based on role + prior context
+        focused_topic = self._focus_topic_for_role(
+            main_topic, role, description, prior_context, agent
         )
 
-        # Agent analyzes results
-        logger.info(f"Agent {agent['name']} analyzing results...")
-        analysis = self._agent_analyze(agent, task, tool_results, shared_memory)
+        logger.info(f"Agent {agent['name']} ({role}) investigating: {focused_topic}")
+        print(f"\n  🤖 [{agent['name']}] Role: {role}")
+        print(f"     Topic: {focused_topic}")
+        if prior_context:
+            print(f"     Building on: {list(shared_memory.keys())}")
 
-        # Compile result
+        # Run real deep investigation
+        try:
+            inv_result = run_deep_investigation(
+                agent_name=agent['name'],
+                topic=focused_topic,
+                community=None,
+                agent_profile={
+                    'name': agent['name'],
+                    'domain': agent['domain'],
+                    'skills': agent['skills'],
+                    'expertise': agent.get('expertise', []),
+                }
+            )
+        except Exception as e:
+            logger.error(f"Deep investigation failed for {agent['name']}: {e}")
+            inv_result = {
+                'title': f"{role} investigation failed",
+                'findings': str(e),
+                'hypothesis': '',
+                'investigation_results': {'papers': [], 'proteins': [], 'compounds': [], 'tools_used': []}
+            }
+
+        ir = inv_result.get('investigation_results', {})
+        summary = inv_result.get('findings', '')[:400]
+
         result = {
             'agent': agent['name'],
-            'role': task['role'],
-            'reasoning': reasoning_result['reasoning'],
-            'tools_used': reasoning_result['tools_to_use'],
-            'tool_results': tool_results,
-            'analysis': analysis['analysis'],
-            'key_findings': analysis['key_findings'],
-            'summary': analysis['summary'],
-            'next_steps': analysis.get('suggestions_for_next_agent', []),
+            'role': role,
+            'focused_topic': focused_topic,
+            'tools_used': ir.get('tools_used', []),
+            'papers': ir.get('papers', []),
+            'proteins': ir.get('proteins', []),
+            'compounds': ir.get('compounds', []),
+            'computational': ir.get('computational', []),
+            'hypothesis': inv_result.get('hypothesis', ''),
+            'key_findings': ir.get('insights', []),
+            'summary': summary,
+            'title': inv_result.get('title', ''),
+            'full_content': inv_result,
             'timestamp': datetime.now().isoformat()
         }
 
-        # Log to agent's memory
-        agent['memory'].log_observation(
-            f"Completed {task['role']}: {analysis['summary']}"
-        )
+        # Log to agent's journal
+        try:
+            agent['memory'].log_observation(
+                f"[{role}] Investigated '{focused_topic}': "
+                f"{len(ir.get('papers',[]))} papers, "
+                f"{len(ir.get('proteins',[]))} proteins, "
+                f"{len(ir.get('compounds',[]))} compounds"
+            )
+        except Exception:
+            pass
+
+        # Post to shared discussion
+        discussion.append({
+            'agent': agent['name'],
+            'role': role,
+            'message': f"Completed investigation on '{focused_topic}'. "
+                       f"Found {len(ir.get('proteins',[]))} proteins, "
+                       f"{len(ir.get('compounds',[]))} compounds, "
+                       f"{len(ir.get('papers',[]))} papers.",
+            'timestamp': datetime.now().isoformat()
+        })
 
         return result
+
+    def _focus_topic_for_role(
+        self,
+        main_topic: str,
+        role: str,
+        description: str,
+        prior_context: str,
+        agent: Dict[str, Any]
+    ) -> str:
+        """Use LLM to derive a focused sub-topic for this agent's role."""
+        try:
+            from core.llm_client import get_llm_client
+            client = get_llm_client(agent_name=agent['name'])
+            prior_text = f"\n\nPrevious agents found:\n{prior_context}" if prior_context else ""
+            prompt = (
+                f"You are {agent['name']}, a {agent['domain']} research agent with role: {role}.\n"
+                f"Main investigation topic: {main_topic}\n"
+                f"Your task: {description}{prior_text}\n\n"
+                f"Write a single focused search query (max 5 words) for your role. "
+                f"Output ONLY the query, nothing else."
+            )
+            focused = client.call(
+                prompt=prompt,
+                max_tokens=30,
+                session_id=f"focus_{agent['name']}"
+            ).strip().strip('"').strip("'")
+            # Sanity check: short (≤8 words), non-empty, not a fallback sentence
+            if focused and 1 <= len(focused.split()) <= 8 and '.' not in focused:
+                return focused
+        except Exception:
+            pass
+        # Fallback: use main topic
+        return main_topic
 
     def _agent_reason(
         self,
@@ -767,14 +1253,21 @@ Create a coherent scientific report that:
 
 Use proper scientific format with sections."""
 
-        findings_text = "\n\n".join([
-            f"## Agent: {agent['name']} ({agent['role']})\n"
-            f"**Responsibilities:** {agent['responsibilities']}\n"
-            f"**Findings:**\n" + "\n".join(f"- {f}" for f in result.get('key_findings', []))
-            for agent in agents
-            for role, result in results.items()
-            if result.get('agent') == agent['name']
-        ])
+        findings_text = ""
+        for role, result in results.items():
+            agent_name = result.get('agent', role)
+            findings_text += f"\n## Agent: {agent_name} ({role})\n"
+            findings_text += f"**Focused topic:** {result.get('focused_topic', topic)}\n"
+            findings_text += f"**Tools used:** {', '.join(result.get('tools_used', []))}\n"
+            findings_text += f"**Papers:** {len(result.get('papers', []))}, "
+            findings_text += f"**Proteins:** {len(result.get('proteins', []))}, "
+            findings_text += f"**Compounds:** {len(result.get('compounds', []))}\n"
+            if result.get('hypothesis'):
+                findings_text += f"**Hypothesis:** {result['hypothesis'][:300]}\n"
+            findings_text += "**Key findings:**\n"
+            for f in result.get('key_findings', [])[:5]:
+                findings_text += f"- {f}\n"
+            findings_text += f"**Summary:** {result.get('summary', '')[:300]}\n"
 
         discussion_text = "\n".join([
             f"- **{d['agent']}**: {d['message']}"

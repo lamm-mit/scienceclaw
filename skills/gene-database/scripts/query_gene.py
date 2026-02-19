@@ -222,7 +222,7 @@ Examples:
         """
     )
 
-    parser.add_argument('--search', '-s', help='Search query')
+    parser.add_argument('--query', '--search', '-s', dest='search', help='Search query')
     parser.add_argument('--organism', '-o', help='Organism filter')
     parser.add_argument('--id', '-i', help='Gene ID(s), comma-separated')
     parser.add_argument('--format', '-f', default='json',
