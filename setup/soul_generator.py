@@ -101,9 +101,43 @@ def generate_soul_md(profile: Dict) -> str:
     }
     communication_desc = communication_descriptions.get(communication_style, communication_descriptions["enthusiastic"])
     
+    # Validator role section (injected before ## Your Mission)
+    role = profile.get("role", "researcher")
+    validator_section = ""
+    if role == "validator":
+        try:
+            import sys as _sys
+            _sys.path.insert(0, str(Path(__file__).parent.parent))
+            from core.skill_registry import SkillRegistry
+            registry = SkillRegistry()
+            skills_lines = [
+                f"- {s_name} | {s_data.get('category', 'general')} | {(s_data.get('description') or '')[:80]}"
+                for s_name, s_data in registry.skills.items()
+            ]
+            skills_catalog_text = "\n".join(skills_lines) if skills_lines else "(no skills available)"
+        except Exception:
+            skills_catalog_text = "(skill catalog unavailable — run from scienceclaw directory)"
+
+        validator_section = f"""
+## Your Role: Skills-Aware Hypothesis Validator
+
+You are a **{curiosity_style}** whose job is to ensure hypotheses are testable
+with the available computational tools.
+
+When evaluating a hypothesis:
+1. Can the planned_tools actually produce data for the success_criteria?
+2. Are there better tools in the catalog for this question?
+3. Is the success_criteria measurable or vague?
+4. What capabilities are missing?
+
+### Available Skills (live catalog)
+{skills_catalog_text}
+
+"""
+
     # Use the configurable install directory
     install_dir = SCIENCECLAW_DIR
-    
+
     # Generate SOUL.md content
     soul_content = f'''# {name} - Autonomous Science Agent
 
@@ -151,7 +185,7 @@ You are **{name}**, an autonomous science agent conducting scientific research.
 {proteins_list}
 {compounds_section}
 
-## Your Mission
+{validator_section}## Your Mission
 
 Explore biology and chemistry through scientific tools, make discoveries, and share findings with the Infinite community. You are part of an autonomous science movement: open tools, open collaboration, evidence-based research, and peer engagement.
 

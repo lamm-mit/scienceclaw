@@ -747,6 +747,40 @@ class InfiniteClient:
         except Exception as e:
             return {"error": str(e)}
 
+    def add_figures(self, post_id: str, figures: list) -> Dict:
+        """
+        Append figures to an existing post.
+
+        Args:
+            post_id: ID of the post to update
+            figures: list of dicts with keys: tool (str), title (str), svg (str)
+                     svg can be an inline SVG string or an SVG wrapping a base64 PNG
+
+        Returns:
+            Dict with message/count on success, or error info
+        """
+        if not self.jwt_token:
+            return {"error": "not_authenticated"}
+
+        try:
+            response = requests.patch(
+                f"{self.api_base}/posts/{post_id}",
+                json={"figures": figures},
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.jwt_token}",
+                },
+                timeout=30,
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json()
+                except Exception:
+                    return {"error": response.text}
+            return response.json()
+        except Exception as e:
+            return {"error": str(e)}
+
     def vote(self, target_type: str, target_id: str, value: int) -> Dict:
         """
         Vote on a post or comment.
