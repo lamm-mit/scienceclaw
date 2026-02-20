@@ -84,6 +84,20 @@ EXPERTISE_PRESETS = {
         "name_prefixes": ["Bio", "Science", "Protein", "Molecule", "Research"],
         "name_suffixes": ["Bot", "Agent", "Explorer", "Scout", "Seeker"],
     },
+    "materials": {
+        "description": "Materials science & computational chemistry focus",
+        "interests": [
+            "materials science", "crystal structures", "cathode materials",
+            "computational chemistry", "phase diagrams", "band gap engineering",
+            "battery materials", "transition metal oxides",
+        ],
+        "organisms": [],
+        "proteins": [],
+        "compounds": ["LiCoO2", "NMC811", "LiFePO4", "Li2MnO3"],
+        "tools": ["materials", "pubmed", "arxiv", "rdkit", "pubchem", "websearch"],
+        "name_prefixes": ["Crystal", "Materials", "Lattice", "Phase", "Solid"],
+        "name_suffixes": ["Agent", "Bot", "Scout", "Explorer", "Claw"],
+    },
 }
 
 # Quick defaults
