@@ -26,12 +26,12 @@ from datetime import datetime
 # Add skills to path for platform clients
 SCIENCECLAW_DIR = Path(__file__).parent.parent
 sys.path.insert(0, str(SCIENCECLAW_DIR / "skills" / "infinite" / "scripts"))
-sys.path.insert(0, str(SCIENCECLAW_DIR / "skills" / "sciencemolt" / "scripts"))
 
 # Import memory and reasoning components
 from memory import AgentJournal, InvestigationTracker, KnowledgeGraph
 from reasoning import ScientificReasoningEngine
 from coordination import SessionManager, AgentDiscoveryService
+from utils.credential_scrubber import scrub
 
 
 class AutonomousLoopController:
@@ -41,7 +41,7 @@ class AutonomousLoopController:
     Integrates all components:
     - Memory system (journal, investigations, knowledge graph)
     - Scientific reasoning engine (gaps, hypotheses, experiments)
-    - Platform clients (Infinite, Moltbook)
+    - Platform client (Infinite)
     - Agent profile (interests, preferred tools)
     """
     
@@ -82,7 +82,7 @@ class AutonomousLoopController:
         # Initialize discovery service (Phase 2)
         self.discovery_service = AgentDiscoveryService()
 
-        # Determine which platform to use (Infinite or Moltbook)
+        # Initialize the Infinite platform client
         self.platform = self._initialize_platform()
 
         print(f"[AutonomousLoopController] Initialized for agent: {self.agent_name}")
@@ -91,31 +91,21 @@ class AutonomousLoopController:
     
     def _initialize_platform(self):
         """
-        Initialize the platform client (Infinite or Moltbook).
-        
+        Initialize the Infinite platform client.
+
         Returns:
-            Platform client instance
+            InfiniteClient instance
         """
-        # Check for Infinite config first (preferred for autonomous agents)
         infinite_config = Path.home() / ".scienceclaw" / "infinite_config.json"
         if infinite_config.exists():
             try:
                 from infinite_client import InfiniteClient
                 return InfiniteClient()
             except Exception as e:
-                print(f"[Platform] Infinite initialization failed: {e}")
-        
-        # Fall back to Moltbook
-        moltbook_config = Path.home() / ".scienceclaw" / "moltbook_config.json"
-        if moltbook_config.exists():
-            try:
-                from moltbook_client import MoltbookClient
-                return MoltbookClient()
-            except Exception as e:
-                print(f"[Platform] Moltbook initialization failed: {e}")
-        
+                print(f"[Platform] Infinite initialization failed: {scrub(str(e))}")
+
         raise RuntimeError(
-            "No platform configured. Run setup.py to configure Infinite or Moltbook."
+            "No platform configured. Run setup.py to configure Infinite."
         )
     
     def run_heartbeat_cycle(self) -> Dict[str, Any]:
@@ -212,10 +202,8 @@ class AutonomousLoopController:
             summary["steps_completed"].append("engage_with_peers")
             
         except Exception as e:
-            print(f"\n❌ Error during heartbeat cycle: {e}")
+            print(f"\n❌ Error during heartbeat cycle: {scrub(str(e))}")
             summary["errors"].append(str(e))
-            import traceback
-            traceback.print_exc()
         
         cycle_end = datetime.now()
         duration = (cycle_end - cycle_start).total_seconds()
@@ -272,7 +260,7 @@ class AutonomousLoopController:
                     posts = result.get("posts", result if isinstance(result, list) else [])
                     all_posts.extend(posts)
                 except Exception as e:
-                    print(f"   Warning: Failed to fetch from m/{community}: {e}")
+                    print(f"   Warning: Failed to fetch from m/{community}: {scrub(str(e))}")
             
             print(f"   Retrieved {len(all_posts)} posts")
             
@@ -298,9 +286,7 @@ class AutonomousLoopController:
             print(f"   Filtered to {len(gaps)} relevant gaps")
             
         except Exception as e:
-            print(f"   Error observing community: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"   Error observing community: {scrub(str(e))}")
         
         return gaps
     
@@ -325,7 +311,7 @@ class AutonomousLoopController:
                 if hypothesis:
                     hypotheses.append(hypothesis)
             except Exception as e:
-                print(f"   Warning: Failed to generate hypothesis for gap: {e}")
+                print(f"   Warning: Failed to generate hypothesis for gap: {scrub(str(e))}")
         
         return hypotheses
     
@@ -457,9 +443,7 @@ class AutonomousLoopController:
             return post_id
             
         except Exception as e:
-            print(f"   Error sharing findings: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"   Error sharing findings: {scrub(str(e))}")
             return None
     
     def engage_with_peers(self) -> Dict[str, int]:
@@ -510,7 +494,7 @@ class AutonomousLoopController:
                                 self.platform.vote_post(post["id"], 1)
                                 engagement["upvotes"] += 1
                             except Exception as e:
-                                print(f"   Warning: Upvote failed: {e}")
+                                print(f"   Warning: Upvote failed: {scrub(str(e))}")
 
                         # Comment if relevant
                         if self._should_comment(post):
@@ -523,19 +507,17 @@ class AutonomousLoopController:
                                     )
                                     engagement["comments"] += 1
                                 except Exception as e:
-                                    print(f"   Warning: Comment failed: {e}")
+                                    print(f"   Warning: Comment failed: {scrub(str(e))}")
 
                         # ── Peer-aware follow-up investigation ──────────────
                         if self._should_follow_up(post):
                             self._run_peer_followup(post, community, engagement)
 
                 except Exception as e:
-                    print(f"   Warning: Engagement failed for m/{community}: {e}")
+                    print(f"   Warning: Engagement failed for m/{community}: {scrub(str(e))}")
 
         except Exception as e:
-            print(f"   Error during peer engagement: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"   Error during peer engagement: {scrub(str(e))}")
 
         return engagement
 
@@ -621,7 +603,7 @@ class AutonomousLoopController:
                 print(f"   ✅ Follow-up posted to m/{community}")
 
         except Exception as e:
-            print(f"   Warning: Follow-up investigation failed: {e}")
+            print(f"   Warning: Follow-up investigation failed: {scrub(str(e))}")
     
     def _check_notifications(self):
         """Check for DMs and notifications."""
@@ -651,7 +633,7 @@ class AutonomousLoopController:
                 print(f"   Could not fetch notifications: {result.get('error')}")
                 
         except Exception as e:
-            print(f"   Error checking notifications: {e}")
+            print(f"   Error checking notifications: {scrub(str(e))}")
     
     def _handle_mention(self, notif: Dict[str, Any]):
         """Handle a mention notification."""
@@ -670,7 +652,7 @@ class AutonomousLoopController:
                 print(f"   Replied to mention in post {post_id[:8]}...")
                 
         except Exception as e:
-            print(f"   Error handling mention: {e}")
+            print(f"   Error handling mention: {scrub(str(e))}")
     
     def _handle_reply(self, notif: Dict[str, Any]):
         """Handle a reply notification (placeholder)."""
@@ -706,7 +688,7 @@ class AutonomousLoopController:
                         self._join_and_participate(session_id)
                         
         except Exception as e:
-            print(f"   Error checking collaborative sessions: {e}")
+            print(f"   Error checking collaborative sessions: {scrub(str(e))}")
     
     def _get_relevant_communities(self, profile: str) -> List[str]:
         """Get list of communities relevant to agent's profile."""
@@ -809,14 +791,12 @@ class AutonomousLoopController:
                                     print(f"       - Claimed investigation: {first_inv['description']}")
 
                 except Exception as e:
-                    print(f"     ✗ Error joining session: {e}")
+                    print(f"     ✗ Error joining session: {scrub(str(e))}")
                     summary["join_errors"] = summary.get("join_errors", 0) + 1
 
         except Exception as e:
-            print(f"   Error during discovery: {e}")
+            print(f"   Error during discovery: {scrub(str(e))}")
             summary["discovery_error"] = str(e)
-            import traceback
-            traceback.print_exc()
 
         return summary
 
@@ -1066,7 +1046,7 @@ class AutonomousLoopController:
                 print(f"   Could not join session: {result.get('error')}")
                 
         except Exception as e:
-            print(f"   Error joining session: {e}")
+            print(f"   Error joining session: {scrub(str(e))}")
     
     def _participate_in_session(self, session_id: str, task: Dict[str, Any]):
         """Execute a collaborative session task."""
@@ -1117,9 +1097,7 @@ class AutonomousLoopController:
             )
             
         except Exception as e:
-            print(f"   Error participating in session: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"   Error participating in session: {scrub(str(e))}")
 
 
 # Test function for development

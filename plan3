@@ -1,0 +1,115 @@
+╭───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Plan to implement                                                                                                             │
+│                                                                                                                               │
+│ Plan: Remove OpenClaw Dependencies & Harden Safety                                                                            │
+│                                                                                                                               │
+│ Context                                                                                                                       │
+│                                                                                                                               │
+│ OpenClaw is a Node.js CLI (openclaw agent --local --message ... --session-id ...) currently used as the default LLM backend   │
+│ in ScienceClaw. It:                                                                                                           │
+│ - Runs as a subprocess with access to ~/.openclaw/workspace/ and ~/.infinite/workspace/                                       │
+│ - Reads/writes SOUL.md, session state files, and potentially other local files                                                │
+│ - Is the default LLM_BACKEND if nothing is configured                                                                         │
+│ - Could theoretically be updated by npm and gain broader permissions                                                          │
+│                                                                                                                               │
+│ Alternative backends (anthropic, openai, huggingface) already exist in core/llm_client.py and are fully functional — they use │
+│  direct API calls with no local filesystem access beyond credential config files.                                             │
+│                                                                                                                               │
+│ Goal: Make anthropic (or openai) the default backend, cleanly decouple from OpenClaw, and harden remaining filesystem         │
+│ touch-points.                                                                                                                 │
+│                                                                                                                               │
+│ ---                                                                                                                           │
+│ Files to Modify                                                                                                               │
+│                                                                                                                               │
+│ ┌──────────────────────────────────────────────┬───────────────────────────────────────────────────────────────────────────┐  │
+│ │                     File                     │                                  Change                                   │  │
+│ ├──────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────┤  │
+│ │ scienceclaw/core/llm_client.py               │ Change default backend from "openclaw" to "anthropic"                     │  │
+│ ├──────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────┤  │
+│ │ scienceclaw/setup.py                         │ Remove openclaw onboarding steps; prompt for Anthropic API key instead    │  │
+│ ├──────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────┤  │
+│ │ scienceclaw/setup/soul_generator.py          │ Stop writing to ~/.openclaw/workspace/SOUL.md; keep ~/.scienceclaw/ only  │  │
+│ ├──────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────┤  │
+│ │ scienceclaw/scienceclaw (CLI wrapper)        │ Remove openclaw "$@" passthrough; replace with direct Python entry points │  │
+│ ├──────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────┤  │
+│ │ scienceclaw/install.sh + install-openclaw.sh │ Remove openclaw install steps                                             │  │
+│ ├──────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────┤  │
+│ │ scienceclaw/autonomous/loop_controller.py    │ Remove any openclaw references in docs/messages                           │  │
+│ ├──────────────────────────────────────────────┼───────────────────────────────────────────────────────────────────────────┤  │
+│ │ scienceclaw/CLAUDE.md / README docs          │ Update instructions to remove openclaw commands                           │  │
+│ └──────────────────────────────────────────────┴───────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                                                               │
+│ ---                                                                                                                           │
+│ Implementation Steps                                                                                                          │
+│                                                                                                                               │
+│ 1. Switch Default LLM Backend (core/llm_client.py)                                                                            │
+│                                                                                                                               │
+│ Change the default fallback:                                                                                                  │
+│ # Before                                                                                                                      │
+│ backend = os.environ.get("LLM_BACKEND", "openclaw")                                                                           │
+│                                                                                                                               │
+│ # After                                                                                                                       │
+│ backend = os.environ.get("LLM_BACKEND", "anthropic")                                                                          │
+│                                                                                                                               │
+│ Also remove the _call_openclaw() method entirely (or leave it as dead code with a deprecation warning) so there's no          │
+│ subprocess path to the local Node.js runtime.                                                                                 │
+│                                                                                                                               │
+│ 2. Remove SOUL.md Writing to ~/.openclaw/workspace/ (setup/soul_generator.py)                                                 │
+│                                                                                                                               │
+│ The generator writes to two locations:                                                                                        │
+│ - ~/.infinite/workspace/SOUL.md — keep (used by Infinite integration)                                                         │
+│ - ~/.openclaw/workspace/SOUL.md — remove                                                                                      │
+│                                                                                                                               │
+│ SOUL.md content itself is fine to keep; just stop placing it in the openclaw workspace directory.                             │
+│                                                                                                                               │
+│ 3. Remove the scienceclaw CLI Passthrough to OpenClaw                                                                         │
+│                                                                                                                               │
+│ The scienceclaw bash wrapper calls openclaw "$@" as a passthrough. Replace it with a stub that prints a deprecation message   │
+│ and points to direct Python commands:                                                                                         │
+│ echo "Direct openclaw passthrough removed. Use 'scienceclaw-post', 'scienceclaw-investigate', etc."                           │
+│ Or remove the file entirely if the Python entry points (scienceclaw-post, scienceclaw-investigate) cover all use cases.       │
+│                                                                                                                               │
+│ 4. Update setup.py Onboarding                                                                                                 │
+│                                                                                                                               │
+│ Remove the step that asks users to run openclaw onboard. Replace with:                                                        │
+│ - Prompt for ANTHROPIC_API_KEY (or OPENAI_API_KEY)                                                                            │
+│ - Write key to ~/.scienceclaw/llm_config.json with chmod 600                                                                  │
+│ - Validate by making a test LLM call via the direct API                                                                       │
+│                                                                                                                               │
+│ 5. Harden Credential File Permissions                                                                                         │
+│                                                                                                                               │
+│ Audit all config files written by the setup/auth code and ensure 0o600 (owner read/write only):                               │
+│ - ~/.scienceclaw/agent_profile.json                                                                                           │
+│ - ~/.scienceclaw/llm_config.json                                                                                              │
+│ - ~/.scienceclaw/infinite_config.json                                                                                         │
+│                                                                                                                               │
+│ These are already mostly at 600; a single audit pass confirms nothing was missed.                                             │
+│                                                                                                                               │
+│ 6. Remove Install Scripts for OpenClaw                                                                                        │
+│                                                                                                                               │
+│ - install-openclaw.sh — delete or archive                                                                                     │
+│ - References in install.sh — remove openclaw npm install step                                                                 │
+│                                                                                                                               │
+│ 7. Update Documentation                                                                                                       │
+│                                                                                                                               │
+│ - CLAUDE.md: Remove all openclaw agent --message ... example commands                                                         │
+│ - Replace with equivalent scienceclaw-post / scienceclaw-investigate examples                                                 │
+│                                                                                                                               │
+│ ---                                                                                                                           │
+│ What Is NOT Changed                                                                                                           │
+│                                                                                                                               │
+│ - Skill execution: Skills are already Python subprocess calls (python3 skills/...) — no change needed                         │
+│ - SOUL.md content: The personality system itself is fine; just stop writing it to the openclaw workspace                      │
+│ - ~/.scienceclaw/ directory: Remains the single canonical state directory                                                     │
+│ - Infinite platform integration: InfiniteClient uses direct HTTP requests — already safe                                      │
+│                                                                                                                               │
+│ ---                                                                                                                           │
+│ Verification                                                                                                                  │
+│                                                                                                                               │
+│ 1. LLM_BACKEND not set → core/llm_client.py should select anthropic                                                           │
+│ 2. ANTHROPIC_API_KEY present → client.call("test") returns a response without touching ~/.openclaw/                           │
+│ 3. which openclaw fails (openclaw uninstalled) → system still works end-to-end                                                │
+│ 4. Run python3 examples/cathode_materials_investigation.py → investigation completes, post created                            │
+│ 5. Check ~/.openclaw/ is not created or modified during a run                                                                 │
+│ 6. Confirm ~/.scienceclaw/llm_config.json has 0o600 permissions after setup                                                   │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

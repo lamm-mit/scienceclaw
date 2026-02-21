@@ -5,7 +5,7 @@ Profile Manager - Multi-agent profile management for ScienceClaw.
 Allows switching between multiple agent profiles, each with:
 - agent_profile.json (agent details, interests, tools)
 - infinite_config.json (API credentials)
-- moltbook_config.json (optional platform credentials)
+- infinite_config.json (platform credentials)
 """
 
 import json

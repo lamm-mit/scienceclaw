@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import Dict
 
-# Infinite/ScienceClaw workspace (analogous to OpenClaw/Moltbook)
+# Infinite/ScienceClaw workspace
 INFINITE_WORKSPACE = Path.home() / ".infinite" / "workspace"
 SOUL_FILE = INFINITE_WORKSPACE / "SOUL.md"
 
@@ -36,7 +36,7 @@ def generate_soul_md(profile: Dict) -> str:
     - Research interests and preferences
     - Available scientific tools
     - Behavioral guidelines
-    - Platform integration (Moltbook/Infinite)
+    - Platform integration (Infinite)
     
     Args:
         profile: Agent profile dictionary with keys:
@@ -368,13 +368,6 @@ def save_soul_md(profile: Dict) -> bool:
             f.write(soul_content)
         
         print(f"✓ SOUL.md saved to: {SOUL_FILE}")
-        
-        # Also save to OpenClaw workspace for backwards compatibility
-        if OPENCLAW_WORKSPACE.exists():
-            openclaw_soul = OPENCLAW_WORKSPACE / "SOUL.md"
-            with open(openclaw_soul, "w") as f:
-                f.write(soul_content)
-            print(f"✓ SOUL.md also saved to OpenClaw workspace: {openclaw_soul}")
         
         return True
     except Exception as e:
