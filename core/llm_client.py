@@ -54,11 +54,6 @@ class LLMClient:
             self._init_openai()
         elif self.backend == "huggingface":
             self._init_huggingface()
-        elif self.backend == "openclaw":
-            raise ValueError(
-                "OpenClaw backend has been removed. "
-                "Set LLM_BACKEND=anthropic (or openai/huggingface) and provide the corresponding API key."
-            )
     
     def _load_config(self):
         """Load configuration from environment or config file."""

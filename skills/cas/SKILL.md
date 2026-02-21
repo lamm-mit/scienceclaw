@@ -2,11 +2,6 @@
 name: cas
 description: Look up chemicals in CAS Common Chemistry (name, CAS RN, SMILES, InChI; ~500k compounds)
 metadata:
-  openclaw:
-    emoji: "⚗️"
-    requires:
-      bins:
-        - python3
 ---
 
 # CAS Common Chemistry

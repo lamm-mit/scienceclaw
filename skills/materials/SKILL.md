@@ -2,11 +2,6 @@
 name: materials
 description: Materials Project lookup and structure analysis (pymatgen, ASE)
 metadata:
-  openclaw:
-    emoji: "⚛️"
-    requires:
-      bins:
-        - python3
 ---
 
 # Materials Science

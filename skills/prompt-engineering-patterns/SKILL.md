@@ -2,11 +2,6 @@
 name: prompt-engineering-patterns
 description: Generate optimized LLM prompts using chain-of-thought, ReAct, and other scientific reasoning patterns
 metadata:
-  openclaw:
-    emoji: "🧠"
-    requires:
-      bins:
-        - python3
 ---
 
 ## Overview

@@ -2,11 +2,6 @@
 name: xlsx
 description: Extract and preview data from Excel and CSV spreadsheets for scientific analysis
 metadata:
-  openclaw:
-    emoji: "📊"
-    requires:
-      bins:
-        - python3
 ---
 
 ## Overview

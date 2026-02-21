@@ -40,6 +40,12 @@ try:
 except ImportError:
     CoordinationEventLogger = None
 
+try:
+    from artifacts.artifact import ArtifactStore, ArtifactDomainError
+except ImportError:
+    ArtifactStore = None
+    ArtifactDomainError = Exception
+
 
 class SessionManager:
     """
@@ -48,7 +54,7 @@ class SessionManager:
     Uses distributed coordination:
     - No central server
     - Agents poll session files during heartbeat
-    - Shared state in OpenClaw workspace
+    - Shared state in agent workspace
     - Automatic task claiming with conflict resolution
     """
     
@@ -61,7 +67,7 @@ class SessionManager:
         """
         self.agent_name = agent_name
 
-        # Session storage in Infinite workspace (analogous to OpenClaw workspace)
+        # Session storage in Infinite workspace
         self.workspace_dir = Path.home() / ".infinite" / "workspace"
         self.sessions_dir = self.workspace_dir / "sessions"
         self.sessions_dir.mkdir(parents=True, exist_ok=True)
@@ -69,9 +75,26 @@ class SessionManager:
         # Event logger (initialized per-session)
         self.event_logger = None
 
+        # Artifact store for domain gating
+        self._artifact_store = ArtifactStore(agent_name) if ArtifactStore else None
+
+        # Cache agent profile for domain gating
+        self._agent_profile: Optional[Dict[str, Any]] = self._load_agent_profile()
+
         print(f"[SessionManager] Initialized for agent: {agent_name}")
         print(f"[SessionManager] Sessions directory: {self.sessions_dir}")
-    
+
+    def _load_agent_profile(self) -> Dict[str, Any]:
+        """Load agent profile from ~/.scienceclaw/agent_profile.json for domain gating."""
+        profile_path = Path.home() / ".scienceclaw" / "agent_profile.json"
+        if profile_path.exists():
+            try:
+                with open(profile_path, "r", encoding="utf-8") as fh:
+                    return json.load(fh)
+            except Exception:
+                pass
+        return {}
+
     def create_collaborative_session(
         self,
         topic: str,
@@ -487,7 +510,8 @@ class SessionManager:
         result: str,
         evidence: Optional[Dict[str, Any]] = None,
         confidence: float = 0.8,
-        reasoning_trace: str = ""
+        reasoning_trace: str = "",
+        artifact_ids: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         Post a finding to the session.
@@ -514,6 +538,15 @@ class SessionManager:
         if self.agent_name not in session["participants"]:
             return {"error": "Not a participant. Join session first."}
 
+        # Domain gating: verify agent may claim each referenced artifact
+        artifact_ids = artifact_ids or []
+        if artifact_ids and self._artifact_store:
+            for aid in artifact_ids:
+                try:
+                    self._artifact_store.assert_agent_can_claim(aid, self._agent_profile)
+                except ArtifactDomainError as exc:
+                    return {"error": f"Domain gating violation: {exc}"}
+
         # Create finding
         finding_id = f"finding_{uuid4().hex[:8]}"
         finding = {
@@ -524,6 +557,7 @@ class SessionManager:
             "confidence": confidence,
             "reasoning_trace": reasoning_trace,
             "timestamp": datetime.utcnow().isoformat(),
+            "artifact_ids": artifact_ids,
             "validations": []  # Will be filled by validators
         }
 

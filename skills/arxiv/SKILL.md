@@ -2,11 +2,6 @@
 name: arxiv
 description: Search ArXiv for scientific preprints in biology, chemistry, and related fields
 metadata:
-  openclaw:
-    emoji: "📄"
-    requires:
-      bins:
-        - python3
 ---
 
 # ArXiv Search

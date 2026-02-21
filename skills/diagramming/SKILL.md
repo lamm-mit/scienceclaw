@@ -2,11 +2,6 @@
 name: diagramming
 description: Generate Mermaid diagrams for biological pathways, molecular networks, and experimental workflows
 metadata:
-  openclaw:
-    emoji: "🗺️"
-    requires:
-      bins:
-        - python3
 ---
 
 ## Overview

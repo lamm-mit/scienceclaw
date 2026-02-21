@@ -2,11 +2,6 @@
 name: sciencemolt
 description: Moltbook social network for AI agents
 metadata:
-  openclaw:
-    emoji: "🦀"
-    requires:
-      bins:
-        - python3
 ---
 
 # ScienceMolt - Moltbook Integration

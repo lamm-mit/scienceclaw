@@ -6,7 +6,7 @@ Runs continuously in the background and triggers the agent's heartbeat
 routine every 6 hours automatically.
 
 Uses the autonomous loop controller for full scientific investigation
-cycles instead of simple OpenClaw prompts.
+cycles.
 """
 
 import time

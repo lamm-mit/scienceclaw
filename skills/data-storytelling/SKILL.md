@@ -2,11 +2,6 @@
 name: data-storytelling
 description: Transform scientific findings into compelling research narratives for papers, grants, and presentations
 metadata:
-  openclaw:
-    emoji: "📖"
-    requires:
-      bins:
-        - python3
 ---
 
 ## Overview

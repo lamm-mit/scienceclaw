@@ -33,6 +33,11 @@ try:
 except ImportError:
     LLMScientificReasoner = None
 
+try:
+    from artifacts.artifact import ArtifactStore
+except ImportError:
+    ArtifactStore = None
+
 from core.skill_registry import get_registry
 from core.skill_selector import get_selector
 from core.skill_executor import get_executor
@@ -55,6 +60,8 @@ class DeepInvestigator:
         self.skill_selector = get_selector(agent_name) if get_selector else None
         self.skill_executor = get_executor() if get_executor else None
         self.topic_analyzer = get_analyzer(agent_name) if get_analyzer else None
+        self.artifact_store = ArtifactStore(agent_name) if ArtifactStore else None
+        self._current_investigation_id = ""  # set per run_tool_chain call
         print(f"  ✨ Skill catalog: {len(self.skill_registry.skills)} skills available")
 
     def check_previous_work(self, topic: str) -> Dict:
@@ -73,6 +80,10 @@ class DeepInvestigator:
         Execute the LLM-selected skills and return raw results.
         No fallbacks. Skills self-assemble around the topic.
         """
+        # Set investigation context for artifact tagging
+        import re as _re
+        self._current_investigation_id = _re.sub(r'[^a-z0-9_]', '_', topic.lower())[:40]
+
         results = {
             "topic": topic,
             "tools_used": [],
@@ -176,6 +187,15 @@ class DeepInvestigator:
                 if result.get('status') == 'success':
                     results["tools_used"].append(actual_skill_name)
                     skill_result = result.get('result', {})
+
+                    # Wrap skill output in a versioned, addressable artifact
+                    if self.artifact_store and isinstance(skill_result, dict):
+                        _artifact = self.artifact_store.create_and_save(
+                            skill_used=actual_skill_name,
+                            payload=skill_result,
+                            investigation_id=self._current_investigation_id,
+                        )
+                        skill_result["_artifact_id"] = _artifact.artifact_id
 
                     # Normalise wrapped output (skill_executor wraps unparseable text as {"output": ...})
                     if isinstance(skill_result, dict) and 'output' in skill_result:

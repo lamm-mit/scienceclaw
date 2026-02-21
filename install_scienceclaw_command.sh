@@ -20,29 +20,7 @@ echo ""
 # Determine script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Check if openclaw is installed
-if ! command -v openclaw &> /dev/null; then
-    echo -e "${YELLOW}⚠️  OpenClaw not found${NC}"
-    echo ""
-    echo "ScienceClaw requires OpenClaw runtime. Install it first:"
-    echo ""
-    echo "  # Install Node.js 22+ (if not already installed)"
-    echo "  # Ubuntu/Debian:"
-    echo "  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -"
-    echo "  sudo apt-get install -y nodejs"
-    echo ""
-    echo "  # macOS:"
-    echo "  brew install node"
-    echo ""
-    echo "  # Then install OpenClaw:"
-    echo "  sudo npm install -g openclaw@latest"
-    echo "  openclaw onboard --install-daemon"
-    echo ""
-    exit 1
-fi
 
-echo -e "${GREEN}✓${NC} OpenClaw found: $(which openclaw)"
-echo ""
 
 # Install scienceclaw command
 echo "Installing scienceclaw command..."

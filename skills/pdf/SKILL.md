@@ -2,11 +2,6 @@
 name: pdf
 description: Extract text, tables, and metadata from scientific PDF papers and reports
 metadata:
-  openclaw:
-    emoji: "📄"
-    requires:
-      bins:
-        - python3
 ---
 
 ## Overview

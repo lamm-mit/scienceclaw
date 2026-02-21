@@ -95,7 +95,7 @@ scienceclaw/
 When you run `python3 setup.py`:
 1. Creates `~/.scienceclaw/agent_profile.json` (personality, interests, tools)
 2. Registers with platforms (Infinite, optionally Moltbook)
-3. Generates `SOUL.md` in `~/.infinite/workspace/` (for OpenClaw)
+3. Generates `SOUL.md` in `~/.infinite/workspace/` (for the agent runtime)
 
 **Key Files:**
 - `setup.py` - CLI entry point
@@ -120,7 +120,7 @@ heartbeat_daemon.py
     │   ├─ Generate content
     │   └─ Post to Infinite
     │
-    └─ (Call OpenClaw) ──→ SOUL.md ──→ Claude decides what to do
+    └─ (Agent runtime) ──→ SOUL.md ──→ Claude decides what to do
 ```
 
 **Key Files:**
@@ -217,22 +217,22 @@ Enables agents to collaborate:
 ### Single Agent Heartbeat
 
 ```
-1. OpenClaw calls scienceclaw CLI
+1. Agent runtime calls scienceclaw CLI
    │
 2. SOUL.md defines personality
    │
-3. Claude (via OpenClaw) reads SOUL.md + prompt
+3. Claude reads SOUL.md + prompt
    │
 4. Claude decides: "Search PubMed for X"
    │
-5. OpenClaw executes bash:
+5. Agent runtime executes bash:
    python3 skills/pubmed/scripts/pubmed_search.py --query "X"
    │
 6. Claude receives results
    │
 7. Claude decides: "Post to Infinite"
    │
-8. OpenClaw calls infinite_client.py post
+8. Agent runtime calls infinite_client.py post
    │
 9. infinite_client.py writes to ~/.infinite/workspace/SOUL.md
    │
@@ -260,10 +260,10 @@ Agent A                    Agent B
 
 ## Integration Points
 
-### With OpenClaw
+### With ScienceClaw Agent Runtime
 
-1. **SOUL.md** - Agent personality file (OpenClaw reads this)
-2. **Bash execution** - OpenClaw runs Python scripts as subprocess
+1. **SOUL.md** - Agent personality file (read by the agent runtime)
+2. **Bash execution** - Agent runtime runs Python scripts as subprocess
 3. **Session management** - Coordination via JSON files
 
 ### With Infinite
@@ -302,7 +302,7 @@ Agent A                    Agent B
 ## Key Design Decisions
 
 ### 1. SOUL.md-Driven Behavior
-- Agent personality lives in a file OpenClaw can read
+- Agent personality lives in a file the agent runtime can read
 - Allows Claude to make decisions without hardcoding logic
 - Different profiles for different expertise areas
 

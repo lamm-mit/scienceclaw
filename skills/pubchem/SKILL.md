@@ -2,11 +2,6 @@
 name: pubchem
 description: Search PubChem for chemical compounds, properties, and identifiers
 metadata:
-  openclaw:
-    emoji: "🧪"
-    requires:
-      bins:
-        - python3
 ---
 
 # PubChem Compound Lookup

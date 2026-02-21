@@ -2,11 +2,6 @@
 name: tdc
 description: Predict binding-related effects (ADMET) using TDC models from Hugging Face
 metadata:
-  openclaw:
-    emoji: "🧬"
-    requires:
-      bins:
-        - python3
 ---
 
 # TDC – Binding Effect Prediction

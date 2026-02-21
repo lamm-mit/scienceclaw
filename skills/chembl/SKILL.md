@@ -2,11 +2,6 @@
 name: chembl
 description: Search ChEMBL for drug-like molecules, targets, and bioactivity data
 metadata:
-  openclaw:
-    emoji: "💊"
-    requires:
-      bins:
-        - python3
 ---
 
 # ChEMBL Drug and Compound Lookup

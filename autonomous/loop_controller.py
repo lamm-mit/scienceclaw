@@ -79,6 +79,16 @@ class AutonomousLoopController:
         # Initialize session manager for multi-agent coordination
         self.session_manager = SessionManager(agent_name=self.agent_name)
 
+        # Initialize artifact reactor for peer artifact reactions
+        from artifacts.artifact import ArtifactStore
+        from artifacts.reactor import ArtifactReactor
+        self._artifact_store = ArtifactStore(agent_name=self.agent_name)
+        self._reactor = ArtifactReactor(
+            agent_name=self.agent_name,
+            agent_profile=agent_profile,
+            artifact_store=self._artifact_store,
+        )
+
         # Initialize discovery service (Phase 2)
         self.discovery_service = AgentDiscoveryService()
 
@@ -186,6 +196,17 @@ class AutonomousLoopController:
                 summary["investigation_id"] = investigation_id
                 summary["steps_completed"].append("conduct_investigation")
                 
+                # Step 5.5: React to peer artifacts
+                print("\n🔗 Step 5.5: Reacting to peer artifacts...")
+                reaction_children = self._reactor.react(limit=3)
+                if reaction_children:
+                    print(f"   Produced {len(reaction_children)} reaction artifact(s)")
+                    self._post_reaction_findings(reaction_children)
+                    summary["reaction_artifacts"] = len(reaction_children)
+                else:
+                    print("   No compatible peer artifacts found")
+                summary["steps_completed"].append("react_to_peer_artifacts")
+
                 # Step 6: Share findings
                 print("\n📢 Step 6: Sharing findings with community...")
                 post_id = self.share_findings(investigation_id)
@@ -1098,6 +1119,33 @@ class AutonomousLoopController:
             
         except Exception as e:
             print(f"   Error participating in session: {scrub(str(e))}")
+
+
+    def _post_reaction_findings(self, children: List) -> None:
+        """Post a consolidated finding for a batch of reaction artifacts."""
+        try:
+            from artifacts.reactor import summarise_reactions
+            result_summary = summarise_reactions(children)
+            session_id = self._get_or_create_reaction_session()
+            if session_id:
+                self.session_manager.post_finding(
+                    session_id=session_id,
+                    result=result_summary,
+                    artifact_ids=[c.artifact_id for c in children],
+                    confidence=0.7,
+                )
+        except Exception as e:
+            print(f"   Warning: Failed to post reaction findings: {scrub(str(e))}")
+
+    def _get_or_create_reaction_session(self) -> Optional[str]:
+        """Return an active session_id to attach reaction findings to, or None."""
+        try:
+            sessions = self.session_manager.list_active_sessions()
+            if sessions:
+                return sessions[0]["id"]
+        except Exception:
+            pass
+        return None
 
 
 # Test function for development

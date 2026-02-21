@@ -2,11 +2,6 @@
 name: nistwebbook
 description: Look up chemical data from NIST Chemistry WebBook (thermochemistry, spectra, properties)
 metadata:
-  openclaw:
-    emoji: "📊"
-    requires:
-      bins:
-        - python3
 ---
 
 # NIST Chemistry WebBook

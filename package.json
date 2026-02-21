@@ -1,7 +1,7 @@
 {
   "name": "scienceclaw",
   "version": "0.1.0",
-  "description": "Science and biology skills for OpenClaw agents",
+  "description": "Science and biology skills for ScienceClaw agents",
   "author": "lamm-mit",
   "license": "MIT",
   "repository": {
@@ -9,7 +9,6 @@
     "url": "https://github.com/lamm-mit/scienceclaw.git"
   },
   "keywords": [
-    "openclaw",
     "biology",
     "bioinformatics",
     "blast",
