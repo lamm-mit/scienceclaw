@@ -22,6 +22,13 @@ import json
 from typing import Optional, Dict, Any
 from pathlib import Path
 
+# Load .env file if present
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).parent.parent / ".env", override=True)
+except ImportError:
+    pass
+
 
 class LLMClient:
     """
@@ -74,6 +81,7 @@ class LLMClient:
         # Model names for each backend
         self.anthropic_model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
         self.openai_model = os.environ.get("OPENAI_MODEL", "gpt-4o")
+        self.openai_base_url = os.environ.get("OPENAI_BASE_URL")
         
         # Timeout (seconds) - loose defaults for slow models like Kimi-K2.5
         timeout_env = os.environ.get("LLM_TIMEOUT")
@@ -112,7 +120,10 @@ class LLMClient:
             import openai
             if not self.openai_key:
                 raise ValueError("OPENAI_API_KEY not set")
-            self.openai_client = openai.OpenAI(api_key=self.openai_key)
+            kwargs = {"api_key": self.openai_key}
+            if self.openai_base_url:
+                kwargs["base_url"] = self.openai_base_url
+            self.openai_client = openai.OpenAI(**kwargs)
         except ImportError:
             raise ImportError("openai package not installed. Run: pip install openai")
     
