@@ -4,9 +4,6 @@ OSTI.gov Search Tool for ScienceClaw
 
 Search the DOE Office of Scientific and Technical Information for
 technical reports, journal articles, and conference papers.
-
-Supports searching the public OSTI.gov API or a local corpus
-(if OSTI_DATA_PATH is set).
 """
 
 import argparse
@@ -127,85 +124,6 @@ def search_osti_api(
     print(f"Found {len(records)} records", file=sys.stderr)
     return records
 
-
-def search_local_corpus(
-    query: str,
-    data_path: str,
-    commodity: Optional[str] = None,
-    limit: int = 10,
-) -> List[Dict]:
-    """
-    Search a local OSTI corpus (JSON files).
-
-    Args:
-        query: Search query
-        data_path: Path to local OSTI data directory
-        commodity: Commodity code filter
-        limit: Maximum results
-
-    Returns:
-        List of record dictionaries
-    """
-    records = []
-    query_lower = query.lower()
-    query_terms = query_lower.split()
-
-    # Walk through the data directory for JSON files
-    for root, dirs, files in os.walk(data_path):
-        for filename in files:
-            if not filename.endswith(".json"):
-                continue
-
-            # If commodity filter is set, check directory name
-            if commodity:
-                dir_name = os.path.basename(root).upper()
-                if commodity.upper() not in dir_name and commodity.upper() != dir_name:
-                    continue
-
-            filepath = os.path.join(root, filename)
-            try:
-                with open(filepath, "r") as f:
-                    data = json.load(f)
-            except (json.JSONDecodeError, IOError):
-                continue
-
-            # Handle both single records and lists
-            if isinstance(data, dict):
-                data = [data]
-
-            for record in data:
-                title = str(record.get("title", "")).lower()
-                description = str(record.get("description", "")).lower()
-                subjects = str(record.get("subjects", "")).lower()
-                searchable = f"{title} {description} {subjects}"
-
-                if all(term in searchable for term in query_terms):
-                    records.append({
-                        "id": str(record.get("osti_id", record.get("id", ""))),
-                        "title": record.get("title", ""),
-                        "authors": _parse_authors(record.get("authors", "")),
-                        "publication_date": record.get("publication_date", ""),
-                        "product_type": record.get("product_type", ""),
-                        "research_org": record.get("research_org", ""),
-                        "sponsor_org": record.get("sponsor_org", ""),
-                        "doi": record.get("doi", ""),
-                        "description": record.get("description", ""),
-                        "url": record.get("links", {}).get("fulltext", "")
-                               or f"https://www.osti.gov/biblio/{record.get('osti_id', record.get('id', ''))}",
-                        "subject": record.get("subjects", ""),
-                    })
-
-                    if len(records) >= limit:
-                        break
-
-            if len(records) >= limit:
-                break
-
-        if len(records) >= limit:
-            break
-
-    print(f"Found {len(records)} records in local corpus", file=sys.stderr)
-    return records
 
 
 def _extract_link(links, rel: str) -> str:
@@ -395,26 +313,15 @@ Examples:
 
     args = parser.parse_args()
 
-    # Check for local corpus
-    data_path = os.environ.get("OSTI_DATA_PATH")
-    if data_path and os.path.isdir(data_path):
-        print(f"Using local OSTI corpus at: {data_path}", file=sys.stderr)
-        records = search_local_corpus(
-            query=args.query,
-            data_path=data_path,
-            commodity=args.commodity,
-            limit=args.limit,
-        )
-    else:
-        records = search_osti_api(
-            query=args.query,
-            commodity=args.commodity,
-            product_type=args.product_type,
-            year_from=args.year_from,
-            year_to=args.year_to,
-            limit=args.limit,
-            sort=args.sort,
-        )
+    records = search_osti_api(
+        query=args.query,
+        commodity=args.commodity,
+        product_type=args.product_type,
+        year_from=args.year_from,
+        year_to=args.year_to,
+        limit=args.limit,
+        sort=args.sort,
+    )
 
     if args.format == "json":
         print(json.dumps(records, indent=2))

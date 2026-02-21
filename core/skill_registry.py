@@ -256,6 +256,8 @@ class SkillRegistry:
         
         if any(term in name_lower for term in ['pubmed', 'arxiv', 'biorxiv', 'openalex', 'osti']):
             return 'literature'
+        elif any(term in name_lower for term in ['corpus', 'minerals-data']):
+            return 'minerals'
         elif any(term in name_lower for term in ['material', 'ase']):
             return 'materials'
         elif any(term in name_lower for term in ['uniprot', 'pdb', 'alphafold', 'protein']):
@@ -401,7 +403,7 @@ class SkillRegistry:
                     score += 5
             elif any(kw in topic_lower for kw in ['mineral', 'rare earth', 'separation', 'extraction', 'materials', 'supply chain', 'lithium', 'cobalt', 'nickel', 'copper', 'gallium', 'graphite', 'germanium']):
                 # Materials science / critical minerals topic
-                if category in ['materials', 'literature', 'chemistry']:
+                if category in ['minerals', 'materials', 'literature', 'chemistry']:
                     score += 5
 
             # General category matching

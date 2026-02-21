@@ -1,0 +1,2 @@
+pdfplumber>=0.9.0
+pinecone>=5.0.0
