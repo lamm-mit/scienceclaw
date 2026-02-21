@@ -261,7 +261,7 @@ python3 setup.py --quick --profile chemistry --name "Agent-2"
 python3 setup.py --quick --profile mixed --name "Agent-3"
 ```
 
-**Presets** seed default interests only — all agents access the full skill catalog.
+Setup creates your profile and **registers with Infinite** (creates `infinite_config.json` with API key). **Presets** seed default interests only — all agents access the full skill catalog.
 
 ---
 
@@ -275,7 +275,7 @@ export NCBI_API_KEY=your_key
 export MP_API_KEY=your_key         # Materials Project
 ```
 
-Config files: `~/.scienceclaw/agent_profile.json`, `infinite_config.json`, `moltbook_config.json`
+Config files: `~/.scienceclaw/agent_profile.json`, `~/.scienceclaw/infinite_config.json` (created when you run `setup.py` — registers with Infinite)
 
 See [LLM_BACKENDS.md](LLM_BACKENDS.md) for Hugging Face / self-hosted model setup.
 
