@@ -2,13 +2,13 @@
 Unified LLM Client for ScienceClaw
 
 Supports multiple LLM backends:
-- OpenClaw (default) - uses openclaw CLI with Anthropic/OpenAI
-- Anthropic API - direct Claude API calls
+- Anthropic API (default) - direct Claude API calls
 - OpenAI API - direct GPT API calls
 - Hugging Face - models via Hugging Face Inference API or local deployment
 
 Configuration via environment variables or config file:
-- LLM_BACKEND: openclaw (default), anthropic, openai, huggingface
+- LLM_BACKEND: openai (default), anthropic, huggingface
+- OPENAI_API_KEY: for OpenAI backend (default)
 - ANTHROPIC_API_KEY: for Anthropic backend
 - OPENAI_API_KEY: for OpenAI backend
 - HF_API_KEY or HUGGINGFACE_API_KEY: for Hugging Face backend
@@ -18,7 +18,6 @@ Configuration via environment variables or config file:
 """
 
 import os
-import subprocess
 import json
 from typing import Optional, Dict, Any
 from pathlib import Path
@@ -39,11 +38,11 @@ class LLMClient:
         
         Args:
             agent_name: Name of the agent (for session tracking)
-            backend: LLM backend to use (openclaw, anthropic, openai, huggingface)
-                    If None, reads from LLM_BACKEND env var or defaults to openclaw
+            backend: LLM backend to use (openai, anthropic, huggingface)
+                    If None, reads from LLM_BACKEND env var or defaults to openai
         """
         self.agent_name = agent_name
-        self.backend = backend or os.environ.get("LLM_BACKEND", "openclaw")
+        self.backend = backend or os.environ.get("LLM_BACKEND", "openai")
         
         # Load configuration
         self._load_config()
@@ -55,7 +54,11 @@ class LLMClient:
             self._init_openai()
         elif self.backend == "huggingface":
             self._init_huggingface()
-        # openclaw doesn't need initialization
+        elif self.backend == "openclaw":
+            raise ValueError(
+                "OpenClaw backend has been removed. "
+                "Set LLM_BACKEND=anthropic (or openai/huggingface) and provide the corresponding API key."
+            )
     
     def _load_config(self):
         """Load configuration from environment or config file."""
@@ -154,9 +157,7 @@ class LLMClient:
             LLM response text
         """
         t = timeout if timeout is not None else self.timeout
-        if self.backend == "openclaw":
-            return self._call_openclaw(prompt, max_tokens, t, session_id)
-        elif self.backend == "anthropic":
+        if self.backend == "anthropic":
             return self._call_anthropic(prompt, max_tokens, temperature)
         elif self.backend == "openai":
             return self._call_openai(prompt, max_tokens, temperature)
@@ -164,34 +165,6 @@ class LLMClient:
             return self._call_huggingface(prompt, max_tokens, temperature)
         else:
             raise ValueError(f"Unknown backend: {self.backend}")
-    
-    def _call_openclaw(self, prompt: str, max_tokens: int, timeout: int, session_id: Optional[str]) -> str:
-        """Call LLM via OpenClaw CLI."""
-        try:
-            sid = session_id or f"scienceclaw_{self.agent_name}"
-            result = subprocess.run(
-                [
-                    "openclaw", "agent",
-                    "--local",
-                    "--message", prompt,
-                    "--session-id", sid
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout
-            )
-            
-            if result.returncode == 0 and result.stdout.strip():
-                return result.stdout.strip()
-            else:
-                return ""
-                
-        except subprocess.TimeoutExpired:
-            return ""
-        except FileNotFoundError:
-            raise FileNotFoundError("openclaw not found. Install: npm install -g openclaw@latest")
-        except Exception:
-            return ""
     
     def _call_anthropic(self, prompt: str, max_tokens: int, temperature: float) -> str:
         """Call Anthropic Claude API."""
@@ -289,7 +262,7 @@ def get_llm_client(agent_name: str = "Agent", backend: Optional[str] = None) -> 
     
     Args:
         agent_name: Name of the agent
-        backend: LLM backend (openclaw, anthropic, openai, huggingface)
+        backend: LLM backend (anthropic, openai, huggingface)
         
     Returns:
         LLMClient instance

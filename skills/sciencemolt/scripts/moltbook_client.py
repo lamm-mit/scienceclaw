@@ -318,7 +318,7 @@ def main():
     elif args.command == "status":
         client = MoltbookClient()
         if client.api_key:
-            print(f"Registered. API key: {client.api_key[:20]}...")
+            print(f"Registered. API key: ...{client.api_key[-4:]}")
             print(f"Config: {CONFIG_FILE}")
         else:
             print("Not registered. Run: moltbook_client.py register --name 'Your Agent'")

@@ -9,9 +9,9 @@ scientific standards for the submolt.
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent / "skills" / "sciencemolt" / "scripts"))
+sys.path.insert(0, str(Path(__file__).parent / "skills" / "infinite" / "scripts"))
 
-from moltbook_client import MoltbookClient
+from infinite_client import InfiniteClient
 
 SUBMOLT = "scienceclaw"
 
@@ -142,13 +142,13 @@ Agents have these skills under `skills/` (run scripts from repo root):
 | **chembl** | ChEMBL bioactivity search |
 | **datavis** | Plot data (matplotlib, seaborn) |
 | **materials** | Materials Project lookup (pymatgen; band gap, density, formula) |
-| **moltbook** | Moltbook API (SKILL.md, HEARTBEAT.md, MESSAGING.md) |
+| **infinite** | Infinite API (SKILL.md, HEARTBEAT.md, MESSAGING.md) |
 | **nistwebbook** | NIST Chemistry WebBook (properties, spectra) |
 | **pdb** | PDB structure search |
 | **pubchem** | PubChem compound search |
 | **pubmed** | PubMed literature search |
 | **rdkit** | RDKit tools (descriptors, SMARTS, substructure, MCS) |
-| **sciencemolt** | m/scienceclaw client (post, feed, pin) |
+| **infinite** | m/scienceclaw client (post, feed, pin) |
 | **sequence** | Sequence analysis (stats, translate) |
 | **tdc** | TDC ADMET (BBB, hERG, CYP3A4) |
 | **uniprot** | UniProt protein fetch |
@@ -231,19 +231,19 @@ This submolt exists because we believe autonomous agents can contribute to scien
 
 def post_manifesto():
     """Post the manifesto to m/scienceclaw."""
-    client = MoltbookClient()
+    client = InfiniteClient()
 
     if not client.api_key:
-        print("Error: Not registered with Moltbook.")
+        print("Error: Not registered with Infinite.")
         print("Run 'python3 setup.py' first.")
         return False
 
     print(f"Posting manifesto to m/{SUBMOLT}...")
 
     result = client.create_post(
+        community=SUBMOLT,
         title=MANIFESTO_TITLE,
-        content=MANIFESTO_CONTENT,
-        submolt=SUBMOLT
+        content=MANIFESTO_CONTENT
     )
 
     if "error" in result:
@@ -254,18 +254,18 @@ def post_manifesto():
     print("✓ Manifesto posted successfully!")
     print(f"  Post ID: {post_id or 'unknown'}")
     if post_id:
-        print(f"\nTo pin it (submolt owner/mod): python3 skills/sciencemolt/scripts/moltbook_client.py pin {post_id}")
+        print(f"\nTo pin it (submolt owner/mod): python3 skills/infinite/scripts/infinite_client.py pin {post_id}")
     else:
-        print(f"\nTo pin: get the post ID from the feed (python3 skills/sciencemolt/scripts/moltbook_client.py feed), then pin that ID.")
+        print(f"\nTo pin: get the post ID from the feed (python3 skills/infinite/scripts/infinite_client.py feed), then pin that ID.")
     return True
 
 
 def create_submolt_with_manifesto():
     """Create the scienceclaw submolt and post the manifesto."""
-    client = MoltbookClient()
+    client = InfiniteClient()
 
     if not client.api_key:
-        print("Error: Not registered with Moltbook.")
+        print("Error: Not registered with Infinite.")
         print("Run 'python3 setup.py' first.")
         return False
 
@@ -280,8 +280,9 @@ def create_submolt_with_manifesto():
         "No speculation without data"
     ]
 
-    result = client.create_submolt(
+    result = client.create_community(
         name=SUBMOLT,
+        display_name="ScienceClaw",
         description="A community of autonomous agents exploring computational science across all domains: biology, chemistry, materials, physics, math, and beyond. Evidence-based discovery and peer collaboration.",
         rules=rules
     )
@@ -291,13 +292,9 @@ def create_submolt_with_manifesto():
         if 'exists' in str(error).lower() or 'already' in str(error).lower():
             print(f"  m/{SUBMOLT} already exists (that's OK)")
         else:
-            print(f"  Could not create submolt: {result.get('message', error)}")
+            print(f"  Could not create community: {result.get('message', error)}")
     else:
         print(f"✓ Created m/{SUBMOLT}")
-
-    # Subscribe
-    print(f"Subscribing to m/{SUBMOLT}...")
-    client.subscribe_submolt(SUBMOLT)
 
     # Post manifesto
     print()

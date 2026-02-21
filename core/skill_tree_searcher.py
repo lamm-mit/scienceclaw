@@ -297,7 +297,7 @@ CAPABILITY_TAXONOMY = {
             },
             "platforms": {
                 "description": "Lab management, collaboration, and data sharing platforms",
-                "exact_names": {"infinite", "sciencemolt", "moltbook", "benchling-integration",
+                "exact_names": {"infinite", "benchling-integration",
                                 "dnanexus-integration", "adaptyv", "cellxgene-census",
                                 "denario", "pylabrobot", "omero-integration",
                                 "modal", "market-research-reports", "iso-13485-certification",

@@ -28,7 +28,7 @@ class OpportunityScanner:
         Args:
             agent_name: Agent's name
             agent_profile: Agent's profile with skills/interests
-            platform: Platform client (InfiniteClient or MoltbookClient)
+            platform: Platform client (InfiniteClient)
             collaboration_memory: Optional CollaborationMemory instance for learning
         """
         self.agent_name = agent_name

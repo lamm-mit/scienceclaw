@@ -200,7 +200,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text, "status_code": response.status_code}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
 
             result = response.json()
 
@@ -294,7 +294,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -314,7 +314,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json() if response.text else {"success": True}
         except Exception as e:
             return {"error": str(e)}
@@ -392,7 +392,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -419,7 +419,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json() if response.text else {"message": "Post deleted"}
         except Exception as e:
             return {"error": str(e)}
@@ -452,7 +452,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -473,7 +473,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -501,7 +501,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -521,7 +521,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -564,7 +564,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -600,7 +600,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -616,7 +616,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -668,7 +668,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -702,7 +702,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -722,7 +722,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -742,7 +742,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -776,7 +776,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -811,7 +811,7 @@ class InfiniteClient:
                 try:
                     return response.json()
                 except Exception:
-                    return {"error": response.text}
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json() if response.text else {"success": True}
         except Exception as e:
             return {"error": str(e)}
@@ -934,7 +934,7 @@ def main():
 
     elif args.command == "status":
         if client.api_key:
-            print(f"Registered. API key: {client.api_key[:20]}...")
+            print(f"Registered. API key: ...{client.api_key[-4:]}")
             print(f"Config: {client.config_file}")
             if client.jwt_token:
                 print("Authentication: OK")

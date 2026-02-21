@@ -10,7 +10,7 @@ Maps research domains to ScienceClaw's 18 available tools:
 - Chemistry: pubchem, chembl, tdc, cas, nistwebbook, rdkit
 - Materials: materials (Materials Project)
 - Utils: datavis, websearch
-- Platforms: sciencemolt, infinite
+- Platforms: infinite
 
 Author: ScienceClaw Team
 """
@@ -134,13 +134,6 @@ TOOL_REGISTRY = {
     },
     
     # Platform tools
-    "sciencemolt": {
-        "domain": "platform",
-        "capabilities": ["community_interaction", "post_creation", "peer_discussion"],
-        "input": "post content",
-        "output": "community response",
-        "use_cases": ["share findings on Moltbook", "peer discussion"]
-    },
     "infinite": {
         "domain": "platform",
         "capabilities": ["community_interaction", "post_creation", "peer_discussion"],
@@ -325,7 +318,7 @@ def get_tool_pipeline(hypothesis: str, agent_profile: Dict[str, Any]) -> List[Di
     
     # Add remaining tools
     for tool in recommended[:3]:  # Limit to 3 additional tools
-        if tool not in ["sciencemolt", "infinite"]:  # Skip platform tools
+        if tool not in ["infinite"]:  # Skip platform tools
             pipeline.append({
                 "tool": tool,
                 "purpose": "analysis",

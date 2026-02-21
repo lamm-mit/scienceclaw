@@ -10,9 +10,9 @@ Usage:
     python3 setup.py --quick --profile biology
     python3 setup.py --quick --profile chemistry --name "ChemBot-7"
 
-The agent runs via OpenClaw or autonomous heartbeat daemon:
-    openclaw agent --message "Start exploring" --session-id scienceclaw
+The agent runs via the autonomous heartbeat daemon:
     ./autonomous/start_daemon.sh service   # Run every 6 hours automatically
+    scienceclaw-post --agent <name> --topic "Your topic"
 
 Author: ScienceClaw Team
 """
@@ -41,6 +41,7 @@ CONFIG_DIR = Path.home() / ".scienceclaw"
 
 # Profile storage
 PROFILE_FILE = CONFIG_DIR / "agent_profile.json"
+LLM_CONFIG_FILE = CONFIG_DIR / "llm_config.json"
 
 # Default submolt for science agents
 SCIENCE_SUBMOLT = "scienceclaw"
@@ -166,6 +167,65 @@ def save_profile(profile: dict):
     print(f"✓ Profile saved to: {PROFILE_FILE}")
 
 
+def prompt_llm_api_key():
+    """Prompt for LLM API keys and save them to llm_config.json (mode 0o600)."""
+    import os
+
+    # Seed from environment
+    config = {}
+    if LLM_CONFIG_FILE.exists():
+        try:
+            with open(LLM_CONFIG_FILE) as f:
+                config = json.load(f)
+        except Exception:
+            config = {}
+
+    openai_key = os.environ.get("OPENAI_API_KEY") or config.get("openai_api_key", "")
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY") or config.get("anthropic_api_key", "")
+
+    print()
+    print("LLM API keys (used for autonomous investigations).")
+    print("Press Enter to keep existing value or skip.")
+
+    def _prompt(label, existing):
+        masked = f"...{existing[-4:]}" if existing else "not set"
+        val = input(f"  {label} [{masked}]: ").strip()
+        return val if val else existing
+
+    openai_key = _prompt("OpenAI API key    (OPENAI_API_KEY)", openai_key)
+    anthropic_key = _prompt("Anthropic API key (ANTHROPIC_API_KEY)", anthropic_key)
+
+    if not openai_key and not anthropic_key:
+        print("  Skipped — set OPENAI_API_KEY or ANTHROPIC_API_KEY before running agents.")
+        return
+
+    # Let user choose default backend
+    available = []
+    if openai_key:
+        available.append("openai")
+    if anthropic_key:
+        available.append("anthropic")
+    if len(available) > 1:
+        current_default = config.get("backend", available[0])
+        choice = input(f"  Default backend [{'/'.join(available)}] (current: {current_default}): ").strip().lower()
+        default_backend = choice if choice in available else current_default
+    else:
+        default_backend = available[0]
+
+    new_config = {"backend": default_backend}
+    if openai_key:
+        new_config["openai_api_key"] = openai_key
+    if anthropic_key:
+        new_config["anthropic_api_key"] = anthropic_key
+
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    with open(LLM_CONFIG_FILE, "w") as f:
+        json.dump(new_config, f, indent=2)
+    LLM_CONFIG_FILE.chmod(0o600)
+    keys_saved = ", ".join(k.replace("_api_key", "") for k in new_config if k.endswith("_api_key"))
+    print(f"✓ LLM config saved (default backend: {default_backend}, keys: {keys_saved}) → {LLM_CONFIG_FILE}")
+
+
 def register_with_platform(profile: dict) -> dict:
     """
     Register agent with Infinite platform.
@@ -276,7 +336,10 @@ Profiles: biology | chemistry | mixed
         
         # Save profile
         save_profile(profile)
-        
+
+        # Configure LLM API key
+        prompt_llm_api_key()
+
         # Generate SOUL.md
         save_soul_md(profile)
         
@@ -298,15 +361,15 @@ Ensure dependencies are installed (use venv on Ubuntu/Debian):
   python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 Run your agent:
-  # Via OpenClaw
-  openclaw agent --message "Start exploring" --session-id scienceclaw
-  
   # Via autonomous heartbeat daemon (runs every 6 hours)
   ./autonomous/start_daemon.sh background   # Background process
   ./autonomous/start_daemon.sh service      # Systemd service (auto-start on boot)
-  
+
   # Run one heartbeat cycle
   ./autonomous/start_daemon.sh once
+
+  # Post directly
+  scienceclaw-post --agent {profile['name']} --topic "Your topic"
 
 View logs:
   tail -f ~/.scienceclaw/heartbeat_daemon.log
@@ -338,9 +401,10 @@ Files created:
     
     print(f"\n✓ Created profile for: {name}")
     print(f"   Preset: {args.profile}")
-    
+
     # Save
     save_profile(profile)
+    prompt_llm_api_key()
     save_soul_md(profile)
     
     # Register
@@ -356,9 +420,6 @@ Run your agent:
   ./autonomous/start_daemon.sh service  # Auto-start on boot
   ./autonomous/start_daemon.sh background  # Background process
   ./autonomous/start_daemon.sh once  # Run once
-
-Or via OpenClaw:
-  openclaw agent --message "Start exploring" --session-id scienceclaw
 
 Happy exploring! 🔬🧬🦀
 """)

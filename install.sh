@@ -71,51 +71,12 @@ echo -e "${GREEN}╚════════════════════
 echo ""
 
 # =============================================================================
-# Step 1: Check OpenClaw is installed and configured
+# Step 1: Check Python is installed
 # =============================================================================
 
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${CYAN}  Step 1: Checking OpenClaw${NC}"
+echo -e "${CYAN}  Step 1: Checking Python${NC}"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-
-# Check if OpenClaw is installed
-if ! command -v openclaw &> /dev/null; then
-    echo -e "${RED}Error: OpenClaw is not installed${NC}"
-    echo ""
-    echo "Please install OpenClaw first:"
-    echo ""
-    echo "  1. Install Node.js >= 22:"
-    echo "     macOS:  brew install node"
-    echo "     Ubuntu: curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs"
-    echo ""
-    echo "  2. Install and configure OpenClaw:"
-    echo "     sudo npm install -g openclaw@latest"
-    echo "     openclaw onboard --install-daemon"
-    echo ""
-    echo "  3. Then run this installer again."
-    echo ""
-    exit 1
-fi
-
-echo -e "${GREEN}✓ OpenClaw is installed${NC}"
-openclaw --version 2>/dev/null || true
-
-# Check if OpenClaw is configured
-if [ ! -f "$HOME/.openclaw/openclaw.json" ]; then
-    echo ""
-    echo -e "${RED}Error: OpenClaw is not configured${NC}"
-    echo ""
-    echo "Please run OpenClaw onboarding first:"
-    echo ""
-    echo "  openclaw onboard --install-daemon"
-    echo ""
-    echo "Then run this installer again."
-    echo ""
-    exit 1
-fi
-
-echo -e "${GREEN}✓ OpenClaw is configured${NC}"
 echo ""
 
 # =============================================================================
@@ -127,8 +88,6 @@ echo -e "${CYAN}  Step 2: Installing ScienceClaw Skills${NC}"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
-# Default install directory (OpenClaw workspace skills directory)
-OPENCLAW_SKILLS_DIR="$HOME/.openclaw/workspace/skills"
 INSTALL_DIR="${SCIENCECLAW_DIR:-$HOME/scienceclaw}"
 
 # Check if already installed
@@ -223,29 +182,6 @@ else
     echo -e "${YELLOW}conda not found; skipping TDC env setup. Install conda or see requirements.txt.${NC}"
 fi
 
-# Link skills to OpenClaw workspace (if OpenClaw is installed)
-if [ -d "$HOME/.openclaw/workspace" ]; then
-    echo ""
-    echo -e "${YELLOW}Linking skills to OpenClaw workspace...${NC}"
-
-    # Create skills directory if it doesn't exist
-    mkdir -p "$OPENCLAW_SKILLS_DIR"
-
-    # Link each skill directory
-    for skill_dir in "$INSTALL_DIR"/skills/*/; do
-        skill_name=$(basename "$skill_dir")
-        target="$OPENCLAW_SKILLS_DIR/$skill_name"
-
-        if [ -e "$target" ]; then
-            echo -e "  ${YELLOW}Skipped (exists):${NC} $skill_name"
-        else
-            ln -s "$skill_dir" "$target" 2>/dev/null || true
-            echo "  Linked: $skill_name"
-        fi
-    done
-
-    echo -e "${GREEN}✓ Skills linked to OpenClaw${NC}"
-fi
 
 echo ""
 
@@ -288,28 +224,17 @@ echo -e "${GREEN}║                                                           �
 echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo "Installed:"
-echo "  • OpenClaw:    $(command -v openclaw 2>/dev/null || echo 'skipped')"
 echo "  • ScienceClaw: $INSTALL_DIR"
-echo "  • SOUL.md:     ~/.openclaw/workspace/SOUL.md"
+echo "  • SOUL.md:     ~/.infinite/workspace/SOUL.md"
 echo ""
-echo -e "${YELLOW}Start your agent via OpenClaw:${NC}"
+echo -e "${YELLOW}Start your agent:${NC}"
 echo ""
-echo "  # One-shot exploration"
-echo "  openclaw agent --message \"Start exploring biology\" --session-id scienceclaw"
+echo "  # Autonomous heartbeat daemon (runs every 6 hours)"
+echo "  ./autonomous/start_daemon.sh service"
 echo ""
-echo "  # Specific task"
-echo "  openclaw agent --message \"Search PubMed for CRISPR delivery and share on Moltbook\""
+echo "  # Post directly"
+echo "  scienceclaw-post --agent <name> --topic 'Your topic'"
 echo ""
-echo "  # Interactive session"
-echo "  openclaw agent --session-id scienceclaw"
-echo ""
-
-# Start agent if requested
-if [ "$START" = true ]; then
-    echo -e "${CYAN}Starting agent via OpenClaw...${NC}"
-    echo ""
-    openclaw agent --message "Introduce yourself, explore a biology topic using your science skills, and share any interesting findings on Moltbook" --session-id scienceclaw
-fi
 
 # Start heartbeat daemon so agent checks Moltbook every 4 hours automatically
 if [ "$START_HEARTBEAT" = true ]; then

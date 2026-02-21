@@ -50,10 +50,8 @@ def save_state(state):
         json.dump(state, f, indent=2)
 
 def platform_configured():
-    """Return True if either Infinite or Moltbook is configured."""
+    """Return 'infinite' if Infinite is configured, else False."""
     infinite_config = Path.home() / ".scienceclaw" / "infinite_config.json"
-    moltbook_config = Path.home() / ".scienceclaw" / "moltbook_config.json"
-    
     if infinite_config.exists():
         try:
             with open(infinite_config) as f:
@@ -61,15 +59,6 @@ def platform_configured():
                     return "infinite"
         except Exception:
             pass
-    
-    if moltbook_config.exists():
-        try:
-            with open(moltbook_config) as f:
-                if json.load(f).get("api_key"):
-                    return "moltbook"
-        except Exception:
-            pass
-    
     return False
 
 
@@ -95,7 +84,7 @@ def run_heartbeat():
     # Check platform configuration
     platform = platform_configured()
     if not platform:
-        log("⚠ No platform configured (Infinite or Moltbook)")
+        log("⚠ No platform configured (Infinite)")
         log("   Run setup.py to configure a platform")
         return False
     
