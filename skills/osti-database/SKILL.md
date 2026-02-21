@@ -89,5 +89,5 @@ python3 {baseDir}/scripts/osti_search.py --query "cobalt recycling" --commodity 
 - OSTI.gov API is free and does not require authentication
 - Covers DOE-funded research: national labs, universities, contractors
 - Document types include technical reports, journal articles, conference papers, theses, patents
-- If `OSTI_DATA_PATH` environment variable is set and points to a local corpus, the script will search the local data instead of the API
+- For local corpus search, use the `corpus-search` skill instead
 - Rate limiting: be courteous, avoid excessive requests
