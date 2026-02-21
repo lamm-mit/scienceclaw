@@ -104,6 +104,12 @@ For BIOMEDICAL topics (drugs, diseases, proteins):
 For DRUG DISCOVERY topics:
 - USE: pubmed-database, chembl-database, drugbank-database, uniprot, pytdc
 
+For MATERIALS SCIENCE / CRITICAL MINERALS topics (minerals, separation, extraction, rare earth, materials discovery, supply chain):
+- PREFER: openalex-database (240M+ scholarly works), arxiv (preprints), osti-database (DOE reports)
+- INCLUDE: materials (Materials Project), websearch (industry data)
+- INCLUDE: rdkit, pubchem-database, nistwebbook (chemistry reference data)
+- AVOID: pubmed-database, biorxiv-database, blast, alphafold-database, uniprot (biomedical)
+
 For each selected skill, specify:
 SKILL: exact_skill_name
 REASON: Why this skill is needed for this topic

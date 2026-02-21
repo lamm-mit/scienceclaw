@@ -340,7 +340,7 @@ Analyze now:"""
             client = get_llm_client(agent_name=self.agent_name)
             out = client.call(
                 prompt=prompt,
-                max_tokens=600,
+                max_tokens=1200,
                 session_id=f"topic_analysis_{self.agent_name}"
             )
             if DEBUG and not out:
