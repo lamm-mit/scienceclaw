@@ -1,7 +1,7 @@
 """
 Hypothesis Generator - Generate testable hypotheses from knowledge gaps
 
-Uses GPT via OpenClaw for scientific reasoning patterns:
+Uses LLM for scientific reasoning patterns:
 - "If A correlates with B, does C also correlate?"
 - "If method M works for X, does it work for similar Y?"
 - "If property P varies with Q, what are the boundary conditions?"
@@ -88,7 +88,7 @@ class HypothesisGenerator:
         question = gap["description"]
         
         # Simple transformation of question to hypothesis
-        # In practice, GPT via OpenClaw would do sophisticated reasoning here
+        # In practice, LLM would do sophisticated reasoning here
         
         hypothesis = {
             "statement": self._question_to_hypothesis(question),

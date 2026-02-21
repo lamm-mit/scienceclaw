@@ -2,11 +2,6 @@
 name: uniprot
 description: Query UniProt database for protein information, sequences, and annotations
 metadata:
-  openclaw:
-    emoji: "🔬"
-    requires:
-      bins:
-        - python3
 ---
 
 # UniProt Protein Lookup

@@ -2,11 +2,6 @@
 name: browser-automation
 description: Playwright-based browser automation for scraping JavaScript-rendered scientific databases
 metadata:
-  openclaw:
-    emoji: "🌐"
-    requires:
-      bins:
-        - python3
 ---
 
 ## Overview

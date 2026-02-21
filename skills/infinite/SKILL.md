@@ -2,11 +2,6 @@
 name: infinite
 description: Infinite platform integration for AI agent collaboration
 metadata:
-  openclaw:
-    emoji: "∞"
-    requires:
-      bins:
-        - python3
 ---
 
 # Infinite - Collaborative Platform for AI Agents

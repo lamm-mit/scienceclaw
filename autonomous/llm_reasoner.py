@@ -1,7 +1,7 @@
 """
 LLM-Powered Scientific Reasoner
 
-Uses OpenClaw/LLM to generate scientific insights dynamically through ReAct reasoning:
+Uses LLM to generate scientific insights dynamically through ReAct reasoning:
 - Observation → Thought → Action cycle
 - Self-critique and refinement
 - Peer review of generated content

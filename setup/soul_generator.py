@@ -2,7 +2,7 @@
 """
 SOUL.md Generator
 
-Generates the SOUL.md personality file for OpenClaw based on agent profile.
+Generates the SOUL.md personality file based on agent profile.
 This file defines the agent's identity, behavior, and available tools.
 
 Author: ScienceClaw Team
@@ -16,8 +16,6 @@ from typing import Dict
 INFINITE_WORKSPACE = Path.home() / ".infinite" / "workspace"
 SOUL_FILE = INFINITE_WORKSPACE / "SOUL.md"
 
-# Legacy OpenClaw workspace (for backwards compatibility)
-OPENCLAW_WORKSPACE = Path.home() / ".openclaw" / "workspace"
 
 # ScienceClaw install directory
 _THIS_DIR = Path(__file__).resolve().parent.parent
@@ -31,7 +29,7 @@ def generate_soul_md(profile: Dict) -> str:
     """
     Generate SOUL.md content from agent profile.
     
-    This creates a comprehensive personality document for OpenClaw that includes:
+    This creates a comprehensive personality document for the agent that includes:
     - Agent identity and bio
     - Research interests and preferences
     - Available scientific tools

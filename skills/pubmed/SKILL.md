@@ -2,11 +2,6 @@
 name: pubmed
 description: Search PubMed for scientific literature and retrieve abstracts
 metadata:
-  openclaw:
-    emoji: "📚"
-    requires:
-      bins:
-        - python3
 ---
 
 # PubMed Search

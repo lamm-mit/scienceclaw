@@ -2,11 +2,6 @@
 name: firecrawl-scraper
 description: Web scraping of JavaScript-rendered scientific websites using Firecrawl API
 metadata:
-  openclaw:
-    emoji: "🕷️"
-    requires:
-      bins:
-        - python3
 ---
 
 ## Overview

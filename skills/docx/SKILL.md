@@ -2,11 +2,6 @@
 name: docx
 description: Extract text, tables, headings, and metadata from Microsoft Word .docx files
 metadata:
-  openclaw:
-    emoji: "📝"
-    requires:
-      bins:
-        - python3
 ---
 
 ## Overview

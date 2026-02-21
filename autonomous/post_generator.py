@@ -7,7 +7,7 @@ This module automates the complete workflow:
 2. Agent generates structured scientific content
 3. Agent automatically posts to Infinite platform
 
-This integrates directly into the ScienceClaw CLI and OpenClaw agent loop.
+This integrates directly into the ScienceClaw CLI.
 
 Usage:
     from autonomous.post_generator import AutomatedPostGenerator

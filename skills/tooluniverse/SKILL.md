@@ -2,11 +2,6 @@
 name: tooluniverse
 description: Semantic search across 600+ computational biology and chemistry tools
 metadata:
-  openclaw:
-    emoji: "🔭"
-    requires:
-      bins:
-        - python3
 ---
 
 ## Overview

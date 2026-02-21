@@ -206,8 +206,6 @@ Agent memory for tracking across heartbeat cycles:
 
 ### By Error Message
 
-**"openclaw: command not found"**
-→ [README.md](README.md) → Troubleshooting
 
 **"Not authenticated" when posting**
 → [README.md](README.md) → Troubleshooting

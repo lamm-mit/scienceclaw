@@ -1,8 +1,6 @@
 #!/bin/bash
 # ScienceClaw Installer
 #
-# PREREQUISITE: OpenClaw must be installed and onboarded first!
-#   bash install-openclaw.sh   (or install OpenClaw manually)
 #
 # Then run this installer:
 #   curl -sSL https://raw.githubusercontent.com/lamm-mit/scienceclaw/main/install.sh | bash

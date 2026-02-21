@@ -3,7 +3,7 @@ Scientific Reasoning Engine - Core orchestrator for autonomous scientific discov
 
 Integrates with:
 - Memory system (AgentJournal, InvestigationTracker, KnowledgeGraph)
-- OpenClaw for GPT-powered reasoning
+- LLM for reasoning
 - 18 scientific tools for experiments
 
 Implements the complete scientific method loop.
@@ -30,7 +30,7 @@ class ScientificReasoningEngine:
     """
     Core reasoning engine implementing autonomous scientific method.
     
-    Uses GPT via OpenClaw for scientific reasoning, with persistent memory
+    Uses LLM for scientific reasoning, with persistent memory
     for tracking investigations across cycles.
     """
     

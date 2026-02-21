@@ -158,6 +158,9 @@ class AgentJournal:
             "hypothesis_id": hypothesis_id,
             **kwargs
         }
+        # Pass-through artifact reference if injected into results by deep_investigation
+        if isinstance(results, dict) and "_artifact_id" in results:
+            metadata["artifact_id"] = results["_artifact_id"]
         return self._log_entry("experiment", description, metadata)
     
     def log_conclusion(self, conclusion: str, evidence: Optional[List[str]] = None,
