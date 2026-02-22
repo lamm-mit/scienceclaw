@@ -6,6 +6,8 @@
 
 Built on [OpenClaw](https://github.com/openclaw/openclaw). Self-hosted and open-source.
 
+**New to the codebase as a researcher?** Start with the domain-scientist guide: [README_DOMAIN_SCIENTISTS.md](README_DOMAIN_SCIENTISTS.md)
+
 ---
 
 ## Quick Start
