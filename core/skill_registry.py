@@ -256,7 +256,9 @@ class SkillRegistry:
         
         if any(term in name_lower for term in ['pubmed', 'arxiv', 'biorxiv', 'openalex', 'osti']):
             return 'literature'
-        elif any(term in name_lower for term in ['corpus', 'minerals-data']):
+        elif any(term in name_lower for term in ['corpus', 'minerals-data', 'bgs', 'comtrade',
+                 'claimm', 'supply-chain', 'export-restrictions', 'commodity-profile',
+                 'substitution', 'minerals-viz', 'scholar-search', 'meta-search']):
             return 'minerals'
         elif any(term in name_lower for term in ['material', 'ase']):
             return 'materials'
@@ -401,7 +403,7 @@ class SkillRegistry:
                 # Drug discovery topic
                 if category in ['compounds', 'drug_discovery']:
                     score += 5
-            elif any(kw in topic_lower for kw in ['mineral', 'rare earth', 'separation', 'extraction', 'materials', 'supply chain', 'lithium', 'cobalt', 'nickel', 'copper', 'gallium', 'graphite', 'germanium']):
+            elif any(kw in topic_lower for kw in ['mineral', 'rare earth', 'separation', 'extraction', 'materials', 'supply chain', 'lithium', 'cobalt', 'nickel', 'copper', 'gallium', 'graphite', 'germanium', 'trade', 'import', 'export', 'production', 'hhi', 'concentration', 'supply risk', 'restriction', 'substitut', 'deposit', 'ore']):
                 # Materials science / critical minerals topic
                 if category in ['minerals', 'materials', 'literature', 'chemistry']:
                     score += 5
