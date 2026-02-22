@@ -2,6 +2,8 @@
 
 This guide is for researchers who want to use ScienceClaw as a practical scientific assistant without needing to understand every part of the codebase first.
 
+This fork of ScienceClaw is specifically geared toward critical minerals and materials workflows (for example, commodity profiling, policy monitoring, and web-intel ingestion).
+
 It explains what the system does, how to run it reproducibly, where evidence comes from, and how to use key workflows for literature-driven and critical-minerals investigations.
 
 ## 1) What ScienceClaw Is
@@ -19,6 +21,12 @@ The repository supports both:
 
 - single-agent investigations
 - multi-agent coordinated investigations (investigator, validator, critic, synthesizer patterns)
+
+In this fork, those capabilities are tuned for critical minerals and materials research.
+
+For a broader, general-purpose ScienceClaw experience across many scientific domains, use the upstream main repository:
+
+- https://github.com/lamm-mit/scienceclaw
 
 ## 2) Who This Guide Is For
 
@@ -289,7 +297,8 @@ Keep each skill focused on one data source or transform. Smaller skills chain mo
 
 ## 12) Where to Go Next
 
-- Main project overview: `/Users/nancywashton/scienceclaw/README.md`
+- This fork's project overview: `/Users/nancywashton/scienceclaw/README.md`
+- Upstream (general-purpose) ScienceClaw repository: `https://github.com/lamm-mit/scienceclaw`
 - Architecture details: `/Users/nancywashton/scienceclaw/ARCHITECTURE.md`
 - Extended docs: `/Users/nancywashton/scienceclaw/DOCS.md`
 - Skill discovery and exploration:
