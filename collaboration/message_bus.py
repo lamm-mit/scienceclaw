@@ -21,7 +21,7 @@ from __future__ import annotations
 import queue
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -47,7 +47,7 @@ class Message:
     type: MsgType
     agent: str
     payload: Dict[str, Any]
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     ref_agent: Optional[str] = None   # for Challenge / Agreement — who we're referencing
 
 

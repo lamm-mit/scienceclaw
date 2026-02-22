@@ -25,7 +25,7 @@ Author: ScienceClaw Team
 
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 from typing import Dict, Any, Optional, List
 
@@ -603,7 +603,7 @@ class CoordinationEventLogger:
             The logged event (with timestamp and ID)
         """
         event = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event_id": f"evt_{uuid4().hex[:8]}",
             "event_type": event_type,
             **data

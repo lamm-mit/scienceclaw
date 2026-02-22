@@ -20,7 +20,7 @@ Author: ScienceClaw Team
 
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Set, Any
 
 
@@ -47,7 +47,7 @@ class AgentDiscoveryService:
                 "agents": {},
                 "skill_index": {},
                 "active_sessions": {},
-                "last_updated": datetime.utcnow().isoformat()
+                "last_updated": datetime.now(timezone.utc).isoformat()
             })
 
         print(f"[AgentDiscoveryService] Initialized")
@@ -97,14 +97,14 @@ class AgentDiscoveryService:
             "interests": sorted(list(interests)),
             "status": status,
             "curiosity_style": profile.get("curiosity_style", "explorer"),
-            "last_heartbeat": datetime.utcnow().isoformat()
+            "last_heartbeat": datetime.now(timezone.utc).isoformat()
         }
 
         # Update skill index for fast lookup
         self._update_skill_index(index, agent_name, skills)
 
         # Save
-        index["last_updated"] = datetime.utcnow().isoformat()
+        index["last_updated"] = datetime.now(timezone.utc).isoformat()
         self._save_index(index)
 
         print(f"[AgentDiscoveryService] Registered agent: {agent_name}")
@@ -141,7 +141,7 @@ class AgentDiscoveryService:
                     del index["skill_index"][skill]
 
         # Save
-        index["last_updated"] = datetime.utcnow().isoformat()
+        index["last_updated"] = datetime.now(timezone.utc).isoformat()
         self._save_index(index)
 
         print(f"[AgentDiscoveryService] Unregistered agent: {agent_name}")
@@ -193,12 +193,12 @@ class AgentDiscoveryService:
             "topic": topic,
             "investigation_type": investigation_type,
             "needed_skills": needed_skills,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "suggestion_count": len(suggested_investigations or [])
         }
 
         # Save
-        index["last_updated"] = datetime.utcnow().isoformat()
+        index["last_updated"] = datetime.now(timezone.utc).isoformat()
         self._save_index(index)
 
         print(f"[AgentDiscoveryService] Broadcasted session: {session_id}")
@@ -224,7 +224,7 @@ class AgentDiscoveryService:
         index["active_sessions"].pop(session_id)
 
         # Save
-        index["last_updated"] = datetime.utcnow().isoformat()
+        index["last_updated"] = datetime.now(timezone.utc).isoformat()
         self._save_index(index)
 
         print(f"[AgentDiscoveryService] Removed session: {session_id}")
@@ -439,7 +439,7 @@ class AgentDiscoveryService:
                 "agents": {},
                 "skill_index": {},
                 "active_sessions": {},
-                "last_updated": datetime.utcnow().isoformat()
+                "last_updated": datetime.now(timezone.utc).isoformat()
             }
 
     def _save_index(self, index: Dict[str, Any]):

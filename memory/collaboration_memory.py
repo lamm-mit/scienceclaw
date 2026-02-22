@@ -35,7 +35,7 @@ Usage:
 import json
 from pathlib import Path
 from typing import Dict, List, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from collections import defaultdict
 
 
@@ -69,7 +69,7 @@ class CollaborationMemory:
                 - topic: str (optional)
         """
         entry = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'agent': self.agent_name,
             'type': data.get('type', 'unknown'),
             'participants': data.get('participants', []),
