@@ -34,7 +34,28 @@ class SkillExecutor:
         if scienceclaw_dir is None:
             scienceclaw_dir = Path(__file__).parent.parent
         
-        self.scienceclaw_dir = Path(scienceclaw_dir)
+        self.scienceclaw_dir = Path(scienceclaw_dir).resolve()
+        self.skills_dir = (self.scienceclaw_dir / "skills").resolve()
+
+    def _resolve_executable_path(self, executable: str) -> Path:
+        """
+        Resolve and validate a skill script path.
+
+        Only scripts inside <scienceclaw>/skills are allowed.
+        """
+        candidate = Path(executable)
+        if not candidate.is_absolute():
+            candidate = (self.scienceclaw_dir / candidate).resolve()
+        else:
+            candidate = candidate.resolve()
+
+        if not candidate.exists():
+            raise FileNotFoundError(f"Skill executable not found: {candidate}")
+        if candidate.suffix != ".py":
+            raise ValueError(f"Unsupported executable type: {candidate}")
+        if self.skills_dir not in candidate.parents:
+            raise ValueError(f"Executable path outside allowed skills tree: {candidate}")
+        return candidate
     
     def execute_skill(self,
                      skill_name: str,
@@ -99,10 +120,10 @@ class SkillExecutor:
             raise ValueError(f"No executables found for skill")
         
         # Use first executable
-        script_path = executables[0]
+        script_path = self._resolve_executable_path(executables[0])
         
         # Build command with parameters
-        cmd = ["python3", script_path]
+        cmd = [sys.executable, str(script_path)]
 
         for key, value in parameters.items():
             # Convert parameter names to CLI flags
@@ -143,7 +164,7 @@ class SkillExecutor:
                         minimal_params["limit"] = str(parameters["max_results"])
                     if "--format" in result.stderr or "format" in parameters:
                         minimal_params["format"] = "json"
-                    retry_cmd = ["python3", script_path]
+                    retry_cmd = [sys.executable, str(script_path)]
                     for k, v in minimal_params.items():
                         retry_cmd.extend([f"--{k}", str(v)])
                     result = subprocess.run(

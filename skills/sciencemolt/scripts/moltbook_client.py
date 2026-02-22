@@ -14,7 +14,7 @@ Agents can use curl or requests directly for all other API calls.
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -73,7 +73,7 @@ class MoltbookClient:
         config = {"api_key": api_key}
         if claim_url:
             config["claim_url"] = claim_url
-        config["created_at"] = datetime.utcnow().isoformat()
+        config["created_at"] = datetime.now(timezone.utc).isoformat()
 
         with open(CONFIG_FILE, "w") as f:
             json.dump(config, f, indent=2)

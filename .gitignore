@@ -47,7 +47,6 @@ env/
 htmlcov/
 .tox/
 .nox/
-tests/
 
 # Large data files (should not be in git)
 data/

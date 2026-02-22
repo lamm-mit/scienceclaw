@@ -14,7 +14,7 @@ Structure: {"active": {...}, "completed": {...}}
 import json
 import os
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 from uuid import uuid4
 
@@ -103,8 +103,8 @@ class InvestigationTracker:
             "tags": tags or [],
             "priority": priority,
             "status": "active",
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
             "metadata": kwargs
         }
         
@@ -146,11 +146,11 @@ class InvestigationTracker:
             return False
         
         # Add timestamp to experiment
-        experiment["timestamp"] = datetime.utcnow().isoformat()
+        experiment["timestamp"] = datetime.now(timezone.utc).isoformat()
         
         # Add to experiments list
         inv["experiments_completed"].append(experiment)
-        inv["updated_at"] = datetime.utcnow().isoformat()
+        inv["updated_at"] = datetime.now(timezone.utc).isoformat()
         
         self._save_tracker()
         return True
@@ -172,7 +172,7 @@ class InvestigationTracker:
         
         inv = self.tracker["active"][investigation_id]
         inv["status"] = status
-        inv["updated_at"] = datetime.utcnow().isoformat()
+        inv["updated_at"] = datetime.now(timezone.utc).isoformat()
         
         if notes:
             if "status_history" not in inv:
@@ -180,7 +180,7 @@ class InvestigationTracker:
             inv["status_history"].append({
                 "status": status,
                 "notes": notes,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             })
         
         self._save_tracker()
@@ -222,8 +222,8 @@ class InvestigationTracker:
         inv["conclusion"] = conclusion
         inv["confidence"] = confidence
         inv["next_steps"] = next_steps or []
-        inv["completed_at"] = datetime.utcnow().isoformat()
-        inv["updated_at"] = datetime.utcnow().isoformat()
+        inv["completed_at"] = datetime.now(timezone.utc).isoformat()
+        inv["updated_at"] = datetime.now(timezone.utc).isoformat()
         
         # Move to completed
         self.tracker["completed"][investigation_id] = inv
@@ -409,7 +409,7 @@ class InvestigationTracker:
         """
         from datetime import timedelta
         
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         cutoff_iso = cutoff.isoformat()
         
         to_archive = []
@@ -422,7 +422,7 @@ class InvestigationTracker:
             return 0
         
         # Create archive file
-        archive_path = self.inv_dir / f"archive_{datetime.utcnow().strftime('%Y%m')}.json"
+        archive_path = self.inv_dir / f"archive_{datetime.now(timezone.utc).strftime('%Y%m')}.json"
         
         # Load existing archive if it exists
         if archive_path.exists():

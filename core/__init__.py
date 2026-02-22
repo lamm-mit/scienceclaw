@@ -12,8 +12,16 @@ Provides:
 
 from .skill_registry import SkillRegistry, get_registry
 from .skill_executor import SkillExecutor, get_executor
-from .skill_selector import LLMSkillSelector, get_selector
-from .topic_analyzer import LLMTopicAnalyzer, get_analyzer
+try:
+    from .skill_selector import LLMSkillSelector, get_selector
+except Exception:  # Optional dependency chain (e.g., pydantic) may be unavailable.
+    LLMSkillSelector = None
+    get_selector = None
+try:
+    from .topic_analyzer import LLMTopicAnalyzer, get_analyzer
+except Exception:
+    LLMTopicAnalyzer = None
+    get_analyzer = None
 from .skill_dag import (
     DependencyGraph, SkillNode, ExecutionPhase,
     NodeStatus, NodeFailureReason, SkillType,

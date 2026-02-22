@@ -18,7 +18,7 @@ Author: ScienceClaw Team
 
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 try:
@@ -475,7 +475,7 @@ Session ID: {session.get('id', 'Unknown')}
             {
                 "finding_id": finding_id,
                 "infinite_post_id": infinite_post_id,
-                "published_at": datetime.utcnow().isoformat(),
+                "published_at": datetime.now(timezone.utc).isoformat(),
             }
         )
 

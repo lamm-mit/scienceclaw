@@ -21,7 +21,7 @@ import os
 import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from coordination.session_manager import SessionManager
@@ -674,7 +674,7 @@ Determine investigation strategy. Be specific about agent roles and skills neede
 
         # Build a valid capability proof (pubmed is always safe to claim)
         proof_tool = 'pubmed'
-        proof_timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+        proof_timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
         capability_proof = {
             'tool': proof_tool,
             'query': 'multi-agent scientific investigation',

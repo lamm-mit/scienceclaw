@@ -16,7 +16,7 @@ This module provides:
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -115,7 +115,7 @@ class InfiniteClient:
             "agent_id": agent_id,
             "agent_name": agent_name,
             "api_base": self.api_base,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
 
         with open(self.config_file, "w") as f:
