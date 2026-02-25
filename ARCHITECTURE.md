@@ -27,23 +27,14 @@ scienceclaw/
 │   └── stop_daemon.sh           # Stop daemon
 │
 ├── skills/                      # 200+ scientific tools
-│   ├── blast/                   # NCBI BLAST sequence search
-│   ├── pubmed/                  # PubMed literature search
-│   ├── uniprot/                 # UniProt protein lookup
-│   ├── sequence/                # Biopython sequence analysis
-│   ├── pdb/                     # PDB protein structures
-│   ├── arxiv/                   # ArXiv preprint search
-│   ├── pubchem/                 # PubChem compound search
-│   ├── chembl/                  # ChEMBL drug molecules
-│   ├── tdc/                     # TDC ADMET prediction
-│   ├── cas/                     # CAS Common Chemistry
-│   ├── nistwebbook/             # NIST Chemistry WebBook
-│   ├── rdkit/                   # RDKit cheminformatics
-│   ├── materials/               # Materials Project API
-│   ├── datavis/                 # Scientific plotting
-│   ├── websearch/               # DuckDuckGo web search
+│   ├── blast/, pubmed/, uniprot/, pdb/, arxiv/   # Core: literature, sequence, structure
+│   ├── pubchem/, chembl/, tdc/, rdkit/, cas/     # Chemistry, ADMET
+│   ├── alphafold/, bindcraft/, rfdiffusion/, proteinmpnn/  # Protein design
+│   ├── tooluniverse/            # Hub for 70+ ToolUniverse workflows
+│   │   └── (drug discovery, genomics, precision medicine, omics, etc.)
 │   ├── infinite/                # Infinite platform client ⭐
-│   └── sciencemolt/             # Moltbook platform client (legacy)
+│   ├── datavis/, websearch/     # Utils
+│   └── ...                      # See skills/SKILLS_LIST.md for full list
 │
 ├── memory/                      # Agent memory system (Phase 1)
 │   ├── journal.py               # Event log (JSONL)
@@ -134,13 +125,20 @@ heartbeat_daemon.py
 
 ### 3. Scientific Skills (`skills/`)
 
-18+ domain-specific tools:
+200+ domain-specific tools grouped by output/artifact type:
 
-**Biology:** BLAST, PubMed, UniProt, PDB, Sequence, ArXiv
-**Chemistry:** PubChem, ChEMBL, TDC, CAS, NIST, RDKit
-**Materials:** Materials Project
-**Utils:** DataVis, WebSearch
+**Literature:** PubMed, ArXiv, OpenAlex, BioRxiv, BGPT paper search, citation management
+**Proteins & sequence:** UniProt, BLAST, Biopython, PDB, AlphaFold, gget, sequence retrieval
+**Compounds & chemistry:** PubChem, ChEMBL, DrugBank, CAS, NIST, RDKit, datamol
+**Structure & docking:** PDB, AlphaFold, DiffDock, OpenMM, Foldseek
+**ADMET & drug discovery:** TDC, PyTDC, DeepChem, drug-drug interaction, pharmacovigilance
+**Pathways & networks:** KEGG, Reactome, STRING, systems biology, gene enrichment
+**Genomics & variants:** ClinVar, GWAS, variant interpretation, structural variants, CRISPR screens
+**Omics:** Scanpy, scvi-tools, RNA-seq, single-cell, spatial transcriptomics, proteomics, metabolomics
+**Protein design:** BindCraft, RFdiffusion, ProteinMPNN, Boltz, LigandMPNN
+**Clinical & precision medicine:** Clinical trials, precision oncology, rare disease, target research
 **Platforms:** Infinite (⭐), Moltbook (legacy)
+**Utils:** DataVis, WebSearch, document extraction (PDF/DOCX/XLSX), diagramming
 
 Each skill is a Python script that:
 - Takes command-line arguments
