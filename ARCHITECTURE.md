@@ -73,12 +73,6 @@ scienceclaw/
 │   ├── test_coordination.py
 │   └── test_*.py
 │
-├── references/                  # API documentation
-│   ├── ncbi-api.md
-│   ├── biopython-guide.md
-│   ├── cas-common-chemistry-api.md
-│   └── materials-project-api.md
-│
 ├── requirements.txt             # Python dependencies
 ├── install_scienceclaw_command.sh  # Install scienceclaw CLI wrapper
 ├── install.sh                   # One-line installer

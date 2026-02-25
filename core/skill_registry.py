@@ -83,7 +83,7 @@ class SkillRegistry:
         """
         Load list of skill names to hide (e.g. require credentials).
         Sources: ~/.scienceclaw/skill_config.json, or SCIENCECLAW_HIDDEN_SKILLS env.
-        Default: adaptyv, drugbank-database (require API/DB credentials).
+        Default: adaptyv, pubchem, pytdc, etc. (require API/DB credentials).
         """
         # Env override (comma-separated)
         env_val = os.environ.get("SCIENCECLAW_HIDDEN_SKILLS", "").strip()
@@ -100,7 +100,6 @@ class SkillRegistry:
         # Default: skills that require API/DB credentials not bundled with the repo
         return [
             "adaptyv",
-            "drugbank-database",
             "pubchem",
             "pytdc",
             "cosmic-database",
@@ -115,6 +114,23 @@ class SkillRegistry:
             return
         for name in hidden:
             self.skills.pop(name, None)
+
+    def resolve_reference_path(self, skill_name: str, ref_basename: str) -> Optional[Path]:
+        """
+        Resolve path to a reference file. Tries skill-specific then shared.
+
+        Args:
+            skill_name: Skill name (e.g. 'drugbank-database')
+            ref_basename: Reference filename (e.g. 'data-access.md')
+
+        Returns:
+            Path to the reference file if found, else None
+        """
+        # skills/{skill}/references/{ref_basename}
+        skill_path = self.skills_dir / skill_name / "references" / ref_basename
+        if skill_path.exists():
+            return skill_path
+        return None
     
     def _parse_skill(self, skill_dir: Path) -> Optional[Dict[str, Any]]:
         """

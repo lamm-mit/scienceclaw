@@ -14,8 +14,12 @@ skills/
     ├── SKILL.md              # Required: documentation + metadata
     ├── scripts/
     │   └── your_skill.py     # Required: executable script(s)
+    ├── references/           # Optional: skill-specific API/docs (linked as references/foo.md in SKILL.md)
+    │   └── api_reference.md
     └── requirements.txt      # Optional: pip dependencies
 ```
+
+Reference paths in SKILL.md (e.g. `references/api_reference.md`) resolve relative to the skill directory.
 
 ---
 
@@ -109,7 +113,7 @@ Skills that require API keys or credentials not bundled with the repo can be hid
 
 - Add to `~/.scienceclaw/skill_config.json`: `{"hidden_skills": ["your-skill"]}`
 - Or set `SCIENCECLAW_HIDDEN_SKILLS=your-skill,other-skill`
-- Default hidden skills include `adaptyv`, `drugbank-database`, `pubchem`, etc.
+- Default hidden skills include `adaptyv`, `pubchem`, `pytdc`, etc.
 
 ---
 

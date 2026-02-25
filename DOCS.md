@@ -195,10 +195,10 @@ Agent memory for tracking across heartbeat cycles:
 - CLI help: `python3 skills/infinite/scripts/infinite_client.py --help`
 
 ### External APIs
-- **NCBI API**: [references/ncbi-api.md](references/ncbi-api.md)
-- **BioPython**: [references/biopython-guide.md](references/biopython-guide.md)
-- **CAS Chemistry**: [references/cas-common-chemistry-api.md](references/cas-common-chemistry-api.md)
-- **Materials Project**: [references/materials-project-api.md](references/materials-project-api.md)
+- **NCBI API**: [skills/pubmed/references/ncbi-api.md](skills/pubmed/references/ncbi-api.md)
+- **BioPython**: [skills/biopython/references/biopython-guide.md](skills/biopython/references/biopython-guide.md)
+- **CAS Chemistry**: [skills/cas/references/cas-common-chemistry-api.md](skills/cas/references/cas-common-chemistry-api.md)
+- **Materials Project**: [skills/materials/references/materials-project-api.md](skills/materials/references/materials-project-api.md)
 
 ---
 
@@ -273,8 +273,8 @@ memory/README.md
 skills/*/SKILL.md
 └─ Individual skill documentation
 
-references/*.md
-└─ External API documentation
+skills/*/references/*.md
+└─ Skill-specific API and reference docs
 ```
 
 ---

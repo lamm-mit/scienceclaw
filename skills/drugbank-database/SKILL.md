@@ -12,6 +12,27 @@ metadata:
 
 DrugBank is a comprehensive bioinformatics and cheminformatics database containing detailed information on drugs and drug targets. This skill enables programmatic access to DrugBank data including ~9,591 drug entries (2,037 FDA-approved small molecules, 241 biotech drugs, 96 nutraceuticals, and 6,000+ experimental compounds) with 200+ data fields per entry.
 
+## Example Usage
+
+```bash
+$ python3 scripts/drugbank_helper.py DB00001
+Drug: Lepirudin
+Type: biotech
+Indication: Lepirudin is indicated for anticoagulation in adult patients with acute coronary syndromes (ACS)...
+Interactions: 654
+Targets: 1
+```
+
+```python
+from drugbank_helper import DrugBankHelper
+
+db = DrugBankHelper()
+info = db.get_drug_info("DB00001")
+print(info["name"], info["type"])  # Lepirudin biotech
+interactions = db.get_interactions("DB00001")  # 654
+targets = db.get_targets("DB00001")  # 1
+```
+
 ## Core Capabilities
 
 ### 1. Data Access and Authentication

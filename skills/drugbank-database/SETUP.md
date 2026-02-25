@@ -51,6 +51,33 @@ interactions = db.get_interactions("DB00001")
 
 First use of `DrugBankHelper()` may take a while while the XML is downloaded and parsed; later runs use the cache.
 
+## Alternative: Download via curl (all-full-database)
+
+If `drugbank-downloader` fails or you prefer manual control, use curl with HTTP basic auth:
+
+```bash
+export DRUGBANK_USERNAME="fw2@mit.edu"
+export DRUGBANK_PASSWORD="your_password"
+
+# Download latest
+./scripts/download_drugbank.sh
+
+# Or specific version (5.1.14 → 5-1-14 in URL)
+./scripts/download_drugbank.sh 5-1-14
+
+# Custom output dir
+./scripts/download_drugbank.sh 5-1-14 /path/to/store/
+```
+
+Raw curl equivalent:
+
+```bash
+curl -Lfv -o drugbank_full.zip -u "$DRUGBANK_USERNAME:$DRUGBANK_PASSWORD" \
+  https://go.drugbank.com/releases/5-1-14/downloads/all-full-database
+```
+
+Then set `DRUGBANK_XML_PATH` to the zip. Use `-L` so curl follows redirects.
+
 ## If download fails: use a local file
 
 If your account is not yet approved for API download, you can download the database once in your browser from https://go.drugbank.com/releases/5.1.14#full (log in, click “Download” for “Full database”), then point the skill at the file:
@@ -62,7 +89,7 @@ export DRUGBANK_XML_PATH="/path/to/full database.xml.zip"
 python3 scripts/drugbank_helper.py DB00001
 ```
 
-The zip must contain a file named `full database.xml` (DrugBank’s default).
+The zip must contain a file named `full database.xml` (DrugBank’s default); the skill auto-detects the XML file inside.
 
 ## Optional: Pin DrugBank version
 
