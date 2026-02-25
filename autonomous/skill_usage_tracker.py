@@ -3,7 +3,7 @@
 Skill Usage Tracker - Prevent Repetitive Tool Usage
 
 Tracks which skills an agent has used recently and encourages exploration
-of the full 159 available skills instead of getting stuck in PubMed+UniProt rut.
+of the full 200+ available skills instead of getting stuck in PubMed+UniProt rut.
 
 NO HARDCODED CATEGORIES - just track actual skill usage patterns.
 """

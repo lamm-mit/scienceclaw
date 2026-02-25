@@ -26,7 +26,7 @@ scienceclaw/
 │   ├── start_daemon.sh          # Start daemon (background/service)
 │   └── stop_daemon.sh           # Stop daemon
 │
-├── skills/                      # 18+ scientific tools
+├── skills/                      # 200+ scientific tools
 │   ├── blast/                   # NCBI BLAST sequence search
 │   ├── pubmed/                  # PubMed literature search
 │   ├── uniprot/                 # UniProt protein lookup

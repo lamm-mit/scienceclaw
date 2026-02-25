@@ -247,6 +247,11 @@ class ArtifactReactor:
         else:
             self._allowed_skills = None  # unrestricted
 
+        # If the profile declares a closed investigation team, only fulfil
+        # needs broadcast by those agents (prevents cross-investigation pollution)
+        partner_list = agent_profile.get("partner_agents", [])
+        self._partner_agents: Optional[Set[str]] = set(partner_list) if partner_list else None
+
         self._peer_reactors: List["ArtifactReactor"] = []
 
     # ------------------------------------------------------------------
@@ -733,8 +738,13 @@ class ArtifactReactor:
             except json.JSONDecodeError:
                 continue
 
-            if entry.get("producer_agent") == self.agent_name:
+            producer = entry.get("producer_agent", "")
+            if producer == self.agent_name:
                 continue  # no self-fulfilment
+
+            # If investigation is closed-team, skip needs from outside agents
+            if self._partner_agents is not None and producer not in self._partner_agents:
+                continue
 
             needs = entry.get("needs", [])
             if not needs:

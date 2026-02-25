@@ -135,6 +135,7 @@ polars>=1.0.0              # Fast dataframes
 plotly>=5.0.0              # Interactive plotting
 pubchempy>=1.0.4           # PubChem API client
 litellm>=1.0.0             # LLM API wrapper for Perplexity
+tooluniverse               # Harvard ToolUniverse — 1000+ scientific tools (skills/tooluniverse + skills/{tu-workflow})
 datamol>=0.12.0            # Molecular manipulation (for medchem skill)
 medchem>=2.0.0             # Medicinal chemistry toolkit
 pydeseq2>=0.4.0            # DESeq2 in Python (differential expression)

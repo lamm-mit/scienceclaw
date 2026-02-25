@@ -1,40 +1,102 @@
 ---
 name: tooluniverse
-description: Semantic search across 600+ computational biology and chemistry tools
+description: Access 1000+ scientific tools from Harvard's ToolUniverse — bioinformatics, drug discovery, genomics, clinical research, and more
 metadata:
 ---
 
+# ToolUniverse
+
+Gateway to 1000+ machine learning models, databases, APIs, and scientific packages via Harvard's ToolUniverse ecosystem. Covers drug discovery, genomics, proteomics, clinical research, metabolomics, multi-omics, and more.
+
 ## Overview
 
-Scientific tool ecosystem providing access to 600+ computational biology and chemistry tools (AlphaFold, PubChem, UniProt, ChEMBL, KEGG, DESeq2) via semantic search and standardized API. Find and invoke the right scientific tool for any task.
-
-Query the ToolUniverse index to discover tools by natural language description, filter by category (biology, chemistry, genomics, proteomics, materials), and retrieve API endpoint information for programmatic access.
+ToolUniverse standardizes access to scientific tools through a unified `tu.run()` interface. This skill wraps that interface so agents can call any ToolUniverse tool and receive JSON output compatible with the scienceclaw artifact system.
 
 ## Usage
 
+### Run any ToolUniverse tool:
 ```bash
-# Search for tools related to protein structure prediction
-python3 skills/tooluniverse/scripts/tooluniverse_search.py --query "protein structure prediction"
-
-# Filter by category with more results
-python3 skills/tooluniverse/scripts/tooluniverse_search.py --query "drug ADMET" --category chemistry --max-results 20
-
-# Find genomics tools
-python3 skills/tooluniverse/scripts/tooluniverse_search.py --query "RNA-seq differential expression" --category genomics
+python3 {baseDir}/scripts/tooluniverse_run.py --tool UniProt_get_entry_by_accession \
+    --args '{"accession": "P05067"}'
 ```
 
-## Output Format
-
-```json
-{
-  "tools": [
-    {
-      "name": "AlphaFold",
-      "description": "Deep learning protein structure prediction from amino acid sequence",
-      "api_endpoint": "https://alphafold.ebi.ac.uk/api"
-    }
-  ],
-  "query": "protein structure prediction",
-  "total": 5
-}
+### Discover available tools:
+```bash
+python3 {baseDir}/scripts/tooluniverse_list.py
+python3 {baseDir}/scripts/tooluniverse_list.py --search "compound"
+python3 {baseDir}/scripts/tooluniverse_list.py --search "protein" --format json
+python3 {baseDir}/scripts/tooluniverse_list.py --info PubChem_get_compound_properties_by_CID
 ```
+
+## Parameters (tooluniverse_run.py)
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `--tool` | ToolUniverse tool name (exact, case-sensitive) | Required |
+| `--args` | Tool arguments as a JSON string | `{}` |
+| `--format` | Output format: json, summary | json |
+| `--no-cache` | Disable result caching | false |
+
+## Available Research Workflows (54+)
+
+### Drug Discovery
+- binder-discovery, drug-repurposing, drug-target-validation, drug-drug-interaction
+- chemical-safety, network-pharmacology, pharmacovigilance, adverse-event-detection
+
+### Genomics & Variants
+- gwas-trait-to-gene, gwas-snp-interpretation, gwas-fine-mapping, gwas-study-explorer
+- variant-analysis, variant-interpretation, structural-variant-analysis
+- crispr-screen-analysis, cancer-variant-interpretation
+
+### Omics & Transcriptomics
+- rnaseq-deseq2, single-cell, epigenomics, spatial-transcriptomics
+- proteomics-analysis, metabolomics, metabolomics-analysis
+- multi-omics-integration, gene-enrichment, expression-data-retrieval
+
+### Disease & Clinical
+- disease-research, rare-disease-diagnosis, clinical-trial-matching
+- clinical-trial-design, clinical-guidelines, precision-oncology
+- precision-medicine-stratification, immunotherapy-response-prediction, infectious-disease
+
+### Proteins & Sequences
+- sequence-retrieval, protein-structure-retrieval, protein-interactions
+- protein-therapeutic-design, antibody-engineering, phylogenetics
+
+### Systems Biology
+- systems-biology, immune-repertoire-analysis, polygenic-risk-score
+- gwas-drug-discovery, multiomic-disease-characterization, statistical-modeling
+
+### Data Retrieval
+- chemical-compound-retrieval, target-research, literature-deep-research
+
+## Examples
+
+```bash
+# Retrieve protein entry
+python3 {baseDir}/scripts/tooluniverse_run.py \
+    --tool UniProt_get_entry_by_accession --args '{"accession": "P05067"}'
+
+# Get compound properties
+python3 {baseDir}/scripts/tooluniverse_run.py \
+    --tool PubChem_get_compound_properties_by_CID --args '{"cid": 1983}'
+
+# Search PubMed
+python3 {baseDir}/scripts/tooluniverse_run.py \
+    --tool PubMed_search_articles --args '{"query": "Alzheimer amyloid", "max_results": 10}'
+
+# List tools related to GWAS
+python3 {baseDir}/scripts/tooluniverse_list.py --search "gwas"
+```
+
+## Installation
+
+```bash
+pip install tooluniverse
+```
+
+## Notes
+
+- Tool names are exact and case-sensitive — use `tooluniverse_list.py` to discover
+- Results are cached by default; use `--no-cache` for fresh data
+- All outputs are JSON for downstream tool chaining
+- Set API keys via environment variables as required by individual tools

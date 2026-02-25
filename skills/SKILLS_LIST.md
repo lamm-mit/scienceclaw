@@ -1,6 +1,6 @@
 # ScienceClaw Skills List
 
-Complete list of available skills (173 total). Generated from `skills/` directory.
+Complete list of available skills (200+). Generated from `skills/` directory.
 
 ```bash
 # Browse interactively
@@ -186,3 +186,29 @@ python3 skill_catalog.py --suggest "CRISPR"
 | 171 | xlsx |
 | 172 | zarr-python |
 | 173 | zinc-database |
+| 174 | alpha-vantage |
+| 175 | bgpt-paper-search |
+| 176 | edgartools |
+| 177 | hedgefundmonitor |
+| 178 | markdown-mermaid-writing |
+| 179 | open-notebook |
+| 180 | tiledbvcf |
+| 181 | timesfm-forecasting |
+| 182 | usfiscaldata |
+| 183 | alphafold |
+| 184 | bindcraft |
+| 185 | binder-design |
+| 186 | binding-characterization |
+| 187 | boltz |
+| 188 | boltzgen |
+| 189 | campaign-manager |
+| 190 | cell-free-expression |
+| 191 | chai |
+| 192 | foldseek |
+| 193 | ipsae |
+| 194 | ligandmpnn |
+| 195 | protein-design-workflow |
+| 196 | protein-qc |
+| 197 | proteinmpnn |
+| 198 | rfdiffusion |
+| 199 | solublempnn |

@@ -26,7 +26,7 @@ from uuid import uuid4
 
 # ---------------------------------------------------------------------------
 # Skill domain map
-# One entry per skill family (covering all 173 skills).
+# One entry per skill family (covering 200+ skills).
 # Keys are the skill names as used in agent profiles ("preferred_tools").
 # Values are the artifact types that skill family may produce.
 # ---------------------------------------------------------------------------
@@ -334,6 +334,77 @@ SKILL_DOMAIN_MAP: Dict[str, List[str]] = {
     "zarr-python":                  ["raw_output"],
     "get-available-resources":      ["raw_output"],
     "tooluniverse":                 ["raw_output"],
+
+    # -----------------------------------------------------------------------
+    # ToolUniverse research workflows (70+ skills)
+    # -----------------------------------------------------------------------
+    # Drug discovery / pharmacology
+    "adverse-event-detection":              ["clinical_data", "drug_data"],
+    "binder-discovery":                     ["compound_data", "structure_data"],
+    "drug-drug-interaction":                ["drug_data", "clinical_data"],
+    "drug-repurposing":                     ["drug_data", "compound_data", "target_data"],
+    "drug-research":                        ["drug_data", "compound_data", "report"],
+    "drug-target-validation":              ["target_data", "protein_data", "report"],
+    "network-pharmacology":                 ["network_data", "drug_data", "compound_data"],
+    "pharmacovigilance":                    ["drug_data", "clinical_data"],
+    "chemical-compound-retrieval":          ["compound_data"],
+    "chemical-safety":                      ["admet_prediction", "compound_data"],
+
+    # Proteins / antibodies / structure
+    "antibody-engineering":                 ["protein_data", "structure_data"],
+    "protein-interactions":                 ["network_data", "protein_data"],
+    "protein-structure-retrieval":          ["structure_data", "protein_data"],
+    "protein-therapeutic-design":           ["protein_data", "structure_data"],
+    "sequence-retrieval":                   ["sequence_alignment", "genomic_data"],
+    "phylogenetics":                        ["sequence_alignment", "genomic_data"],
+
+    # Genomics / variants
+    "cancer-variant-interpretation":        ["genomic_data", "clinical_data"],
+    "crispr-screen-analysis":               ["genomic_data", "expression_data"],
+    "gwas-drug-discovery":                  ["genomic_data", "target_data"],
+    "gwas-finemapping":                     ["genomic_data"],
+    "gwas-snp-interpretation":              ["genomic_data"],
+    "gwas-study-explorer":                  ["genomic_data"],
+    "gwas-trait-to-gene":                   ["genomic_data", "target_data"],
+    "polygenic-risk-score":                 ["genomic_data", "ml_prediction"],
+    "structural-variant-analysis":          ["genomic_data"],
+    "variant-analysis":                     ["genomic_data"],
+    "variant-interpretation":               ["genomic_data", "clinical_data"],
+
+    # Omics / transcriptomics
+    "epigenomics":                          ["genomic_data", "expression_data"],
+    "expression-data-retrieval":            ["expression_data"],
+    "gene-enrichment":                      ["pathway_data", "expression_data"],
+    "metabolomics":                         ["metabolomics_data"],
+    "metabolomics-analysis":                ["metabolomics_data"],
+    "multi-omics-integration":              ["expression_data", "genomic_data", "metabolomics_data"],
+    "multiomic-disease-characterization":   ["expression_data", "genomic_data", "report"],
+    "proteomics-analysis":                  ["protein_data", "expression_data"],
+    "rnaseq-deseq2":                        ["expression_data"],
+    "single-cell":                          ["single_cell_data", "expression_data"],
+    "spatial-omics-analysis":              ["single_cell_data", "imaging_data"],
+    "spatial-transcriptomics":              ["single_cell_data", "expression_data"],
+
+    # Disease / clinical / precision medicine
+    "clinical-guidelines":                  ["clinical_data", "report"],
+    "clinical-trial-design":                ["clinical_data", "report"],
+    "clinical-trial-matching":              ["clinical_data"],
+    "disease-research":                     ["report", "clinical_data", "genomic_data"],
+    "immunotherapy-response-prediction":    ["ml_prediction", "clinical_data"],
+    "infectious-disease":                   ["genomic_data", "drug_data", "report"],
+    "precision-medicine-stratification":    ["clinical_data", "genomic_data"],
+    "precision-oncology":                   ["clinical_data", "genomic_data", "report"],
+    "rare-disease-diagnosis":               ["clinical_data", "genomic_data"],
+
+    # Systems biology / immune
+    "immune-repertoire-analysis":           ["genomic_data", "protein_data"],
+    "systems-biology":                      ["pathway_data", "network_data"],
+    "target-research":                      ["target_data", "protein_data", "report"],
+
+    # Literature / imaging / statistics
+    "image-analysis":                       ["imaging_data"],
+    "literature-deep-research":             ["pubmed_results", "report"],
+    "statistical-modeling":                 ["ml_prediction"],
     "offer-k-dense-web":            ["raw_output"],
     "document-skills":              ["raw_output"],
 

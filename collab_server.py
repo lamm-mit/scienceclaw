@@ -1,7 +1,7 @@
 """
 Collaboration SSE Server
 
-Exposes the full scienceclaw stack (159+ skills, LLMTopicAnalyzer, DependencyGraph,
+Exposes the full scienceclaw stack (200+ skills, LLMTopicAnalyzer, DependencyGraph,
 SkillExecutor) as a streaming HTTP API that the Infinite/LAMMAC frontend can call.
 
 Run with:
@@ -68,7 +68,7 @@ app.add_middleware(
 
 # ── Agent domain templates ─────────────────────────────────────────────────────
 # Each domain specifies which skill *categories* to bias toward.
-# The LLMTopicAnalyzer does the actual selection from the full 159-skill registry.
+# The LLMTopicAnalyzer does the actual selection from the full 200+-skill registry.
 
 AGENT_DOMAINS = [
     {
@@ -141,14 +141,14 @@ def select_skills_for_agent(
     max_skills: int = 4,
 ) -> List[Dict[str, Any]]:
     """
-    Use LLMTopicAnalyzer to pick from the full 159-skill registry.
+    Use LLMTopicAnalyzer to pick from the full 200+-skill registry.
     Falls back to keyword-based selection if LLM is unavailable.
     """
     registry = get_registry()
     all_skills = list(registry.skills.values()) if registry.skills else []
 
     # Bias the skill list: put preferred categories first for context
-    # (LLM still chooses freely from all 159)
+    # (LLM still chooses freely from all 226)
     analyzer = LLMTopicAnalyzer(agent_name=f"{agent_name}_{domain}")
     agent_profile = {
         "role": f"{domain} researcher",
@@ -185,7 +185,7 @@ def run_agent_with_dag(
 ) -> Dict[str, Any]:
     """
     Full agent execution:
-    1. LLM selects skills from 159-skill registry
+    1. LLM selects skills from 200+-skill registry
     2. Build DependencyGraph (DAG) from selected skills
     3. Execute in topological phases (parallelizable within phase)
     4. Synthesize findings
@@ -420,7 +420,7 @@ async def stream(
             "n_agents": len(agent_names),
             "mode": mode,
             "mode_label": mode_cfg["label"],
-            "skill_pool": "full_registry",  # signal to frontend that we have 159+ skills
+            "skill_pool": "full_registry",  # signal to frontend that we have 200+ skills
         })
 
         # Shared state between agents
