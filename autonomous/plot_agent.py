@@ -38,21 +38,20 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # ---------------------------------------------------------------------------
 
 PLANNER_SYSTEM = """\
-You are an expert scientific data visualisation specialist embedded in an \
-autonomous AI research agent. Your role is to study the raw investigation \
-results produced by a multi-tool scientific investigation and design a \
-precise, information-rich figure suite that would belong in a high-impact \
-peer-reviewed paper.
+You are a scientific data visualisation specialist. Your task is to design \
+a figure suite for a multi-agent AI investigation. You MUST always propose \
+2–4 figures — the data supplied is real scientific output and is always \
+plottable in some form.
 
 Rules:
-- Propose 2–5 distinct figures. Each figure should illuminate a different \
-  aspect of the data (temporal trends, property distributions, ADMET \
-  predictions, protein annotations, comparative rankings, etc.).
-- Only propose a figure if the data to support it is actually present in \
-  the investigation results supplied.
+- Always propose figures using whatever data IS present (papers, proteins, \
+  compounds, variants, pathways, targets, predictions). Do NOT skip.
+- If a list has 3–20 items, a bar chart, pie chart, or horizontal bar chart \
+  works perfectly.
+- If a list has 1–2 items, combine them with other data or use a table-style \
+  figure.
 - Be specific: name the exact data fields (e.g. papers[].year, \
-  compounds[].molecular_weight, computational.predictions[].result) that \
-  each figure will use.
+  proteins[].name, variants[].gene, pathways[].name) that each figure uses.
 - Output valid JSON only — no prose outside the JSON block.
 """
 
@@ -248,7 +247,7 @@ class PlotAgent:
         """Ask the LLM which figures the data supports."""
         # Trim results to avoid huge context
         slim = self._slim_results(investigation_results)
-        results_json = json.dumps(slim, indent=2)[:6000]
+        results_json = json.dumps(slim, indent=2)[:12000]
 
         prompt = PLANNER_PROMPT.format(
             topic=topic, results_json=results_json
@@ -454,6 +453,30 @@ class PlotAgent:
                     for p in comp.get("properties", [])[:20]
                 ],
             }
+
+        if "variants" in results:
+            slim["variants"] = [
+                {k: v for k, v in v.items()
+                 if k in ("gene", "rsid", "consequence", "clinical_significance", "variant_type",
+                          "name", "hgvs", "allele_frequency", "source")}
+                for v in results["variants"][:20]
+            ]
+
+        if "pathways" in results:
+            slim["pathways"] = [
+                {k: v for k, v in pw.items()
+                 if k in ("id", "name", "pathway_name", "genes", "gene_count",
+                          "p_value", "fdr", "score", "source")}
+                for pw in results["pathways"][:15]
+            ]
+
+        if "targets" in results:
+            slim["targets"] = [
+                {k: v for k, v in t.items()
+                 if k in ("target", "symbol", "genetic_evidence", "overall_score",
+                          "drugs", "tractability", "source")}
+                for t in results["targets"][:10]
+            ]
 
         return slim
 

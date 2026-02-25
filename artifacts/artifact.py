@@ -31,53 +31,320 @@ from uuid import uuid4
 # Values are the artifact types that skill family may produce.
 # ---------------------------------------------------------------------------
 SKILL_DOMAIN_MAP: Dict[str, List[str]] = {
-    # Literature
-    "pubmed":              ["pubmed_results"],
-    "arxiv":               ["pubmed_results"],
-    "europe-pmc":          ["pubmed_results"],
-    "semantic-scholar":    ["pubmed_results"],
-    # Protein / sequence
-    "uniprot":             ["protein_data"],
-    "uniprot-database":    ["protein_data"],
-    "blast":               ["sequence_alignment"],
-    "pdb":                 ["structure_data"],
-    "alphafold":           ["structure_data"],
-    "interpro":            ["protein_data"],
-    "pfam":                ["protein_data"],
-    "string-database":     ["protein_data"],
+    # -----------------------------------------------------------------------
+    # Literature / preprints / citation
+    # -----------------------------------------------------------------------
+    "pubmed":                       ["pubmed_results"],
+    "pubmed-database":              ["pubmed_results"],
+    "arxiv":                        ["pubmed_results"],
+    "biorxiv-database":             ["pubmed_results"],
+    "openalex-database":            ["pubmed_results"],
+    "literature-review":            ["pubmed_results", "report"],
+    "citation-management":          ["pubmed_results"],
+    "fabric":                       ["pubmed_results", "report"],
+    "research-lookup":              ["pubmed_results", "web_content"],
+    "perplexity-search":            ["web_content", "pubmed_results"],
+    # legacy / alternate names kept for backwards compat
+    "europe-pmc":                   ["pubmed_results"],
+    "semantic-scholar":             ["pubmed_results"],
+
+    # -----------------------------------------------------------------------
+    # Protein / sequence / structure
+    # -----------------------------------------------------------------------
+    "uniprot":                      ["protein_data"],
+    "uniprot-database":             ["protein_data"],
+    "blast":                        ["sequence_alignment"],
+    "biopython":                    ["sequence_alignment", "protein_data"],
+    "bioservices":                  ["protein_data", "compound_data", "pathway_data"],
+    "sequence":                     ["sequence_alignment", "protein_data"],
+    "gget":                         ["protein_data", "genomic_data", "sequence_alignment"],
+    "esm":                          ["protein_data", "structure_data"],
+    "adaptyv":                      ["protein_data", "admet_prediction"],
+    "string-database":              ["network_data", "protein_data"],
+    "brenda-database":              ["pathway_data", "protein_data"],
+    # legacy names
+    "interpro":                     ["protein_data"],
+    "pfam":                         ["protein_data"],
+
+    # -----------------------------------------------------------------------
+    # 3-D structure / docking / MD
+    # -----------------------------------------------------------------------
+    "pdb":                          ["structure_data"],
+    "pdb-database":                 ["structure_data"],
+    "alphafold-database":           ["structure_data"],
+    "diffdock":                     ["structure_data"],
+    "openmm":                       ["simulation_data", "structure_data"],
+    "rowan":                        ["simulation_data", "compound_data", "structure_data"],
+    "qmmm_adaptive":                ["simulation_data"],
+    # legacy name
+    "alphafold":                    ["structure_data"],
+
+    # -----------------------------------------------------------------------
     # Chemistry / compounds
-    "pubchem":             ["compound_data"],
-    "pubchem-database":    ["compound_data"],
-    "chembl":              ["compound_data"],
-    "chembl-database":     ["compound_data"],
-    "cas":                 ["compound_data"],
-    "nist-webbook":        ["compound_data"],
+    # -----------------------------------------------------------------------
+    "pubchem":                      ["compound_data"],
+    "pubchem-database":             ["compound_data"],
+    "chembl":                       ["compound_data"],
+    "chembl-database":              ["compound_data"],
+    "cas":                          ["compound_data"],
+    "nistwebbook":                  ["compound_data"],
+    "zinc-database":                ["compound_data"],
+    "drugbank-database":            ["drug_data", "compound_data"],
+    "hmdb-database":                ["metabolomics_data"],
+    "metabolomics-workbench-database": ["metabolomics_data"],
+    "matchms":                      ["metabolomics_data", "spectral_data"],
+    "pyopenms":                     ["spectral_data", "metabolomics_data"],
+    # legacy names
+    "nist-webbook":                 ["compound_data"],
+
+    # -----------------------------------------------------------------------
+    # Cheminformatics / molecular properties
+    # -----------------------------------------------------------------------
+    "rdkit":                        ["rdkit_properties", "polymer_properties"],
+    "datamol":                      ["rdkit_properties", "compound_data", "polymer_properties"],
+    "medchem":                      ["rdkit_properties", "compound_data"],
+    "molfeat":                      ["rdkit_properties", "ml_prediction"],
+    # legacy name
+    "openbabel":                    ["rdkit_properties"],
+
+    # -----------------------------------------------------------------------
     # ADMET / drug properties
-    "tdc":                 ["admet_prediction"],
-    "pytdc":               ["admet_prediction"],
-    "admet-ai":            ["admet_prediction"],
-    # Cheminformatics
-    "rdkit":               ["rdkit_properties"],
-    "openbabel":           ["rdkit_properties"],
-    # Pathways / networks
-    "kegg-database":       ["pathway_data"],
-    "reactome-database":   ["pathway_data"],
-    "go-database":         ["pathway_data"],
-    # Genomics / variants
-    "ensembl":             ["genomic_data"],
-    "clinvar":             ["genomic_data"],
-    "gnomad":              ["genomic_data"],
-    "dbsnp":               ["genomic_data"],
-    # Materials science
-    "materials-project":   ["materials_data"],
-    "aflow":               ["materials_data"],
-    # Visualization
-    "datavis":             ["figure"],
-    "pymol":               ["figure"],
-    # Synthesis (cross-tool)
-    "_synthesis":          ["synthesis"],
-    # Peer validation
-    "_validation":         ["peer_validation"],
+    # -----------------------------------------------------------------------
+    "tdc":                          ["admet_prediction"],
+    "pytdc":                        ["admet_prediction"],
+    "deepchem":                     ["admet_prediction", "ml_prediction"],
+    "torchdrug":                    ["ml_prediction", "admet_prediction"],
+    # legacy name
+    "admet-ai":                     ["admet_prediction"],
+
+    # -----------------------------------------------------------------------
+    # Pathways / systems biology / metabolic modeling
+    # -----------------------------------------------------------------------
+    "kegg-database":                ["pathway_data"],
+    "reactome-database":            ["pathway_data"],
+    "cobrapy":                      ["simulation_data", "pathway_data"],
+    "opentargets-database":         ["target_data", "genomic_data"],
+    # legacy names
+    "go-database":                  ["pathway_data"],
+
+    # -----------------------------------------------------------------------
+    # Genomics / variants / epigenomics
+    # -----------------------------------------------------------------------
+    "ensembl-database":             ["genomic_data"],
+    "clinvar-database":             ["genomic_data"],
+    "gene-database":                ["genomic_data"],
+    "gwas-database":                ["genomic_data"],
+    "cosmic-database":              ["genomic_data"],
+    "ena-database":                 ["genomic_data", "sequence_alignment"],
+    "geo-database":                 ["expression_data", "genomic_data"],
+    "deeptools":                    ["genomic_data", "expression_data"],
+    "pysam":                        ["genomic_data"],
+    "dnanexus-integration":         ["genomic_data"],
+    "latchbio-integration":         ["genomic_data"],
+    "geniml":                       ["genomic_data"],
+    "gtars":                        ["genomic_data"],
+    "etetoolkit":                   ["genomic_data"],
+    "scikit-bio":                   ["genomic_data", "sequence_alignment"],
+    # legacy names
+    "ensembl":                      ["genomic_data"],
+    "clinvar":                      ["genomic_data"],
+    "gnomad":                       ["genomic_data"],
+    "dbsnp":                        ["genomic_data"],
+
+    # -----------------------------------------------------------------------
+    # Gene expression / single-cell omics
+    # -----------------------------------------------------------------------
+    "scanpy":                       ["single_cell_data", "expression_data"],
+    "scvi-tools":                   ["single_cell_data"],
+    "anndata":                      ["single_cell_data"],
+    "cellxgene-census":             ["single_cell_data", "expression_data"],
+    "lamindb":                      ["single_cell_data"],
+    "pydeseq2":                     ["expression_data"],
+    "arboreto":                     ["network_data", "expression_data"],
+
+    # -----------------------------------------------------------------------
+    # Imaging / pathology / cytometry
+    # -----------------------------------------------------------------------
+    "pathml":                       ["imaging_data"],
+    "histolab":                     ["imaging_data"],
+    "pydicom":                      ["imaging_data"],
+    "omero-integration":            ["imaging_data"],
+    "flowio":                       ["imaging_data"],
+    "imaging-data-commons":         ["imaging_data"],
+
+    # -----------------------------------------------------------------------
+    # Materials science / quantum chemistry
+    # -----------------------------------------------------------------------
+    "materials":                    ["materials_data"],
+    "pymatgen":                     ["materials_data"],
+    "ase":                          ["materials_data", "simulation_data", "polymer_properties"],
+    "mopac":                        ["simulation_data", "materials_data"],
+    # legacy names
+    "materials-project":            ["materials_data"],
+    "aflow":                        ["materials_data"],
+
+    # -----------------------------------------------------------------------
+    # Quantum computing
+    # -----------------------------------------------------------------------
+    "qiskit":                       ["quantum_computation"],
+    "cirq":                         ["quantum_computation"],
+    "pennylane":                    ["quantum_computation"],
+    "qutip":                        ["quantum_computation"],
+
+    # -----------------------------------------------------------------------
+    # Machine learning / statistics / optimisation
+    # -----------------------------------------------------------------------
+    "scikit-learn":                 ["ml_prediction"],
+    "pytorch-lightning":            ["ml_prediction"],
+    "torch_geometric":              ["ml_prediction", "network_data"],
+    "transformers":                 ["nlp_output", "ml_prediction"],
+    "stable-baselines3":            ["ml_prediction"],
+    "pufferlib":                    ["ml_prediction"],
+    "shap":                         ["ml_prediction"],
+    "umap-learn":                   ["ml_prediction", "figure"],
+    "pymc":                         ["ml_prediction"],
+    "pymoo":                        ["ml_prediction"],
+    "aeon":                         ["ml_prediction", "time_series_data"],
+    "statistical-analysis":         ["ml_prediction"],
+    "statsmodels":                  ["ml_prediction"],
+    "hypogenic":                    ["ml_prediction", "report"],
+
+    # -----------------------------------------------------------------------
+    # Simulation / dynamics / CFD
+    # -----------------------------------------------------------------------
+    # Note: openmm entry is already defined above under "3-D structure / docking / MD"
+    "fluidsim":                     ["simulation_data"],
+    "simpy":                        ["simulation_data"],
+    "matlab":                       ["simulation_data", "ml_prediction"],
+    "sympy":                        ["simulation_data"],
+
+    # -----------------------------------------------------------------------
+    # Network / graph analysis
+    # -----------------------------------------------------------------------
+    "networkx":                     ["network_data"],
+
+    # -----------------------------------------------------------------------
+    # Biosignal / time series / physiology
+    # -----------------------------------------------------------------------
+    "neurokit2":                    ["time_series_data"],
+    "neuropixels-analysis":         ["time_series_data"],
+
+    # -----------------------------------------------------------------------
+    # Clinical / health data
+    # -----------------------------------------------------------------------
+    "clinicaltrials-database":      ["clinical_data"],
+    "clinpgx-database":             ["pharmacogenomics_data", "clinical_data"],
+    "fda-database":                 ["drug_data", "clinical_data"],
+    "pyhealth":                     ["clinical_data", "ml_prediction"],
+    "scikit-survival":              ["ml_prediction", "clinical_data"],
+    "clinical-decision-support":    ["report", "clinical_data"],
+    "clinical-reports":             ["report", "clinical_data"],
+    "treatment-plans":              ["report", "clinical_data"],
+
+    # -----------------------------------------------------------------------
+    # Data I/O / document parsing
+    # -----------------------------------------------------------------------
+    "pdf":                          ["document_content"],
+    "docx":                         ["document_content"],
+    "xlsx":                         ["document_content"],
+    "markitdown":                   ["document_content"],
+    "exploratory-data-analysis":    ["report"],
+
+    # -----------------------------------------------------------------------
+    # Visualisation / figures
+    # -----------------------------------------------------------------------
+    "datavis":                      ["figure"],
+    "matplotlib":                   ["figure"],
+    "seaborn":                      ["figure"],
+    "plotly":                       ["figure"],
+    "scientific-visualization":     ["figure"],
+    "scientific-schematics":        ["figure"],
+    "generate-image":               ["figure"],
+    "infographics":                 ["figure"],
+    "diagramming":                  ["figure"],
+    # legacy name
+    "pymol":                        ["figure"],
+
+    # -----------------------------------------------------------------------
+    # Report / document generation
+    # -----------------------------------------------------------------------
+    "scientific-writing":           ["report"],
+    "scientific-slides":            ["report"],
+    "latex-posters":                ["report"],
+    "pptx-posters":                 ["report"],
+    "venue-templates":              ["report"],
+    "market-research-reports":      ["report"],
+    "research-grants":              ["report"],
+    "paper-2-web":                  ["report"],
+    "iso-13485-certification":      ["report"],
+    "data-storytelling":            ["report"],
+    "denario":                      ["report", "pubmed_results"],
+
+    # -----------------------------------------------------------------------
+    # Peer review / critical thinking / evaluation
+    # -----------------------------------------------------------------------
+    "peer-review":                  ["peer_validation", "report"],
+    "scientific-critical-thinking": ["peer_validation"],
+    "scholar-evaluation":           ["peer_validation", "report"],
+
+    # -----------------------------------------------------------------------
+    # Hypothesis / brainstorming / reasoning
+    # -----------------------------------------------------------------------
+    "hypothesis-generation":        ["synthesis"],
+    "scientific-brainstorming":     ["synthesis"],
+    "prompt-engineering-patterns":  ["synthesis"],
+
+    # -----------------------------------------------------------------------
+    # Web / search
+    # -----------------------------------------------------------------------
+    "websearch":                    ["web_content"],
+    "browser-automation":           ["web_content"],
+    "firecrawl-scraper":            ["web_content"],
+
+    # -----------------------------------------------------------------------
+    # Economic / geospatial / astronomical
+    # -----------------------------------------------------------------------
+    "fred-economic-data":           ["economic_data"],
+    "datacommons-client":           ["economic_data"],
+    "geopandas":                    ["geospatial_data"],
+    "astropy":                      ["astronomical_data"],
+
+    # -----------------------------------------------------------------------
+    # Patent / IP
+    # -----------------------------------------------------------------------
+    "uspto-database":               ["patent_data"],
+
+    # -----------------------------------------------------------------------
+    # Lab integration / automation / ELN
+    # -----------------------------------------------------------------------
+    "opentrons-integration":        ["lab_integration"],
+    "pylabrobot":                   ["lab_integration"],
+    "benchling-integration":        ["lab_integration"],
+    "labarchive-integration":       ["lab_integration"],
+    "protocolsio-integration":      ["lab_integration"],
+
+    # -----------------------------------------------------------------------
+    # Platform / infrastructure / utilities (no domain restriction)
+    # -----------------------------------------------------------------------
+    "infinite":                     ["raw_output"],
+    "modal":                        ["raw_output"],
+    "dask":                         ["raw_output"],
+    "polars":                       ["raw_output"],
+    "vaex":                         ["raw_output"],
+    "zarr-python":                  ["raw_output"],
+    "get-available-resources":      ["raw_output"],
+    "tooluniverse":                 ["raw_output"],
+    "offer-k-dense-web":            ["raw_output"],
+    "document-skills":              ["raw_output"],
+
+    # -----------------------------------------------------------------------
+    # Synthesis / validation / mutation policy (internal cross-cutting types)
+    # -----------------------------------------------------------------------
+    "_synthesis":                   ["synthesis"],
+    "_validation":                  ["peer_validation"],
+    "candidate_evaluator":          ["candidate_evaluation"],
+    "candidate_ranker":             ["candidate_ranking"],
+    "_mutation_policy":             ["mutation_policy"],
 }
 
 
@@ -102,6 +369,8 @@ class Artifact:
     timestamp: str           # ISO 8601 UTC
     content_hash: str        # sha256(canonical JSON of payload)
     parent_artifact_ids: List[str] = field(default_factory=list)  # DAG lineage
+    result_quality: str = "ok"  # "ok" | "empty" | "irrelevant"
+    needs: List[dict] = field(default_factory=list)  # LLM-generated need signals
 
     @staticmethod
     def _hash_payload(payload: dict) -> str:
@@ -117,6 +386,8 @@ class Artifact:
         payload: dict,
         investigation_id: str = "",
         parent_artifact_ids: Optional[List[str]] = None,
+        result_quality: str = "ok",
+        needs: Optional[List[dict]] = None,
     ) -> "Artifact":
         """Factory: generates id, timestamp, and hash automatically."""
         return cls(
@@ -130,6 +401,8 @@ class Artifact:
             timestamp=datetime.now(timezone.utc).isoformat(),
             content_hash=cls._hash_payload(payload),
             parent_artifact_ids=parent_artifact_ids or [],
+            result_quality=result_quality,
+            needs=needs or [],
         )
 
     def address(self) -> str:
@@ -143,6 +416,8 @@ class Artifact:
     def from_dict(cls, d: dict) -> "Artifact":
         d = dict(d)
         d.setdefault("parent_artifact_ids", [])
+        d.setdefault("result_quality", "ok")
+        d.setdefault("needs", [])
         return cls(**d)
 
 
@@ -191,6 +466,7 @@ class ArtifactStore:
             "timestamp":          artifact.timestamp,
             "content_hash":       artifact.content_hash,
             "parent_artifact_ids": artifact.parent_artifact_ids,
+            "needs":              artifact.needs,
         }
         with open(self._global_index_path, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -201,11 +477,15 @@ class ArtifactStore:
         payload: dict,
         investigation_id: str = "",
         parent_artifact_ids: Optional[List[str]] = None,
+        result_quality: str = "ok",
+        needs: Optional[List[dict]] = None,
     ) -> Artifact:
         """
         Convenience: build Artifact from skill name + payload, save, return it.
 
         Looks up artifact_type from SKILL_DOMAIN_MAP; falls back to "raw_output".
+        result_quality: "ok" | "empty" | "irrelevant" — tagged for downstream filtering.
+        needs: LLM-generated need signals broadcast to peer agents.
         """
         artifact_type = SKILL_DOMAIN_MAP.get(skill_used, ["raw_output"])[0]
         artifact = Artifact.create(
@@ -215,6 +495,8 @@ class ArtifactStore:
             payload=payload,
             investigation_id=investigation_id,
             parent_artifact_ids=parent_artifact_ids or [],
+            result_quality=result_quality,
+            needs=needs or [],
         )
         self.save(artifact)
         return artifact
@@ -263,6 +545,49 @@ class ArtifactStore:
                 break
         return results
 
+    def get_depth(self, artifact_id: str, _memo: Optional[Dict[str, int]] = None) -> int:
+        """
+        Compute DAG depth of artifact_id by traversing parent_artifact_ids
+        in the global index (payload-free, fast).
+
+        Depth 0 = root artifact (no parents).
+        Depth N = max(depth(parents)) + 1.
+
+        Uses memoization to avoid redundant traversal.
+        """
+        if _memo is None:
+            _memo = {}
+        if artifact_id in _memo:
+            return _memo[artifact_id]
+
+        parent_ids = self._get_parent_ids_from_index(artifact_id)
+        if not parent_ids:
+            _memo[artifact_id] = 0
+            return 0
+
+        depth = max(self.get_depth(p, _memo) for p in parent_ids) + 1
+        _memo[artifact_id] = depth
+        return depth
+
+    def _get_parent_ids_from_index(self, artifact_id: str) -> List[str]:
+        """Scan global_index.jsonl for artifact_id and return its parent_artifact_ids."""
+        if not self._global_index_path.exists():
+            return []
+        try:
+            for line in self._global_index_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if entry.get("artifact_id") == artifact_id:
+                    return entry.get("parent_artifact_ids", [])
+        except OSError:
+            pass
+        return []
+
     # ------------------------------------------------------------------
     # Domain gating helpers
     # ------------------------------------------------------------------
@@ -283,8 +608,8 @@ class ArtifactStore:
         for tool in preferred:
             for t in SKILL_DOMAIN_MAP.get(tool, []):
                 allowed.add(t)
-        # Always permit synthesis and validation artifacts regardless of profile
-        allowed.update(["synthesis", "peer_validation", "raw_output"])
+        # Always permit synthesis, validation, and mutation_policy regardless of profile
+        allowed.update(["synthesis", "peer_validation", "raw_output", "mutation_policy"])
         return list(allowed)
 
     def assert_agent_can_claim(
@@ -309,3 +634,47 @@ class ArtifactStore:
                 f"(artifact {artifact_id})"
             )
         return artifact
+
+
+# ---------------------------------------------------------------------------
+# Registration artifact helpers
+# ---------------------------------------------------------------------------
+
+def _get_system_version() -> str:
+    """Read system version from version.py, falling back to '1.0'."""
+    try:
+        version_path = Path(__file__).parent.parent / "version.py"
+        if version_path.exists():
+            text = version_path.read_text(encoding="utf-8")
+            for line in text.splitlines():
+                if "__version__" in line:
+                    parts = line.split("=", 1)
+                    if len(parts) == 2:
+                        return parts[1].strip().strip('"\'')
+    except Exception:
+        pass
+    return "1.0"
+
+
+def emit_registration_artifact(agent_name: str, agent_profile: dict) -> "Artifact":
+    """Emit a registration_metadata artifact when an agent profile is created."""
+    store = ArtifactStore(agent_name)
+    payload = {
+        "agent_name": agent_name,
+        "preferred_tools": agent_profile.get(
+            "preferred_tools",
+            agent_profile.get("preferences", {}).get("tools", []),
+        ),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "system_version": _get_system_version(),
+    }
+    artifact = Artifact.create(
+        artifact_type="registration_metadata",
+        producer_agent=agent_name,
+        skill_used="system_registration",
+        payload=payload,
+        investigation_id="",
+        parent_artifact_ids=[],
+    )
+    store.save(artifact)
+    return artifact

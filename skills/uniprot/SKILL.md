@@ -1,6 +1,6 @@
 ---
 name: uniprot
-description: Query UniProt database for protein information, sequences, and annotations
+description: "Protein sequence, function, and annotation lookup. Query MUST be a bare gene symbol or protein name — 1 to 3 words maximum. Valid examples: 'KRAS', 'EGFR', 'BTK', 'TP53', 'Bruton tyrosine kinase', 'P01116'. If the topic is 'sotorasib KRAS G12C', the correct query is 'KRAS'. If the topic is 'imatinib BCR-ABL resistance', the correct query is 'BCR-ABL'. Strip the drug name, mutation label, and all mechanism words — pass only the protein or gene name."
 metadata:
 ---
 
@@ -119,6 +119,24 @@ UniProt entries contain cross-references to:
 - **Reactome**: Reaction pathways
 - **DrugBank**: Drug interactions
 - **OMIM**: Disease associations
+
+## Query Limitations — Read Before Using
+
+UniProt is a **protein database**, not a drug/chemistry database. Queries must target **proteins by name, gene, or accession**. Drug or chemistry concepts will return zero results.
+
+| ❌ Fails (not a protein query) | ✅ Works |
+|---|---|
+| "KRAS covalent inhibitors" | "KRAS_HUMAN" or "P01116" |
+| "BTK warhead optimization" | "BTK" or "BTK_HUMAN" or "Q06187" |
+| "covalent inhibitor design" | "Bruton tyrosine kinase" |
+| "BBB penetration ADMET" | "ABCB1 human" or "MDR1" |
+| "kinase inhibitor selectivity" | "EGFR kinase" or "EGFR_HUMAN" |
+
+**Rule:** If your query describes a drug, chemical process, mechanism, or assay — use PubChem or TDC instead. UniProt answers: *"What is this protein and what does it do?"*
+
+**For KRAS covalent inhibitor research, the correct two-step workflow is:**
+1. UniProt: `--search "KRAS_HUMAN"` or `--accession P01116` → get KRAS protein structure, active site residues (Cys12, Gly12), domains
+2. PubChem/ChEMBL: search "KRAS G12C inhibitor" or "sotorasib" → get inhibitor SMILES, IC50, selectivity data
 
 ## Notes
 

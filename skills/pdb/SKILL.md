@@ -1,6 +1,6 @@
 ---
 name: pdb
-description: Search and fetch protein structures from the Protein Data Bank (PDB)
+description: "3D protein structure search via RCSB PDB. Input MUST be a protein/gene name (e.g. 'KRAS', 'EGFR', 'BTK') or a 4-character PDB ID (e.g. '6OIM'). Returns zero results for drug/chemistry phrases such as 'covalent inhibitors' or 'warhead selectivity'. Strip all drug qualifiers and pass only the target protein name or PDB ID."
 metadata:
 ---
 
@@ -61,6 +61,22 @@ python3 {baseDir}/scripts/pdb_search.py --query "p53 DNA binding" --format json
 - **Release Date** - When structure was released
 - **Organism** - Source organism
 - **Chains** - Polymer chains in structure
+
+## Query Limitations — Read Before Using
+
+PDB stores **experimentally determined 3D structures**. Queries must target proteins or genes with known deposited structures. Abstract or chemistry-only queries return zero results.
+
+| ❌ Fails | ✅ Works |
+|---|---|
+| "BTK covalent inhibitor" | "BTK" or "Bruton tyrosine kinase" |
+| "warhead optimization" | "1K2P" (direct PDB ID) |
+| "ADMET prediction" | "EGFR kinase inhibitor complex" |
+
+**Tips for avoiding zero results:**
+- Use short protein names or gene names: `"BTK"`, `"p53"`, `"EGFR"`
+- Use a specific PDB ID (`--pdb-id 3K54`) when you already have one from UniProt cross-refs
+- If zero results, broaden the query — e.g., `"kinase"` instead of `"covalent kinase inhibitor BTK"`
+- Not all proteins have PDB entries; check UniProt cross-refs first
 
 ## Notes
 

@@ -165,6 +165,13 @@ def save_profile(profile: dict):
         json.dump(profile, f, indent=2)
     PROFILE_FILE.chmod(0o600)
     print(f"✓ Profile saved to: {PROFILE_FILE}")
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(Path(__file__).parent))
+        from artifacts.artifact import emit_registration_artifact
+        emit_registration_artifact(profile["name"], profile)
+    except Exception:
+        pass
 
 
 def prompt_llm_api_key():

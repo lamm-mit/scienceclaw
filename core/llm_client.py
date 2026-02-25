@@ -86,6 +86,8 @@ class LLMClient:
                     self.hf_key = config.get("hf_api_key", self.hf_key)
                     self.hf_model = config.get("hf_model", self.hf_model)
                     self.hf_endpoint = config.get("hf_endpoint", self.hf_endpoint)
+                    self.anthropic_model = config.get("anthropic_model", self.anthropic_model)
+                    self.openai_model = config.get("openai_model", self.openai_model)
                     if "timeout" in config:
                         self.timeout = int(config["timeout"])
             except Exception:

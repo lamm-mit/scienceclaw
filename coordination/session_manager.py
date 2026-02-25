@@ -103,6 +103,7 @@ class SessionManager:
         max_participants: int = 5,
         investigation_type: str = "multi-agent",
         metadata: Optional[Dict[str, Any]] = None,
+        tasks: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         """
         Create a new collaborative investigation session (hybrid model).
@@ -135,6 +136,10 @@ class SessionManager:
                 max_participants=4
             )
         """
+        # `tasks` is an alias for `suggested_investigations`
+        if tasks is not None and suggested_investigations is None:
+            suggested_investigations = tasks
+
         session_id = f"scienceclaw-collab-{uuid4().hex[:8]}"
 
         session = {
@@ -149,6 +154,7 @@ class SessionManager:
             "participants": [self.agent_name],
             # Hybrid model: suggested investigations + independent findings
             "suggested_investigations": suggested_investigations or [],  # Optional suggestions
+            "tasks": suggested_investigations or [],  # Alias used by get_workflow_status
             "claimed_investigations": {},  # inv_id -> agent_name (agents can claim if interested)
             "findings": [],  # List of posted findings (both from claimed invs and independent)
             # Optional task graph for fine-grained tracking
@@ -892,8 +898,66 @@ class SessionManager:
         if post_id:
             session["result_post_id"] = post_id
 
-        # Save
+        # Save initial completion status
         self._save_session(session_id, session)
+
+        # Judge whether the session actually produced a complete answer, then
+        # generate the investigation paper regardless of verdict.
+        try:
+            import re as _re
+            from autonomous.investigation_conclusion import (
+                CompletionJudge,
+                InvestigationConclusion,
+                ArtifactCollector,
+            )
+
+            findings = session.get("findings", [])
+            topic = session.get("topic", session_id)
+            collector = ArtifactCollector()
+            inv_id = _re.sub(r"[^a-z0-9]+", "_", topic.lower()).strip("_")[:64]
+            index_entries = collector.collect_index_entries(inv_id)
+
+            verdict = CompletionJudge(self.agent_name).judge(topic, findings, index_entries)
+
+            if not verdict.complete:
+                session["status"] = "partial_complete"
+                session["completion_verdict"] = {
+                    "complete": False,
+                    "confidence": verdict.confidence,
+                    "reasoning": verdict.reasoning,
+                    "missing_evidence": verdict.missing_evidence,
+                    "collaboration_score": verdict.collaboration_score,
+                }
+                self._save_session(session_id, session)
+                logger.warning(
+                    f"[SessionManager] Judge: INCOMPLETE ({verdict.confidence}) — "
+                    f"{verdict.reasoning}"
+                )
+            else:
+                session["completion_verdict"] = {
+                    "complete": True,
+                    "confidence": verdict.confidence,
+                    "reasoning": verdict.reasoning,
+                    "missing_evidence": [],
+                    "collaboration_score": verdict.collaboration_score,
+                }
+                self._save_session(session_id, session)
+                logger.info(
+                    f"[SessionManager] Judge: COMPLETE ({verdict.confidence}) — "
+                    f"{verdict.reasoning}"
+                )
+
+            # Generate paper regardless (complete = full, partial_complete = partial)
+            paper = InvestigationConclusion(self.agent_name).conclude(
+                session_id=session_id, topic=topic
+            )
+            logger.info(
+                f"[SessionManager] Paper generated: "
+                f"convergence={paper.convergence['confidence']}, "
+                f"artifacts={paper.artifact_count}"
+            )
+        except Exception as _e:
+            logger.warning(f"[SessionManager] Paper generation skipped: {_e}")
 
         # Log completion (initialize logger if needed)
         if CoordinationEventLogger:

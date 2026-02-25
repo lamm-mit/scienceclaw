@@ -18,10 +18,30 @@ Author: ScienceClaw Team
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+
+from pydantic import BaseModel, Field, field_validator
+
+
+class EntityQuery(BaseModel):
+    """Validated entity extracted from thread context for a specific skill."""
+    entity: str = Field(..., min_length=1, max_length=80)
+
+    @field_validator("entity")
+    @classmethod
+    def must_be_entity_not_sentence(cls, v: str) -> str:
+        """Reject generic fallback sentences the LLM sometimes produces."""
+        bad = {"required", "analysis", "computational", "further",
+               "investigation", "relationships", "evidence", "suggests",
+               "no results", "not found"}
+        if any(w in v.lower() for w in bad):
+            raise ValueError(f"Looks like a sentence, not an entity: {v!r}")
+        return v.strip("\"'")
+
 
 # Add skills to path for platform clients
 SCIENCECLAW_DIR = Path(__file__).parent.parent
@@ -65,7 +85,17 @@ class AutonomousLoopController:
         """
         self.agent_profile = agent_profile
         self.agent_name = agent_profile.get("name", "ScienceClawAgent")
-        
+
+        # Optional seed post: when set, findings are posted as comments on this
+        # post instead of as new top-level posts.  Passed via the profile key
+        # "seed_post_id" or the SCIENCECLAW_SEED_POST_ID environment variable.
+        import os
+        self.seed_post_id: Optional[str] = (
+            agent_profile.get("seed_post_id")
+            or os.environ.get("SCIENCECLAW_SEED_POST_ID")
+            or ""
+        )
+
         # Initialize memory components
         self.journal = AgentJournal(agent_name=self.agent_name)
         self.investigations = InvestigationTracker(agent_name=self.agent_name)
@@ -92,7 +122,7 @@ class AutonomousLoopController:
         # Initialize discovery service (Phase 2)
         self.discovery_service = AgentDiscoveryService()
 
-        # Initialize the Infinite platform client
+        # Initialize the Infinite platform client — prefer per-agent config if it exists
         self.platform = self._initialize_platform()
 
         print(f"[AutonomousLoopController] Initialized for agent: {self.agent_name}")
@@ -106,11 +136,16 @@ class AutonomousLoopController:
         Returns:
             InfiniteClient instance
         """
-        infinite_config = Path.home() / ".scienceclaw" / "infinite_config.json"
+        # Per-agent config takes priority (enables distinct identities in multi-agent demo)
+        per_agent_config = (
+            Path.home() / ".scienceclaw" / "profiles" / self.agent_name / "infinite_config.json"
+        )
+        default_config = Path.home() / ".scienceclaw" / "infinite_config.json"
+        infinite_config = per_agent_config if per_agent_config.exists() else default_config
         if infinite_config.exists():
             try:
                 from infinite_client import InfiniteClient
-                return InfiniteClient()
+                return InfiniteClient(config_file=infinite_config)
             except Exception as e:
                 print(f"[Platform] Infinite initialization failed: {scrub(str(e))}")
 
@@ -164,56 +199,37 @@ class AutonomousLoopController:
             summary["discovery_summary"] = discovery_summary
             summary["steps_completed"].append("agent_discovery")
 
-            # Step 2: Observe community (read posts, identify gaps)
-            print("\n👀 Step 2: Observing community and identifying gaps...")
-            gaps = self.observe_community()
-            print(f"   Found {len(gaps)} knowledge gaps")
-            summary["gaps_found"] = len(gaps)
-            summary["steps_completed"].append("observe_community")
-            
-            # Step 3: Generate hypotheses from gaps
-            print("\n💡 Step 3: Generating hypotheses...")
-            hypotheses = self.generate_hypotheses(gaps)
-            print(f"   Generated {len(hypotheses)} hypotheses")
-            summary["hypotheses_generated"] = len(hypotheses)
-            summary["steps_completed"].append("generate_hypotheses")
-            
-            if not hypotheses:
-                print("   No hypotheses generated - skipping investigation")
-                summary["investigation_status"] = "skipped_no_hypotheses"
-            else:
-                # Step 4: Select best hypothesis
-                print("\n🎯 Step 4: Selecting best hypothesis...")
-                selected = self.select_hypothesis(hypotheses)
-                print(f"   Selected: {selected['hypothesis']}")
-                summary["selected_hypothesis"] = selected["hypothesis"]
-                summary["steps_completed"].append("select_hypothesis")
-                
-                # Step 5: Conduct investigation
-                print("\n🔬 Step 5: Conducting investigation...")
-                investigation_id = self.conduct_investigation(selected)
-                print(f"   Investigation ID: {investigation_id}")
-                summary["investigation_id"] = investigation_id
-                summary["steps_completed"].append("conduct_investigation")
-                
-                # Step 5.5: React to peer artifacts
-                print("\n🔗 Step 5.5: Reacting to peer artifacts...")
-                reaction_children = self._reactor.react(limit=3)
-                if reaction_children:
-                    print(f"   Produced {len(reaction_children)} reaction artifact(s)")
-                    self._post_reaction_findings(reaction_children)
-                    summary["reaction_artifacts"] = len(reaction_children)
-                else:
-                    print("   No compatible peer artifacts found")
-                summary["steps_completed"].append("react_to_peer_artifacts")
+            # Step 2: Deep investigation directly from agent interests.
+            # The artifact reactor drives cross-agent chaining — no gap detector needed.
+            print("\n🔬 Step 2: Running deep investigation on agent interests...")
+            investigation_id, post_id = self._run_interest_investigation()
+            summary["investigation_id"] = investigation_id
+            if post_id:
+                summary["post_id"] = post_id
+            summary["steps_completed"].append("conduct_investigation")
 
-                # Step 6: Share findings
-                print("\n📢 Step 6: Sharing findings with community...")
-                post_id = self.share_findings(investigation_id)
-                if post_id:
-                    print(f"   Posted: {post_id}")
-                    summary["post_id"] = post_id
-                summary["steps_completed"].append("share_findings")
+            # Step 3: React to peer artifacts (lock-and-key artifact chaining)
+            print("\n🔗 Step 3: Reacting to peer artifacts...")
+            reaction_children = self._reactor.react(
+                limit=3, investigation_id=investigation_id or ""
+            )
+            if reaction_children:
+                print(f"   Produced {len(reaction_children)} reaction artifact(s)")
+                self._post_reaction_findings(reaction_children)
+                summary["reaction_artifacts"] = len(reaction_children)
+
+                # Detect fulfillment artifacts and synthesize insights from them
+                fulfillments = [
+                    c for c in reaction_children
+                    if "_fulfilled_need" in c.payload
+                ]
+                if fulfillments:
+                    print(f"   Synthesizing from {len(fulfillments)} fulfillment artifact(s)...")
+                    self._synthesize_from_fulfillments(fulfillments)
+                    summary["fulfillment_artifacts"] = len(fulfillments)
+            else:
+                print("   No compatible peer artifacts found yet")
+            summary["steps_completed"].append("react_to_peer_artifacts")
             
             # Step 7: Engage with peers
             print("\n🤝 Step 7: Engaging with peers...")
@@ -286,21 +302,36 @@ class AutonomousLoopController:
             print(f"   Retrieved {len(all_posts)} posts")
             
             # Detect gaps using reasoning engine
-            # Use gap detector directly
+            # Use gap detector directly, passing posts as context
             from reasoning.gap_detector import GapDetector
             gap_detector = GapDetector(
                 knowledge_graph=self.knowledge_graph,
                 journal=self.journal
             )
-            detected_gaps = gap_detector.detect_gaps()
-            
+            detected_gaps = gap_detector.detect_gaps(context={"posts": all_posts})
+
+            # Bootstrap: if no gaps found yet and agent has research interests,
+            # seed one gap per interest so the first heartbeat cycle can proceed
+            if not detected_gaps:
+                interests = self.agent_profile.get(
+                    "interests",
+                    self.agent_profile.get("research", {}).get("interests", [])
+                )
+                for interest in interests[:3]:
+                    detected_gaps.append({
+                        "type": "interest_gap",
+                        "description": f"Unexplored research area: {interest}",
+                        "priority": "medium",
+                        "source": "agent_interests",
+                    })
+
             # Enrich gaps with context from posts
             for gap in detected_gaps:
                 # Add agent interests for filtering
                 gap["agent_interests"] = self.agent_profile.get("interests", [])
                 gap["agent_profile"] = profile
                 gaps.append(gap)
-            
+
             # Filter gaps by relevance to agent's interests
             gaps = self._filter_gaps_by_interests(gaps)
             
@@ -435,19 +466,39 @@ class AutonomousLoopController:
             
             # Determine community
             community = self._select_community_for_post(investigation)
-            
-            # Create post
-            print(f"   Posting to m/{community}...")
-            result = self.platform.create_post(
-                title=title,
-                content=content,
-                community=community,
-                hypothesis=investigation.get("hypothesis", ""),
-                method=self._extract_method(investigation),
-                findings=self._extract_findings(investigation)
-            )
-            
-            post_id = result.get("id") or result.get("post_id") or result.get("post", {}).get("id")
+
+            if self.seed_post_id:
+                # Demo mode: thread all findings as comments on the shared seed post
+                print(f"   Commenting on seed post {self.seed_post_id[:12]}...")
+                comment_body = (
+                    f"**[{self.agent_name}] {title}**\n\n"
+                    + content
+                )
+                result = self.platform.create_comment(
+                    post_id=self.seed_post_id,
+                    content=comment_body,
+                )
+                post_id = (
+                    result.get("id")
+                    or result.get("comment_id")
+                    or result.get("comment", {}).get("id")
+                )
+            else:
+                # Normal mode: create a new top-level post
+                print(f"   Posting to m/{community}...")
+                result = self.platform.create_post(
+                    title=title,
+                    content=content,
+                    community=community,
+                    hypothesis=investigation.get("hypothesis", ""),
+                    method=self._extract_method(investigation),
+                    findings=self._extract_findings(investigation),
+                )
+                post_id = (
+                    result.get("id")
+                    or result.get("post_id")
+                    or result.get("post", {}).get("id")
+                )
             
             # Log to journal
             self.journal.log_observation(
@@ -733,6 +784,41 @@ class AutonomousLoopController:
                 filtered.append(gap)
         
         return filtered if filtered else gaps[:3]  # Return all if none match
+
+    def _post_hypotheses_to_communities(self, hypotheses: List[Dict[str, Any]]) -> int:
+        """
+        Post a list of hypotheses to appropriate communities based on keyword routing.
+
+        Returns the number of hypotheses successfully posted.
+        """
+        COMMUNITY_KEYWORDS = {
+            "protein-design": ["protein", "folding", "structure", "alphafold", "pdb", "uniprot"],
+            "drug-discovery": ["drug", "compound", "admet", "bbb", "smiles", "binding", "inhibitor", "sar"],
+            "materials": ["material", "scaffold", "biocompatible", "surface", "polymer"],
+            "biology": ["gene", "crispr", "expression", "genomic", "organism", "cell"],
+            "chemistry": ["reaction", "synthesis", "chemical", "molecule", "rdkit", "pubchem"],
+        }
+
+        posted = 0
+        agent_name = self.agent_profile.get("name", "Agent")
+        for hyp in hypotheses:
+            text = hyp.get("hypothesis", hyp.get("statement", "")).lower()
+            community = "scienceclaw"  # default
+            for comm, keywords in COMMUNITY_KEYWORDS.items():
+                if any(kw in text for kw in keywords):
+                    community = comm
+                    break
+            try:
+                self.platform.create_post(
+                    title=text[:80],
+                    content=text,
+                    community=community,
+                    agent_name=agent_name,
+                )
+                posted += 1
+            except Exception:
+                pass
+        return posted
 
     def _discover_and_join_sessions(self) -> Dict[str, Any]:
         """
@@ -1121,6 +1207,748 @@ class AutonomousLoopController:
             print(f"   Error participating in session: {scrub(str(e))}")
 
 
+    def _run_interest_investigation(self):
+        """
+        Run each of the agent's preferred tools on one of its research interests,
+        save the outputs as artifacts, then post a structured comment that includes:
+          - Key results from each tool
+          - Tool names + artifact IDs (enables chaining verification)
+          - Open questions / hints for downstream agents
+
+        Returns (investigation_id, post_id).
+        """
+        interests = self.agent_profile.get(
+            "interests",
+            self.agent_profile.get("research", {}).get("interests", [])
+        )
+        preferred_tools = self.agent_profile.get("preferred_tools", [])
+        if not preferred_tools:
+            print("   No tools configured — skipping")
+            return None, None
+
+        # Skip re-investigation if we already posted a comment on the seed post
+        # Agents with allow_reinvestigation=True in their profile bypass this guard;
+        # tool rotation (random.sample) ensures each re-run fires different tools.
+        if self.seed_post_id and self.platform and not self.agent_profile.get("allow_reinvestigation", False):
+            try:
+                resp = self.platform.get_comments(self.seed_post_id)
+                comments = resp.get("comments", []) if isinstance(resp, dict) else resp
+                agent_tag = f"**[{self.agent_name}]**"
+                if any(agent_tag in c.get("content", "") for c in comments):
+                    print(f"   Already commented on seed post — skipping re-investigation")
+                    return None, None
+            except Exception:
+                pass
+
+        # If demo_topic is set, override agent interests so all agents investigate it
+        demo_topic = self.agent_profile.get("demo_topic", "")
+        if demo_topic:
+            interests = [demo_topic]
+        if not interests:
+            print("   No interests or demo_topic configured — skipping")
+            return None, None
+
+        # Check peer synthesis artifacts for open questions — if a peer agent
+        # has flagged something specific to investigate, prioritise that as our topic.
+        peer_topic = None
+        try:
+            from artifacts.artifact import ArtifactStore as _AS
+            from pathlib import Path as _Path
+            _base = _Path.home() / ".scienceclaw" / "artifacts"
+            _global = _base / "global_index.jsonl"
+            if _global.exists():
+                _consumed_path = _base / self.agent_name / "consumed.txt"
+                _consumed = set(_consumed_path.read_text().splitlines()) if _consumed_path.exists() else set()
+                for _line in reversed(_global.read_text().splitlines()):
+                    try:
+                        _e = __import__("json").loads(_line)
+                    except Exception:
+                        continue
+                    if _e.get("producer_agent") == self.agent_name:
+                        continue
+                    if _e.get("artifact_id") in _consumed:
+                        continue
+                    if _e.get("artifact_type") != "synthesis":
+                        continue
+                    # Load full artifact to get open_questions
+                    _store_path = _base / _e["producer_agent"] / "store.jsonl"
+                    if not _store_path.exists():
+                        continue
+                    for _l2 in _store_path.read_text().splitlines():
+                        try:
+                            _a = __import__("json").loads(_l2)
+                        except Exception:
+                            continue
+                        if _a.get("artifact_id") != _e["artifact_id"]:
+                            continue
+                        _oq = _a.get("payload", {}).get("open_questions", "")
+                        if not _oq:
+                            break
+                        # Extract first numbered question as a focused topic
+                        import re as _re2
+                        _qs = _re2.findall(r"\d+\.\s+(.+)", _oq)
+                        if _qs:
+                            peer_topic = _qs[0].strip()[:120]
+                        break
+                    if peer_topic:
+                        break
+        except Exception:
+            pass
+
+        # Rotate through interests so each heartbeat explores a different angle
+        try:
+            idx = len(self.journal.search("", limit=1000)) % len(interests)
+        except Exception:
+            idx = 0
+        # demo_topic pins the investigation — never let peer questions override it
+        if self.agent_profile.get("demo_topic"):
+            topic = interests[idx]
+        else:
+            topic = peer_topic or interests[idx]
+        if peer_topic and not self.agent_profile.get("demo_topic"):
+            print(f"   Topic (from peer open question): {topic}")
+        import re as _re
+        investigation_id = _re.sub(r"[^a-z0-9_]", "_", topic.lower())[:40]
+        print(f"   Topic: {topic}")
+        # Per-cycle tool rotation: if more than 4 tools available, sample 4
+        # so each round a different subset fires
+        import random as _random
+        if len(preferred_tools) > 4:
+            preferred_tools = _random.sample(preferred_tools, 4)
+        print(f"   Tools (this cycle): {preferred_tools}")
+
+        community = self._select_community_for_topic(topic)
+
+        # Ask LLM once: what is the key entity (drug name, gene, protein) for this topic?
+        # Used as the default focused query for entity-specific tools.
+        _key_entity = topic
+        try:
+            from core.llm_client import get_llm_client as _get_llm
+            _ke = _get_llm(agent_name=self.agent_name).call(
+                prompt=(
+                    f"Topic: {topic}\n"
+                    f"Agent tools: {', '.join(preferred_tools)}\n\n"
+                    "What is the single most specific entity (drug name, gene symbol, protein name, "
+                    "or compound name) that this agent should search for given its tools? "
+                    "Reply with ONLY that entity name, nothing else."
+                ),
+                max_tokens=20,
+            ).strip().strip("\"'")
+            if _ke and len(_ke.split()) <= 4:
+                _key_entity = _ke
+        except Exception:
+            pass
+        print(f"   Key entity: {_key_entity}")
+
+        # --- Run each preferred tool and collect results + artifacts ---
+        from core.skill_registry import get_registry
+        from core.skill_executor import get_executor
+        from artifacts.artifact import ArtifactStore
+
+        registry = get_registry()
+        executor = get_executor()
+        artifact_store = ArtifactStore(agent_name=self.agent_name)
+
+        tool_sections = []    # For the structured post
+        artifact_refs = []    # (artifact_id, artifact_type, tool_name, summary)
+
+        # Code-library skills: they expose Python APIs, not query endpoints.
+        # Their demo.py scripts return availability metadata only — no scientific data.
+        # Skip direct invocation; the artifact reactor can invoke them once upstream
+        # SMILES/sequence data is available.
+        # biopython has no standalone CLI script yet
+        _LIBRARY_ONLY_SKILLS = {"biopython"}
+
+        for tool_name in preferred_tools:
+            if tool_name in _LIBRARY_ONLY_SKILLS:
+                print(f"   {tool_name}: code-library skill — skipping direct invocation "
+                      f"(requires SMILES/sequence input from a prior tool)")
+                continue
+
+            skill_meta = registry.skills.get(tool_name)
+            if not skill_meta:
+                print(f"   Skill '{tool_name}' not found in registry — skipping")
+                continue
+
+            # For entity-specific tools, refine the query from accumulated results if available,
+            # otherwise use the key entity derived above.
+            _ENTITY_TOOLS = {"chembl", "uniprot", "pdb", "pdb-database",
+                             "pubchem", "string", "string-database", "kegg", "kegg-database",
+                             "reactome", "reactome-database",
+                             "nistwebbook", "cas", "hmdb-database",
+                             "ensembl-database", "alphafold-database"}
+            focused_query = _key_entity
+            if tool_name in _ENTITY_TOOLS:
+                # Prefer thread-aware extraction: read existing comments and ask LLM what
+                # entity to use.  This avoids passing full topic sentences to entity APIs.
+                _entity_type_hint = {
+                    "uniprot": "protein name or UniProt accession",
+                    "pdb": "PDB ID or protein name",
+                    "pdb-database": "PDB ID or protein name",
+                    "chembl": "drug or compound name",
+                    "pubchem": "compound name or CID",
+                    "string": "gene symbol",
+                    "string-database": "gene symbol",
+                    "kegg": "gene symbol or pathway ID",
+                    "kegg-database": "gene symbol or pathway name",
+                    "reactome": "gene symbol or pathway name",
+                    "reactome-database": "gene symbol or pathway name",
+                    "blast": "protein sequence or gene name",
+                    "nistwebbook": "compound name",
+                    "ensembl-database": "gene symbol (e.g. SOD1, TARDBP, FUS)",
+                    "alphafold-database": "protein name or UniProt accession",
+                }.get(tool_name, "entity name")
+                _thread_entity = self._extract_entity_from_thread(tool_name, _entity_type_hint)
+                if _thread_entity:
+                    focused_query = _thread_entity
+                    print(f"   Entity override for {tool_name}: {focused_query!r}")
+            elif tool_name not in _ENTITY_TOOLS:
+                # Discovery tools: clean topic into keyword soup so PubMed/websearch
+                # don't choke on English connectors ("via", "in", "with", "of", etc.)
+                _cleaned = re.sub(
+                    r'\b(via|in|with|of|for|and|through|using|by|from|on|to|the|a|an)\b',
+                    ' ', topic, flags=re.IGNORECASE)
+                focused_query = re.sub(r'\s+', ' ', _cleaned).strip()
+
+            # Build params — let the skill's own SKILL.md define what it needs;
+            # we just provide the most useful query we have.
+            params = {"query": focused_query}
+            if tool_name == "uniprot":
+                params = {"search": focused_query}
+            elif tool_name == "ensembl-database":
+                # ensembl_query.py uses --gene, not --query
+                params = {"gene": focused_query}
+            elif tool_name in ("string-database", "string"):
+                # string_api.py CLI uses --query for comma/space-separated gene names
+                params = {"query": focused_query}
+            elif tool_name in ("reactome-database", "reactome"):
+                # reactome_query.py uses positional subcommand "search <term>"
+                # Executor will pass --query which the script rejects → retry logic kicks in.
+                # Override here to pass query in a way the script handles gracefully.
+                params = {"query": focused_query}
+            elif tool_name == "chembl":
+                params = {"query": focused_query, "max_results": "5"}
+            elif tool_name in ("tdc", "pytdc"):
+                compounds = self.agent_profile.get("research", {}).get("compounds", [])
+                if not compounds:
+                    print(f"   {tool_name}: no SMILES in profile — skipping")
+                    continue
+                params = {"smiles": compounds[0]}
+            elif tool_name == "rdkit":
+                compounds = self.agent_profile.get("research", {}).get("compounds", [])
+                compound_names = self.agent_profile.get("research", {}).get("compound_names", [])
+                if not compounds:
+                    continue
+                # Override executables to use molecular_properties.py (JSON output, --smiles support)
+                import copy as _copy
+                _rdkit_meta = _copy.deepcopy(skill_meta)
+                _mp = [e for e in _rdkit_meta.get("executables", [])
+                       if Path(e).name == "molecular_properties.py"]
+                if _mp:
+                    _rdkit_meta["executables"] = _mp
+                # Run RDKit on ALL compounds in the panel to produce a comparative dataset
+                print(f"   Running {tool_name} panel ({len(compounds)} compounds)...", end=" ", flush=True)
+                all_rows = []
+                for idx_c, smi in enumerate(compounds):
+                    try:
+                        _r = executor.execute_skill(
+                            skill_name=tool_name,
+                            skill_metadata=_rdkit_meta,
+                            parameters={"smiles": smi},
+                            timeout=20,
+                        )
+                        if _r.get("status") == "success":
+                            row = _r.get("result", {})
+                            if isinstance(row, dict):
+                                row["smiles"] = smi
+                                row["compound_name"] = compound_names[idx_c] if idx_c < len(compound_names) else smi[:20]
+                                all_rows.append(row)
+                    except Exception:
+                        pass
+                if not all_rows:
+                    print("no results")
+                    continue
+                # Save a single aggregate artifact with all rows
+                import json as _json
+                agg_payload = {
+                    "compounds": all_rows,
+                    "count": len(all_rows),
+                    "compound_names": [r.get("compound_name","") for r in all_rows],
+                    # Expose first compound's keys at top level for reactor matching
+                    **{k: all_rows[0][k] for k in ("smiles", "compound_name") if k in all_rows[0]},
+                }
+                try:
+                    artifact = artifact_store.create_and_save(
+                        skill_used=tool_name,
+                        payload=agg_payload,
+                        investigation_id=investigation_id,
+                    )
+                    short_id = artifact.artifact_id[:12]
+                    print(f"artifact {short_id}…")
+                except Exception as e:
+                    short_id = "n/a"
+                    artifact = None
+                    print(f"artifact save failed: {scrub(str(e))}")
+                summary = self._summarise_payload(tool_name, agg_payload, topic=topic)
+                tool_sections.append(f"**{tool_name}** (artifact `{short_id}…`)\n{summary}")
+                if artifact:
+                    artifact_refs.append((artifact.artifact_id, artifact.artifact_type, tool_name, summary))
+                continue  # skip the generic execute below
+            elif tool_name in ("molfeat", "datamol", "medchem"):
+                # SMILES-based tools — run on all compounds in the agent's panel
+                compounds = self.agent_profile.get("research", {}).get("compounds", [])
+                compound_names = self.agent_profile.get("research", {}).get("compound_names", [])
+                if not compounds:
+                    print(f"   {tool_name}: no SMILES in profile — skipping")
+                    continue
+                # Map tool → specific functional script (registry lists ALL scripts; we
+                # must override executables to avoid running the legacy demo.py)
+                _smiles_script_name = {
+                    "molfeat": "molfeat_featurize.py",
+                    "datamol": "datamol_process.py",
+                    "medchem": "medchem_evaluate.py",
+                }.get(tool_name)
+                import copy as _copy
+                _meta = _copy.deepcopy(skill_meta)
+                _specific = [e for e in _meta.get("executables", [])
+                             if Path(e).name == _smiles_script_name]
+                if _specific:
+                    _meta["executables"] = _specific
+                elif not _meta.get("executables"):
+                    print(f"   {tool_name}: no executables found — skipping")
+                    continue
+                print(f"   Running {tool_name} panel ({len(compounds)} compounds)...", end=" ", flush=True)
+                all_rows = []
+                for idx_c, smi in enumerate(compounds):
+                    try:
+                        _r = executor.execute_skill(
+                            skill_name=tool_name,
+                            skill_metadata=_meta,
+                            parameters={"smiles": smi},
+                            timeout=30,
+                        )
+                        if _r.get("status") == "success":
+                            row = _r.get("result", {})
+                            if isinstance(row, dict):
+                                row["smiles"] = smi
+                                row["compound_name"] = compound_names[idx_c] if idx_c < len(compound_names) else smi[:20]
+                                all_rows.append(row)
+                    except Exception:
+                        pass
+                if not all_rows:
+                    print("no results")
+                    continue
+                import json as _json
+                agg_payload = {
+                    "compounds": all_rows,
+                    "count": len(all_rows),
+                    "compound_names": [r.get("compound_name", "") for r in all_rows],
+                    **{k: all_rows[0][k] for k in ("smiles", "compound_name") if k in all_rows[0]},
+                }
+                try:
+                    artifact = artifact_store.create_and_save(
+                        skill_used=tool_name,
+                        payload=agg_payload,
+                        investigation_id=investigation_id,
+                    )
+                    short_id = artifact.artifact_id[:12]
+                    print(f"artifact {short_id}…")
+                except Exception as e:
+                    short_id = "n/a"
+                    artifact = None
+                    print(f"artifact save failed: {scrub(str(e))}")
+                summary = self._summarise_payload(tool_name, agg_payload, topic=topic)
+                tool_sections.append(f"**{tool_name}** (artifact `{short_id}…`)\n{summary}")
+                if artifact:
+                    artifact_refs.append((artifact.artifact_id, artifact.artifact_type, tool_name, summary))
+                continue  # skip the generic execute below
+            elif tool_name == "blast":
+                params = {"query": focused_query, "program": "blastp"}
+            elif tool_name in ("pdb", "pdb-database"):
+                params = {"query": focused_query, "limit": "3"}
+
+            print(f"   Running {tool_name}...", end=" ", flush=True)
+            try:
+                result = executor.execute_skill(
+                    skill_name=tool_name,
+                    skill_metadata=skill_meta,
+                    parameters=params,
+                    timeout=45,
+                )
+            except Exception as e:
+                print(f"error: {scrub(str(e))}")
+                continue
+
+            if result.get("status") != "success":
+                print(f"failed ({result.get('error','unknown')})")
+                continue
+
+            payload = result.get("result", {})
+            if not isinstance(payload, dict):
+                raw = str(payload)
+                # Build structured payload so the artifact reactor can match keys
+                # against downstream skill --params (e.g. "query" matches --query,
+                # "accession" matches --accession).
+                structured: dict = {"output": raw[:500]}
+                # Carry forward the query that produced this artifact so any skill
+                # accepting --query / --search can react to it.
+                if params.get("query"):
+                    structured["query"]  = params["query"]
+                    structured["search"] = params["query"]
+                # Extract UniProt accessions  (e.g. P00533)
+                import re as _re
+                accs = _re.findall(r'\b[OPQ][0-9][A-Z0-9]{3}[0-9]\b|'
+                                   r'\b[A-NR-Z][0-9](?:[A-Z][A-Z0-9]{2}[0-9]){1,2}\b',
+                                   raw)
+                if accs:
+                    structured["accession"] = accs[0]
+                # Extract PDB IDs  (4-char alphanumeric like 1ATP, 6W63)
+                pdbs = _re.findall(r'\b[0-9][A-Z0-9]{3}\b', raw)
+                if pdbs:
+                    structured["pdb_id"] = pdbs[0]
+                # Extract SMILES-like strings (contains C/N/O + = or ( characters)
+                smiles_cands = _re.findall(r'[A-Za-z][A-Za-z0-9@\[\]()=#\+\-]{6,}', raw)
+                smiles_cands = [s for s in smiles_cands if any(c in s for c in '()=#')]
+                if smiles_cands:
+                    structured["smiles"] = smiles_cands[0]
+                payload = structured
+
+            # Save artifact
+            try:
+                artifact = artifact_store.create_and_save(
+                    skill_used=tool_name,
+                    payload=payload,
+                    investigation_id=investigation_id,
+                )
+                short_id = artifact.artifact_id[:12]
+                print(f"artifact {short_id}…")
+            except Exception as e:
+                print(f"artifact save failed: {scrub(str(e))}")
+                short_id = "n/a"
+                artifact = None
+
+            # Cross-agent duplicate check via content_hash in global_index
+            _duplicate = False
+            if artifact:
+                try:
+                    from pathlib import Path as _Path2
+                    _gidx = _Path2.home() / ".scienceclaw" / "artifacts" / "global_index.jsonl"
+                    if _gidx.exists():
+                        import json as _json2
+                        for _gline in _gidx.read_text().splitlines():
+                            try:
+                                _ge = _json2.loads(_gline)
+                            except Exception:
+                                continue
+                            if (_ge.get("content_hash") == artifact.content_hash
+                                    and _ge.get("artifact_id") != artifact.artifact_id):
+                                _duplicate = True
+                                print(f"   ↳ {tool_name}: content_hash already in global index "
+                                      f"(producer={_ge.get('producer_agent','?')}) — skipping section")
+                                break
+                except Exception:
+                    pass
+
+            # Extract a 1-2 line human-readable summary from payload
+            summary = self._summarise_payload(tool_name, payload, topic=topic)
+            if not _duplicate and not self._is_junk_summary(summary):
+                tool_sections.append(f"**{tool_name}** (artifact `{short_id}…`)\n{summary}")
+            elif _duplicate:
+                pass  # artifact_refs still appended below for audit
+            else:
+                print(f"   ↳ {tool_name}: suppressing junk section (artifact saved for audit)")
+            if artifact:
+                artifact_refs.append((artifact.artifact_id, artifact.artifact_type, tool_name, summary))
+
+        if not tool_sections:
+            print("   No tools produced results")
+            return investigation_id, None
+
+        # --- Build structured post body ---
+        # Open questions: LLM-generated from actual findings, not mechanical interest subtraction
+        hints = "- None identified"
+        try:
+            from autonomous.llm_reasoner import LLMScientificReasoner
+            reasoner = LLMScientificReasoner(self.agent_name)
+            findings_text = "\n".join(tool_sections)[:1200]
+            prompt = (
+                f"Research topic: {topic}\n\n"
+                f"Findings so far:\n{findings_text}\n\n"
+                "Based on these specific findings, list 2-3 concrete open questions "
+                "that a peer agent with different computational tools (e.g. structure prediction, ADMET, "
+                "literature search, sequence analysis) could investigate next. Each question should reference "
+                "something specific found above (a compound name, protein, mechanism, etc). "
+                "All questions must be answerable computationally — do NOT suggest wet-lab experiments, "
+                "assays, or any physical/biological testing. "
+                "Output as a numbered list (1. 2. 3.). No preamble."
+            )
+            raw = reasoner._call_llm(prompt, max_tokens=400).strip()
+            if raw:
+                hints = raw
+        except Exception:
+            pass
+
+        # Save a synthesis artifact containing open_questions so peer agents
+        # can read them via the artifact reactor and use them as investigation topics.
+        try:
+            synthesis_payload = {
+                "open_questions": hints,
+                "topic": topic,
+                "agent": self.agent_name,
+                "artifact_count": len(artifact_refs),
+                # First question as a short query field for reactor key-matching
+                "query": hints.splitlines()[0].lstrip("1. ").lstrip("- ")[:120] if hints else topic,
+            }
+            artifact_store.create_and_save(
+                skill_used="synthesis",
+                payload=synthesis_payload,
+                investigation_id=investigation_id,
+            )
+        except Exception:
+            pass
+
+        artifact_lines = "\n".join(
+            f"- `{aid[:12]}…` ({atype}) via {tname}" for aid, atype, tname, _ in artifact_refs
+        )
+
+        body = (
+            f"## Results\n"
+            + "\n\n".join(tool_sections)
+            + f"\n\n## Artifacts\n{artifact_lines if artifact_lines else '— none saved'}"
+            + f"\n\n## Open Questions for Downstream Agents\n\n**What should be investigated next:**\n\n{hints}"
+        )
+
+        post_id = self._post_investigation_content(
+            {"title": topic, "content": body}, community
+        )
+
+        self.journal.log_observation(
+            content=f"Ran {len(tool_sections)} tool(s) on: {topic}",
+            observation=f"Skill-chain investigation on '{topic}'",
+            source="skill_chain_investigation",
+            metadata={"topic": topic, "post_id": post_id,
+                      "artifacts": [a[0] for a in artifact_refs]},
+        )
+        return investigation_id, post_id
+
+    def _extract_entity_from_thread(self, skill_name: str, entity_type: str) -> Optional[str]:
+        """
+        Read seed post comments, ask LLM to return JSON {entity: <name>},
+        validate with EntityQuery Pydantic model.
+        Returns clean entity string or None.
+        """
+        if not self.seed_post_id or not self.platform:
+            return None
+        try:
+            resp = self.platform.get_comments(self.seed_post_id)
+            comments = resp.get("comments", []) if isinstance(resp, dict) else resp
+            if not comments:
+                return None
+            context = "\n---\n".join(
+                c.get("content", "")[:200] for c in comments[-5:]
+            )
+            prompt = (
+                f"These are comments from a multi-agent scientific investigation:\n\n"
+                f"{context}\n\n"
+                f"Extract the single best {entity_type} to query '{skill_name}' with.\n"
+                f"Respond with ONLY valid JSON in this exact format:\n"
+                f'{{\"entity\": \"<name>\"}}\n'
+                f"Example: {{\"entity\": \"TP53\"}} or {{\"entity\": \"APR-246\"}}"
+            )
+            from core.llm_client import get_llm_client
+            _client = get_llm_client(agent_name=self.agent_name)
+            raw = _client.call(prompt=prompt, max_tokens=60).strip()
+            m = re.search(r'\{[^}]+\}', raw)
+            if not m:
+                return None
+            data = json.loads(m.group())
+            result = EntityQuery(**data)
+            return result.entity
+        except Exception:
+            return None
+
+    _JUNK_PHRASES = [
+        "did not return any", "nothing scientifically meaningful", "too broad",
+        "entirely of unrelated", "does not contain any scientifically",
+        "not return any specific", "failed to retrieve relevant",
+        "no scientifically meaningful",
+    ]
+
+    def _is_junk_summary(self, text: str) -> bool:
+        t = text.lower()
+        return any(phrase in t for phrase in self._JUNK_PHRASES)
+
+    def _summarise_payload(self, tool_name: str, payload: dict,
+                           topic: str = "", use_llm: bool = True) -> str:
+        """Return a 1-3 line human-readable summary of a skill output payload.
+
+        Tries known structured extractors first; falls back to an LLM call
+        that reads the actual payload and extracts scientific meaning rather
+        than dumping raw scalar keys.
+        """
+        lines = []
+        # Tool-specific key extraction for common structured outputs
+        if tool_name == "pubmed":
+            papers = payload.get("papers") or payload.get("articles") or payload.get("items") or []
+            total = payload.get("total") or payload.get("count") or len(papers)
+            if papers and isinstance(papers[0], dict):
+                titles = [p.get("title", "")[:80] for p in papers[:3] if p.get("title")]
+                lines.append(f"{total} paper(s). Top: {'; '.join(titles)}")
+        elif tool_name in ("uniprot", "uniprot_fetch"):
+            acc = payload.get("primaryAccession") or payload.get("accession") or payload.get("id", "")
+            name = (payload.get("proteinDescription", {}) or {})
+            name = (name.get("recommendedName", {}) or {}).get("fullName", {})
+            name = (name.get("value", "") if isinstance(name, dict) else "") or payload.get("protein_name", "")
+            gene = ""
+            genes = payload.get("genes", [])
+            if genes and isinstance(genes[0], dict):
+                gene = genes[0].get("geneName", {}).get("value", "")
+            if acc:
+                lines.append(f"{acc} ({gene or 'unknown gene'}) — {name or 'protein'}")
+        elif tool_name in ("tdc", "pytdc"):
+            preds = payload.get("predictions") or payload.get("results") or {}
+            score = payload.get("score")
+            if preds:
+                lines.append(f"Predictions: {str(preds)[:120]}")
+            elif score is not None:
+                lines.append(f"Score: {score}")
+        elif tool_name == "rdkit":
+            rows = payload.get("compounds", [])
+            if rows:
+                # Multi-compound panel
+                lines.append(f"{len(rows)} compounds profiled:")
+                for row in rows[:5]:
+                    name = row.get("compound_name", row.get("smiles","")[:15])
+                    mw = row.get("Molecular Weight") or row.get("molecular_weight") or row.get("MW","?")
+                    logp = row.get("LogP") or row.get("logP") or row.get("MolLogP","?")
+                    qed = row.get("QED Score") or row.get("QED") or row.get("qed", "?")
+                    lines.append(f"  {name}: MW={mw}, logP={logp}, QED={qed}")
+            else:
+                mw = payload.get("Molecular Weight") or payload.get("molecular_weight") or payload.get("MW")
+                logp = payload.get("LogP") or payload.get("logP") or payload.get("MolLogP")
+                qed = payload.get("QED Score") or payload.get("QED") or payload.get("qed")
+                if mw:
+                    lines.append(f"MW={mw}, logP={logp}, QED={qed}")
+        elif tool_name == "pubchem":
+            cid = payload.get("cid") or (payload.get("compounds") or [{}])[0].get("cid", "")
+            name = payload.get("name") or payload.get("iupac_name", "")
+            smiles = payload.get("canonical_smiles") or payload.get("smiles", "")
+            if cid:
+                lines.append(f"CID {cid} — {name}" + (f" | SMILES: {smiles[:60]}" if smiles else ""))
+        elif tool_name in ("pdb", "pdb-database"):
+            structs = payload.get("structures") or payload.get("hits") or payload.get("items") or []
+            if structs and isinstance(structs[0], dict):
+                ids = [s.get("pdb_id") or s.get("id", "") for s in structs[:3] if s]
+                lines.append(f"{len(structs)} structure(s): {', '.join(i for i in ids if i)}")
+            else:
+                lines.append(f"{len(structs)} structure(s) found")
+        elif tool_name == "blast":
+            hits = payload.get("hits") or []
+            if hits and isinstance(hits[0], dict):
+                top = hits[0]
+                lines.append(f"{len(hits)} hit(s). Top: {top.get('id','')} "
+                              f"identity={top.get('identity','?')}% e={top.get('evalue','?')}")
+            else:
+                lines.append(f"{len(hits)} BLAST hit(s)")
+        elif tool_name == "chembl":
+            items = payload.get("molecules") or payload.get("items") or payload.get("results") or []
+            if not items and payload.get("molecule_chembl_id"):
+                items = [payload]
+            if isinstance(items, list) and items and isinstance(items[0], dict):
+                for item in items[:3]:
+                    name = item.get("pref_name") or item.get("molecule_chembl_id", "")
+                    props = item.get("molecule_properties") or {}
+                    mw = props.get("full_mwt") or props.get("mw_freebase") or props.get("molecular_weight", "?")
+                    logp = props.get("alogp") or props.get("cx_logp", "?")
+                    qed = props.get("qed_weighted", "?")
+                    if mw == "?" and logp == "?" and qed == "?":
+                        continue
+                    phase = item.get("max_phase", "?")
+                    smiles = (item.get("molecule_structures") or {}).get("canonical_smiles", "")[:50]
+                    lines.append(f"**{name}** — MW={mw}, logP={logp}, QED={qed}, phase={phase}"
+                                 + (f"\n  SMILES: `{smiles}…`" if smiles else ""))
+
+        # If structured extraction yielded nothing, use LLM for any tool
+        if not lines and use_llm:
+            try:
+                from autonomous.llm_reasoner import LLMScientificReasoner
+                reasoner = LLMScientificReasoner(self.agent_name)
+                # Serialize payload concisely — drop huge lists, keep first 3 items
+                import json as _json
+                def _trim(obj, depth=0):
+                    if depth > 2: return "…"
+                    if isinstance(obj, list): return [_trim(x, depth+1) for x in obj[:3]]
+                    if isinstance(obj, dict): return {k: _trim(v, depth+1) for k, v in list(obj.items())[:10]}
+                    return obj
+                payload_preview = _json.dumps(_trim(payload), ensure_ascii=False)[:2500]
+                prompt = (
+                    f"You are a scientific research assistant. An agent ran the tool '{tool_name}'"
+                    + (f" on topic '{topic}'" if topic else "") + ".\n\n"
+                    f"Tool output (JSON):\n{payload_preview}\n\n"
+                    "Write 2-3 complete sentences summarising the scientifically interesting findings. "
+                    "Be specific: mention compound names, protein IDs, scores, mechanisms, or binding data if present. "
+                    "Always finish your last sentence with a period. "
+                    "Do NOT mention metadata fields like availability_type, black_box_warning, etc. "
+                    "If there is nothing scientifically meaningful, say so in one sentence."
+                )
+                summary = reasoner._call_llm(prompt, max_tokens=350).strip()
+                if summary:
+                    lines.append(summary)
+            except Exception:
+                pass
+
+        # Last resort: note what was empty rather than dumping noise
+        if not lines:
+            lines.append(f"(Tool returned data but no scientifically extractable values)")
+        return "\n".join(lines)
+
+    def _select_community_for_topic(self, topic: str) -> str:
+        """Pick the most appropriate community for a given topic string."""
+        t = topic.lower()
+        if any(w in t for w in ["protein", "gene", "sequence", "blast", "uniprot", "pdb", "alphafold"]):
+            return "biology"
+        if any(w in t for w in ["compound", "smiles", "admet", "drug", "inhibitor", "warhead",
+                                  "kinase", "scaffold", "chembl", "rdkit", "pubchem"]):
+            return "chemistry"
+        profile = self.agent_profile.get("profile", "mixed")
+        return "biology" if profile == "biology" else "chemistry"
+
+    def _post_investigation_content(self, content: dict, community: str) -> Optional[str]:
+        """Post deep-investigation content as a comment (seed mode) or new post."""
+        try:
+            title = content.get("title", "Findings")
+            body = content.get("content", "")
+            if self.seed_post_id:
+                print(f"   Commenting on seed post {self.seed_post_id[:12]}...")
+                comment_body = f"**[{self.agent_name}]** — *{title}*\n\n{body}"
+                result = self.platform.create_comment(
+                    post_id=self.seed_post_id,
+                    content=comment_body,
+                )
+                return (
+                    result.get("id")
+                    or result.get("comment_id")
+                    or result.get("comment", {}).get("id")
+                )
+            else:
+                print(f"   Posting to m/{community}...")
+                result = self.platform.create_post(
+                    title=title,
+                    content=body,
+                    community=community,
+                    hypothesis=content.get("hypothesis", ""),
+                    method=content.get("method", ""),
+                    findings=content.get("findings", ""),
+                )
+                return (
+                    result.get("id")
+                    or result.get("post_id")
+                    or result.get("post", {}).get("id")
+                )
+        except Exception as e:
+            print(f"   Warning: Failed to post findings: {scrub(str(e))}")
+            return None
+
     def _post_reaction_findings(self, children: List) -> None:
         """Post a consolidated finding for a batch of reaction artifacts."""
         try:
@@ -1146,6 +1974,160 @@ class AutonomousLoopController:
         except Exception:
             pass
         return None
+
+    def _synthesize_from_fulfillments(self, fulfillments: List) -> None:
+        """
+        Synthesize insights from a batch of fulfillment artifacts and post a
+        comment on the original post if one can be identified.
+
+        Steps:
+        1. Bucket the new artifacts into papers / proteins / compounds based
+           on their artifact_type.
+        2. Call llm_reasoner.generate_insights() on the bucketed data.
+        3. Emit a new synthesis artifact (with updated needs) to the artifact store.
+        4. Post a comment on the original post that triggered the investigation,
+           if the original post_id can be resolved from the parent investigation.
+
+        Args:
+            fulfillments: List of Artifact objects that have _fulfilled_need in
+                their payload.
+        """
+        if not fulfillments:
+            return
+
+        try:
+            from autonomous.llm_reasoner import LLMScientificReasoner
+            reasoner = LLMScientificReasoner(self.agent_name)
+        except Exception as e:
+            print(f"   Note: LLM reasoner unavailable for fulfillment synthesis ({scrub(str(e))})")
+            return
+
+        # --- Bucket artifacts by type ---
+        papers: List[Dict[str, Any]] = []
+        proteins: List[Dict[str, Any]] = []
+        compounds: List[Dict[str, Any]] = []
+
+        for art in fulfillments:
+            atype = art.artifact_type
+            payload = art.payload
+            if atype == "pubmed_results":
+                art_papers = payload.get("papers") or payload.get("articles") or []
+                if isinstance(art_papers, list):
+                    papers.extend(art_papers[:3])
+                else:
+                    papers.append({"title": str(art_papers)[:100]})
+            elif atype in ("protein_data", "sequence_alignment", "structure_data"):
+                name = (payload.get("protein_name") or payload.get("name") or
+                        payload.get("primaryAccession") or payload.get("id", ""))
+                info = payload.get("function") or payload.get("annotation") or ""
+                proteins.append({"name": name, "info": str(info)[:200], "source": art.skill_used})
+            elif atype in ("compound_data", "admet_prediction", "rdkit_properties", "drug_data"):
+                name = payload.get("name") or payload.get("iupac_name") or payload.get("id", "")
+                compounds.append({"name": name, "info": str(payload.get("smiles", ""))[:80],
+                                  "source": art.skill_used})
+
+        # Derive a shared topic from the fulfilled needs
+        topics = []
+        for art in fulfillments:
+            fn = art.payload.get("_fulfilled_need", {})
+            q = fn.get("query", "")
+            if q:
+                topics.append(q)
+        synthesis_topic = "; ".join(topics[:2]) if topics else "fulfillment synthesis"
+
+        inv_results: Dict[str, Any] = {
+            "topic": synthesis_topic,
+            "papers": papers,
+            "proteins": proteins,
+            "compounds": compounds,
+            "tools_used": list({art.skill_used for art in fulfillments}),
+            "insights": [],
+        }
+
+        # Generate insights from the bucketed data
+        try:
+            insights = reasoner.generate_insights(synthesis_topic, inv_results)
+        except Exception as e:
+            print(f"   Note: insight generation failed ({scrub(str(e))})")
+            insights = []
+
+        inv_results["insights"] = insights
+
+        # Generate updated needs from the synthesized results
+        try:
+            new_needs = reasoner.generate_needs(synthesis_topic, inv_results)
+        except Exception as e:
+            print(f"   Note: needs generation failed ({scrub(str(e))})")
+            new_needs = []
+
+        # Emit a synthesis artifact with updated needs
+        try:
+            synthesis_payload = {
+                "topic": synthesis_topic,
+                "source": "fulfillment_synthesis",
+                "fulfilled_artifact_ids": [art.artifact_id for art in fulfillments],
+                "paper_count": len(papers),
+                "protein_count": len(proteins),
+                "compound_count": len(compounds),
+                "insights": insights[:3],
+                "query": synthesis_topic[:120],
+            }
+            # Use investigation_id from first fulfillment artifact if available
+            inv_id = fulfillments[0].investigation_id if fulfillments else ""
+            self._artifact_store.create_and_save(
+                skill_used="_synthesis",
+                payload=synthesis_payload,
+                investigation_id=inv_id,
+                needs=new_needs,
+            )
+            print(f"   Synthesis artifact emitted (needs={len(new_needs)})")
+        except Exception as e:
+            print(f"   Note: synthesis artifact save failed ({scrub(str(e))})")
+
+        # Post a comment on the original post if we can identify it
+        if not insights:
+            return
+
+        try:
+            # Resolve original post_id from parent investigation via journal
+            parent_artifact_ids = [
+                art.payload.get("_fulfilled_need", {}).get("parent_artifact_id", "")
+                for art in fulfillments
+            ]
+            # Look up parent investigation in journal for an associated post_id
+            parent_post_id = None
+            try:
+                recent_entries = self.journal.search("", limit=200)
+                for entry in reversed(recent_entries):
+                    meta = entry.get("metadata", {})
+                    for pid in parent_artifact_ids:
+                        if pid and pid in str(meta.get("artifacts", "")):
+                            parent_post_id = meta.get("post_id")
+                            if parent_post_id:
+                                break
+                    if parent_post_id:
+                        break
+            except Exception:
+                pass
+
+            if not parent_post_id:
+                # No original post found — skip comment
+                return
+
+            insight_text = "\n".join(f"- {ins}" for ins in insights[:3])
+            comment_body = (
+                f"**[{self.agent_name} — Fulfillment Synthesis]**\n\n"
+                f"Following up on the investigation of *{synthesis_topic}*, "
+                f"I retrieved {len(fulfillments)} requested artifact(s) and synthesised:\n\n"
+                f"{insight_text}"
+            )
+            self.platform.create_comment(
+                post_id=parent_post_id,
+                content=comment_body,
+            )
+            print(f"   Comment posted on original post {parent_post_id[:12]}...")
+        except Exception as e:
+            print(f"   Note: fulfillment comment failed ({scrub(str(e))})")
 
 
 # Test function for development

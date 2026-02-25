@@ -15,6 +15,38 @@ import subprocess
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 
+# Maps skill_category values (from SKILL_INPUT_MAP) to example values shown in
+# the LLM prompt so the model understands exactly what kind of entity to extract.
+SKILL_ENTITY_EXAMPLES: Dict[str, str] = {
+    "protein name or UniProt accession":     "TP53, BRCA1, P04637, or another gene symbol/UniProt accession",
+    "protein name or PDB ID":                "TP53 Y220C, 2OCJ, or a PDB code",
+    "protein name or gene symbol":           "TP53, KRAS, MDM2, or BRCA1",
+    "gene symbol":                           "TP53, BRCA1, KRAS, or another HGNC symbol",
+    "gene or protein name":                  "TP53, MDM2, KRAS, or another gene/protein name",
+    "gene, variant, or disease":             "TP53 Y220C, rs28934578, or Li-Fraumeni syndrome",
+    "gene symbol or variant":                "TP53, ENSG00000141510, or TP53 Y220C",
+    "compound name":                         "APR-246, eprenetapopt, PRIMA-1, or another drug/compound name",
+    "compound name or target":               "APR-246, eprenetapopt, MDM2 inhibitor, or TP53 activator",
+    "compound name or SMILES":               "APR-246, eprenetapopt, or a valid SMILES string",
+    "drug name":                             "eprenetapopt, APR-246, nutlin-3, or another approved/investigational drug",
+    "compound name or CAS number":           "APR-246, 7396-28-3, or another compound/CAS number",
+    "SMILES string":                         "O=C1CC[N+]2(CC=C)CCC1CC2 or another valid SMILES",
+    "research topic":                        "TP53 Y220C small molecule stabilizer, p53 reactivation, or MDM2 inhibition",
+    "pathway or gene name":                  "TP53 apoptosis pathway, KRAS signalling, or a KEGG pathway ID",
+    "gene or disease":                       "TP53, ENSG00000141510, cancer, or Li-Fraumeni syndrome",
+    "cancer gene or mutation":               "TP53 Y220C, KRAS G12D, or a COSMIC gene name",
+    "enzyme name or EC number":              "MDM2 E3 ligase, p53 kinase, or EC 2.7.11.1",
+    "amino acid sequence":                   "one-letter amino acid string for the protein of interest",
+    "protein or DNA sequence":               "amino acid or nucleotide sequence string",
+    "sequence or gene name":                 "TP53 exon 5-8 or a gene symbol",
+    "UniProt accession":                     "P04637 (TP53_HUMAN), P00533 (EGFR), or another UniProt ID",
+    "PDB ID":                                "2OCJ, 4HHB, 6W63, or another four-character PDB code",
+    "accession or organism":                 "Homo sapiens TP53 mRNA or a GenBank/ENA accession",
+    "SNP ID or trait":                       "rs28934578 or Li-Fraumeni syndrome",
+    "GEO accession":                         "GSE12345 or GPL570",
+    "metabolite name":                       "cysteine, glutathione, or another metabolite",
+}
+
 
 class LLMScientificReasoner:
     """
@@ -79,9 +111,72 @@ class LLMScientificReasoner:
         elif "scientific insights" in prompt.lower():
             return "Multiple lines of evidence converge, suggesting biological relevance."
         else:
-            return "Further experimental validation required to establish causal relationships."
+            return "Further computational analysis required to establish causal relationships."
     
-    def generate_hypothesis(self, 
+    def derive_query_for_skill(
+        self,
+        skill_name: str,
+        skill_category: str,
+        topic: str,
+        results_so_far: Dict,
+    ) -> Optional[str]:
+        """
+        Ask the LLM: given what we've found so far, what is the single best
+        search query to run against `skill_name`?
+
+        Returns a short, focused query string, or None if the LLM cannot help
+        (the caller should then fall back to its own logic).
+        """
+        papers = results_so_far.get("papers", [])
+        proteins = results_so_far.get("proteins", [])
+        compounds = results_so_far.get("compounds", [])
+
+        # Even with no prior evidence, the topic itself is enough signal for the LLM
+        # to extract the right entity (e.g. "TP53" from "p53 reactivation via …")
+
+        # Summarise accumulated evidence concisely so the prompt stays short
+        evidence_lines: List[str] = []
+        for p in papers[:4]:
+            t = p.get("title", "")
+            if t:
+                evidence_lines.append(f"  Paper: {t[:100]}")
+        for pr in proteins[:3]:
+            n = pr.get("name", "")
+            if n:
+                evidence_lines.append(f"  Protein: {n}")
+        for c in compounds[:3]:
+            n = c.get("name", "")
+            if n:
+                evidence_lines.append(f"  Compound: {n}")
+
+        evidence_summary = "\n".join(evidence_lines) if evidence_lines else "  (none yet)"
+
+        prompt = f"""You are a scientific research assistant helping an AI agent conduct a multi-step investigation.
+
+Research topic: {topic}
+
+Evidence collected so far:
+{evidence_summary}
+
+Next tool to run: {skill_name} (category: {skill_category})
+
+What is the single most scientifically valuable search query to submit to {skill_name}, \
+given the evidence above? The query should be a short, specific {skill_category} \
+(e.g. {SKILL_ENTITY_EXAMPLES.get(skill_category, 'protein name, gene symbol, or compound name')}) that will return \
+the most relevant results — not a paraphrase of the overall topic.
+
+Reply with ONLY the query string, nothing else."""
+
+        response = self._call_llm(prompt, max_tokens=60).strip()
+
+        # Reject responses that are obviously bad (too long, contain newlines, etc.)
+        if not response or len(response) > 120 or "\n" in response:
+            return None
+        # Strip surrounding quotes if the LLM added them
+        response = response.strip('"\'')
+        return response if response else None
+
+    def generate_hypothesis(self,
                           topic: str,
                           papers: List[Dict],
                           proteins: List[Dict],
@@ -208,7 +303,7 @@ You are {self.agent_name}. Analyze this investigation and generate deep scientif
 1. **Mechanistic**: Explain mechanisms, not just observations
 2. **Evidence-based**: Reference specific papers, data, findings
 3. **Novel**: Go beyond literature summaries
-4. **Actionable**: Suggest experimental validation or applications
+4. **Actionable**: Suggest computational follow-up analyses or applications
 5. **Technical**: Use precise scientific terminology, parameters, quantitative details when possible
 
 **What NOT to do:**
@@ -492,6 +587,91 @@ Only list gaps addressable by: pubmed, uniprot, pubchem, chembl, tdc, rdkit, bla
                     gaps.append(gap)
 
         return gaps[:4]
+
+    def generate_needs(self, topic: str, investigation_results: dict) -> list:
+        """
+        Ask the LLM what scientific data the investigation is still missing.
+
+        Returns a list of need dicts (matching NeedItem schema) with at most 2
+        entries.  Returns [] on parse failure or when investigation is sufficient.
+
+        Args:
+            topic: The research topic being investigated.
+            investigation_results: The full results dict from run_tool_chain /
+                run_deep_investigation (keys: papers, proteins, compounds,
+                tools_used, insights, …).
+
+        Returns:
+            List of dicts, each with keys: artifact_type, query, rationale.
+        """
+        try:
+            from artifacts.needs import NeedsSignal
+        except ImportError:
+            return []
+
+        papers = investigation_results.get("papers", [])
+        proteins = investigation_results.get("proteins", [])
+        compounds = investigation_results.get("compounds", [])
+        tools_used = investigation_results.get("tools_used", [])
+        insights = investigation_results.get("insights", [])
+
+        # Build a concise evidence summary for the LLM
+        evidence_lines: List[str] = []
+        for p in papers[:4]:
+            t = p.get("title", "")
+            if t:
+                evidence_lines.append(f"  Paper: {t[:100]}")
+        for pr in proteins[:3]:
+            n = pr.get("name", "")
+            if n:
+                evidence_lines.append(f"  Protein: {n}")
+        for c in compounds[:3]:
+            n = c.get("name", "")
+            if n:
+                evidence_lines.append(f"  Compound: {n}")
+        for ins in insights[:2]:
+            evidence_lines.append(f"  Insight: {ins[:100]}")
+
+        evidence_summary = "\n".join(evidence_lines) if evidence_lines else "  (no evidence collected)"
+        tools_str = ", ".join(tools_used) if tools_used else "none"
+
+        prompt = (
+            "You are assessing what scientific data an investigation is missing.\n"
+            'You must output JSON matching this schema: {"needs": [{"artifact_type": "...", "query": "...", "rationale": "..."}]}\n\n'
+            "Rules:\n"
+            "- Maximum 2 needs. Fewer is better if the investigation is sufficient.\n"
+            "- query MUST be a specific entity name or search term, NOT a restatement of the topic.\n"
+            '  GOOD: "CRBN E3 ligase substrate binding domain", "ARV-110 SMILES CC1=CC=..."\n'
+            '  BAD:  "more information about degradation", "protein data for this study"\n'
+            "- artifact_type must be the next logical step given what was already found.\n"
+            "  Valid types: pubmed_results, protein_data, sequence_alignment, structure_data,\n"
+            "  compound_data, admet_prediction, rdkit_properties, pathway_data, network_data,\n"
+            "  genomic_data, expression_data, clinical_data, drug_data, metabolomics_data,\n"
+            "  ml_prediction, figure, synthesis\n"
+            "- rationale must explain the mechanistic gap, not just 'to learn more'.\n"
+            '- If the investigation already covers the topic adequately, output {"needs": []}.\n'
+            "- Vague or generic queries will be rejected. Be specific.\n\n"
+            f"Research topic: {topic}\n\n"
+            f"Tools already used: {tools_str}\n\n"
+            f"Evidence collected:\n{evidence_summary}\n\n"
+            "Output ONLY valid JSON. No explanation, no markdown fences."
+        )
+
+        raw = self._call_llm(prompt, max_tokens=400).strip()
+
+        # Strip markdown fences if the LLM added them
+        if raw.startswith("```"):
+            lines = raw.splitlines()
+            raw = "\n".join(
+                l for l in lines
+                if not l.startswith("```")
+            ).strip()
+
+        try:
+            signal = NeedsSignal.model_validate_json(raw)
+            return [item.model_dump() for item in signal.needs]
+        except Exception:
+            return []
 
     def generate_conclusion(self,
                           topic: str,

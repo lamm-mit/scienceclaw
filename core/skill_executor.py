@@ -101,30 +101,33 @@ class SkillExecutor:
         # Use first executable
         script_path = executables[0]
         
-        # Build command with parameters
-        cmd = ["python3", script_path]
+        def _build_cmd(params: dict, with_format_json: bool) -> list:
+            c = ["python3", script_path]
+            for key, value in params.items():
+                flag = f"--{key.replace('_', '-')}"
+                if isinstance(value, list):
+                    if value:
+                        c.extend([flag] + [str(v) for v in value])
+                elif isinstance(value, dict):
+                    pass
+                else:
+                    c.extend([flag, str(value)])
+            if with_format_json and "format" not in params:
+                c.extend(["--format", "json"])
+            return c
 
-        for key, value in parameters.items():
-            # Convert parameter names to CLI flags
-            flag = f"--{key.replace('_', '-')}"
-            if isinstance(value, list):
-                # Pass each list item as a separate argument (supports nargs="+")
-                if value:
-                    cmd.extend([flag] + [str(v) for v in value])
-            elif isinstance(value, dict):
-                # Skip dict values - not representable as CLI args
-                pass
-            else:
-                cmd.extend([flag, str(value)])
-        
-        # Execute
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            cwd=self.scienceclaw_dir
-        )
+        def _run(cmd):
+            return subprocess.run(
+                cmd, capture_output=True, text=True,
+                timeout=timeout, cwd=self.scienceclaw_dir
+            )
+
+        # First attempt: with --format json so output is parseable structured data
+        result = _run(_build_cmd(parameters, with_format_json=True))
+
+        if result.returncode != 0:
+            # --format json may be unrecognised; retry without it
+            result = _run(_build_cmd(parameters, with_format_json=False))
 
         if result.returncode != 0:
             # Try to recover by injecting topic as query when required args are missing
@@ -141,31 +144,28 @@ class SkillExecutor:
                         minimal_params["limit"] = str(parameters["limit"])
                     elif "max_results" in parameters:
                         minimal_params["limit"] = str(parameters["max_results"])
-                    if "--format" in result.stderr or "format" in parameters:
-                        minimal_params["format"] = "json"
-                    retry_cmd = ["python3", script_path]
-                    for k, v in minimal_params.items():
-                        retry_cmd.extend([f"--{k}", str(v)])
-                    result = subprocess.run(
-                        retry_cmd,
-                        capture_output=True,
-                        text=True,
-                        timeout=timeout,
-                        cwd=self.scienceclaw_dir
-                    )
+                    result = _run(_build_cmd(minimal_params, with_format_json=True))
+                    if result.returncode != 0:
+                        result = _run(_build_cmd(minimal_params, with_format_json=False))
                     if result.returncode != 0:
                         raise RuntimeError(f"Script failed: {result.stderr}")
                 else:
                     raise RuntimeError(f"Script failed: {result.stderr}")
             else:
                 raise RuntimeError(f"Script failed: {result.stderr}")
-        
-        # Try to parse JSON output
+
+        # Try to parse JSON output — structured payloads enable artifact reactor matching
         try:
             return json.loads(result.stdout)
         except json.JSONDecodeError:
-            # Return raw output if not JSON
-            return {"output": result.stdout}
+            # Strip leading non-JSON lines (some skills print a status header before JSON)
+            stdout = result.stdout
+            for i, line in enumerate(stdout.splitlines()):
+                try:
+                    return json.loads("\n".join(stdout.splitlines()[i:]))
+                except json.JSONDecodeError:
+                    continue
+            return {"output": stdout}
     
     def _execute_database_skill(self,
                                 skill_metadata: Dict[str, Any],

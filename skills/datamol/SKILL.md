@@ -1,12 +1,25 @@
 ---
 name: datamol
-description: Pythonic wrapper around RDKit with simplified interface and sensible defaults. Preferred for standard drug discovery including SMILES parsing, standardization, descriptors, fingerprints, clustering, 3D conformers, parallel processing. Returns native rdkit.Chem.Mol objects. For advanced control or custom parameters, use rdkit directly.
+description: "Python cheminformatics library (RDKit wrapper). Input: SMILES strings you already possess. Output: computed molecular properties, fingerprints, conformers, clustering. Does NOT retrieve compounds from any database — querying by topic name returns only a metadata stub. Use pubchem or chembl to obtain SMILES first, then pass those SMILES here."
 license: Apache-2.0 license
 metadata:
     skill-author: K-Dense Inc.
 ---
 
 # Datamol Cheminformatics Skill
+
+## ⚠️ When NOT To Use This Skill
+
+**Do NOT invoke datamol** if you want to:
+- Look up compounds related to a research topic (e.g. "KRAS covalent inhibitors") → use **pubchem** or **chembl**
+- Find binding affinities or IC50 data → use **chembl** or **tdc**
+- Search for compounds by mechanism or target → use **pubchem** or **pubmed**
+
+**datamol requires SMILES strings you already have.** It performs computations on those structures — it does not retrieve structures from any database. Invoking `demo.py` without a SMILES input returns only a metadata confirmation that the library is available.
+
+**Correct agent workflow:**
+1. Get SMILES from pubchem/chembl (e.g. sotorasib: `CC1=CN=C(C=C1)NC(=O)C2=CC(=CC=C2)F`)
+2. Pass those SMILES to datamol for property calculation, fingerprinting, clustering, etc.
 
 ## Overview
 

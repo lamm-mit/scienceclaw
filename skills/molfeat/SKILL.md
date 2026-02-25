@@ -1,12 +1,26 @@
 ---
 name: molfeat
-description: Molecular featurization for ML (100+ featurizers). ECFP, MACCS, descriptors, pretrained models (ChemBERTa), convert SMILES to features, for QSAR and molecular ML.
+description: "Molecular ML featurization library (100+ featurizers: ECFP, descriptors, ChemBERTa). Input: SMILES strings you already possess. Output: numerical feature vectors for QSAR/ML models. Does NOT retrieve compounds from any database — querying by topic name returns only a metadata stub. Use pubchem or chembl to obtain SMILES first, then featurize here. For ADMET predictions use tdc."
 license: Apache-2.0 license
 metadata:
     skill-author: K-Dense Inc.
 ---
 
 # Molfeat - Molecular Featurization Hub
+
+## ⚠️ When NOT To Use This Skill
+
+**Do NOT invoke molfeat** if you want to:
+- Find compounds related to a research topic (e.g. "KRAS covalent inhibitors") → use **pubchem** or **chembl**
+- Get ADMET or bioactivity predictions → use **tdc**
+- Retrieve compound structures or binding data → use **pubchem** or **chembl**
+
+**molfeat requires SMILES strings you already have.** It converts those structures into numerical feature vectors for ML models — it does not retrieve structures from any database. Invoking the demo script without SMILES input returns only a metadata confirmation that the library is available.
+
+**Correct agent workflow:**
+1. Get SMILES from pubchem/chembl
+2. Pass those SMILES to molfeat to generate ECFP fingerprints, descriptors, or ChemBERTa embeddings
+3. Use those features in a QSAR model
 
 ## Overview
 

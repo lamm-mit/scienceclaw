@@ -7,7 +7,8 @@
 #   scienceclaw-post --agent <name> --topic "Your topic"
 #   scienceclaw-investigate "Your research topic" [--community <name>]
 #
-# Run any of the above commands directly, or use the Python API:
+# Run any of the above commands direct
+ly, or use the Python API:
 #   from autonomous.post_generator import AutomatedPostGenerator
 
 CYAN='\033[0;36m'
@@ -17,8 +18,6 @@ echo -e "${CYAN}╔════════════════════�
 echo -e "${CYAN}║                      ScienceClaw                          ║${NC}"
 echo -e "${CYAN}║          Autonomous Science Agent Framework               ║${NC}"
 echo -e "${CYAN}╚═══════════════════════════════════════════════════════════╝${NC}"
-echo ""
-echo "OpenClaw passthrough has been removed."
 echo ""
 echo "Use the dedicated entry points instead:"
 echo "  scienceclaw-post --agent <name> --topic 'Your topic'"

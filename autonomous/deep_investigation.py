@@ -75,7 +75,78 @@ class DeepInvestigator:
             }
         return {"investigated": False}
 
-    def run_tool_chain(self, topic: str, pre_selected_skills: List[Dict[str, Any]]) -> Dict:
+    # ------------------------------------------------------------------
+    # Result validation helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _is_empty_bucket(candidate_items: list) -> bool:
+        return len(candidate_items) == 0
+
+    @staticmethod
+    def _is_irrelevant(query: str, items: list) -> bool:
+        """Returns True if no item contains any token from the query string."""
+        tokens = {t.lower() for t in query.split() if len(t) > 3}
+        if not tokens:
+            return False
+        for item in items:
+            text = " ".join(str(v) for v in item.values()).lower()
+            if any(tok in text for tok in tokens):
+                return False
+        return True
+
+    @staticmethod
+    def _compound_has_properties(item: dict) -> bool:
+        """Returns False if all numeric drug properties are missing."""
+        props = item.get('molecule_properties') or {}
+        mw = props.get('full_mwt') or item.get('mw')
+        return bool(mw and str(mw) not in ('?', '', 'None', 'N/A'))
+
+    def _retry_skill(self, skill_name: str, actual_skill_name: str, skill_meta: dict,
+                     original_query: str, timeout: int = 60) -> Optional[Dict]:
+        """
+        Retry a skill with a simplified query (first noun phrase or first 5 words).
+        Returns the raw skill result dict on success, or None.
+        """
+        # Simplify: take text before separators, or first 5 words
+        for sep in (' for ', ' in ', ' via ', ' of ', ' with '):
+            if sep in original_query.lower():
+                simplified = original_query[:original_query.lower().index(sep)].strip()
+                break
+        else:
+            simplified = ' '.join(original_query.split()[:5])
+
+        if simplified.lower() == original_query.lower() or not simplified:
+            return None
+
+        print(f"      ↩ Retry with simplified query: '{simplified}'", end="", flush=True)
+        _QUERY_REMAP = {'uniprot': 'search', 'blast': 'query'}
+        _skill_base = actual_skill_name.replace('-database', '')
+        retry_params = {}
+        if _skill_base in _QUERY_REMAP:
+            retry_params[_QUERY_REMAP[_skill_base]] = simplified
+        else:
+            retry_params['query'] = simplified
+        if _skill_base == 'uniprot':
+            retry_params['format'] = 'json'
+        try:
+            result = self.skill_executor.execute_skill(
+                skill_name=actual_skill_name,
+                skill_metadata=skill_meta,
+                parameters=retry_params,
+                timeout=timeout,
+            )
+            if result.get('status') == 'success':
+                print(f" ✓")
+                return result.get('result', {})
+            else:
+                print(f" ✗ {result.get('error', 'failed')}")
+        except Exception as e:
+            print(f" ✗ {e}")
+        return None
+
+    def run_tool_chain(self, topic: str, pre_selected_skills: List[Dict[str, Any]],
+                       skill_query_overrides: Optional[Dict[str, str]] = None) -> Dict:
         """
         Execute the LLM-selected skills and return raw results.
         No fallbacks. Skills self-assemble around the topic.
@@ -87,6 +158,7 @@ class DeepInvestigator:
         results = {
             "topic": topic,
             "tools_used": [],
+            "productive_tools": [],  # skills that returned non-empty, non-irrelevant results
             "papers": [],
             "proteins": [],
             "compounds": [],
@@ -128,50 +200,60 @@ class DeepInvestigator:
 
                 params = dict(skill.suggested_params) if skill.suggested_params else {}
 
-                # Build focused query (leading words up to first stop-word)
-                _stop_words = {
-                    'mechanism', 'mechanisms', 'pathway', 'pathways', 'analysis',
-                    'inhibition', 'activation', 'regulation', 'effect', 'effects',
-                    'role', 'function', 'study', 'investigation', 'via', 'of', 'in',
-                    'and', 'for', 'the', 'a', 'an', 'with', 'using', 'by',
-                    'selectivity', 'selectivities', 'interaction', 'interactions',
-                    'response', 'responses', 'activity', 'activities',
-                }
-                _key_words = []
-                for _w in topic.split():
-                    if _w.lower() in _stop_words:
-                        break
-                    _key_words.append(_w)
-                    if len(_key_words) >= 3:
-                        break
-                _focused = ' '.join(_key_words) if _key_words else topic
-
-                # Skill-specific parameter name remapping (always applied)
                 _skill_base = actual_skill_name.replace('-database', '')
+                _skill_category = skill_meta.get('category', '')
+
+                # Skills that primarily discover broad evidence — use the full topic query.
+                _DISCOVERY_SKILLS = {'pubmed', 'arxiv', 'semanticscholar'}
+                # Skills that expect a focused entity name — derive from accumulated results.
+                _ENTITY_SKILLS = {'uniprot', 'pdb', 'chembl', 'pubchem', 'blast',
+                                  'string', 'kegg', 'reactome'}
                 # Skills that use a non-standard query param name
-                _QUERY_REMAP = {'uniprot': 'search'}
-                # Skills that work best with a single-word entity query (more specific is worse)
-                _SINGLE_WORD_SKILLS = {'uniprot', 'blast'}
+                _QUERY_REMAP = {'uniprot': 'search', 'blast': 'query'}
+
+                # Only override the query param when it is absent or was copied blindly
+                # from the topic by the LLM skill selector.
+                def _query_already_set() -> bool:
+                    return any(k in params for k in ('query', 'search', 'term', 'keyword', 'topic'))
+
+                if _skill_base in _ENTITY_SKILLS:
+                    # Check thread-aware overrides first (highest quality signal).
+                    # Fall back to topic word splitting if no override available.
+                    _override = (skill_query_overrides or {}).get(_skill_base)
+                    if _override:
+                        _focused = _override
+                    else:
+                        # Hard fallback: strip everything after "via/in/with/of" —
+                        # keeps the entity part and drops the context clause.
+                        import re as _re2
+                        _focused = _re2.split(r'\s+(?:via|in|with|of|for|and)\s+',
+                                              topic, maxsplit=1)[0].strip()
+                else:
+                    # Broad discovery skills — use full topic
+                    _focused = topic
 
                 if _skill_base in _QUERY_REMAP:
                     _correct_param = _QUERY_REMAP[_skill_base]
-                    # Move any 'query'/'term'/'keyword' value to the correct param
                     for _wrong in ('query', 'term', 'keyword', 'topic'):
                         if _wrong in params and _wrong != _correct_param:
                             params[_correct_param] = params.pop(_wrong)
-                    # If still no query param, inject focused topic
                     if not any(k in params for k in (_correct_param, 'search')):
-                        _q = _focused.split()[0] if _skill_base in _SINGLE_WORD_SKILLS and _focused else _focused
-                        params[_correct_param] = _q
-                    elif _skill_base in _SINGLE_WORD_SKILLS:
-                        # Also trim existing value to first word for better results
+                        params[_correct_param] = _focused
+                    else:
+                        # Replace whatever the LLM selector suggested with our derived query
                         for _k in (_correct_param, 'search'):
-                            if _k in params and len(params[_k].split()) > 2:
-                                params[_k] = params[_k].split()[0]
+                            if _k in params:
+                                params[_k] = _focused
                 else:
-                    # Standard skills: inject query if missing
-                    if not any(k in params for k in ('query', 'search', 'term', 'keyword', 'topic')):
+                    # Standard skills
+                    if not _query_already_set():
                         params['query'] = _focused
+                    else:
+                        # Override LLM-selector's topic paraphrase with derived query
+                        for _k in ('query', 'search', 'term', 'keyword', 'topic'):
+                            if _k in params:
+                                params[_k] = _focused
+                                break
 
                 # Force JSON output for skills that support it
                 if _skill_base == 'uniprot' and 'format' not in params:
@@ -187,15 +269,6 @@ class DeepInvestigator:
                 if result.get('status') == 'success':
                     results["tools_used"].append(actual_skill_name)
                     skill_result = result.get('result', {})
-
-                    # Wrap skill output in a versioned, addressable artifact
-                    if self.artifact_store and isinstance(skill_result, dict):
-                        _artifact = self.artifact_store.create_and_save(
-                            skill_used=actual_skill_name,
-                            payload=skill_result,
-                            investigation_id=self._current_investigation_id,
-                        )
-                        skill_result["_artifact_id"] = _artifact.artifact_id
 
                     # Normalise wrapped output (skill_executor wraps unparseable text as {"output": ...})
                     if isinstance(skill_result, dict) and 'output' in skill_result:
@@ -272,78 +345,178 @@ class DeepInvestigator:
 
                     # Bucket results — normalise across skill output schemas
                     category = skill_meta.get('category', '')
+                    _quality = "ok"  # assumed until proven otherwise
+                    _skill_base_v = actual_skill_name.replace('-database', '')
+                    _is_entity_skill = _skill_base_v in ('uniprot', 'pdb', 'chembl', 'pubchem',
+                                                          'blast', 'string', 'kegg', 'reactome')
+                    _is_discovery_skill = _skill_base_v in ('pubmed', 'arxiv', 'semanticscholar')
+
                     if 'literature' in category or skill_name in ('pubmed', 'arxiv'):
                         papers = skill_result if isinstance(skill_result, list) else skill_result.get('papers', [])
-                        results["papers"].extend([p for p in papers[:5] if isinstance(p, dict)])
+                        candidate_papers = [p for p in papers[:5] if isinstance(p, dict)]
+
+                        # Rule A: empty result
+                        if self._is_empty_bucket(candidate_papers):
+                            _quality = "empty"
+                            print(f" ✗ empty result", end="")
+                            # Retry with shorter query
+                            _retry_result = self._retry_skill(
+                                skill_name, actual_skill_name, skill_meta, _focused, timeout=60)
+                            if _retry_result is not None:
+                                retry_papers = _retry_result if isinstance(_retry_result, list) else _retry_result.get('papers', [])
+                                candidate_papers = [p for p in retry_papers[:5] if isinstance(p, dict)]
+                                if candidate_papers:
+                                    _quality = "ok"
+                                    skill_result = _retry_result
+
+                        if _quality == "ok":
+                            results["papers"].extend(candidate_papers)
+
                     elif 'protein' in category or skill_name in ('uniprot', 'blast', 'pdb'):
                         if isinstance(skill_result, list):
                             raw_proteins = skill_result
                         elif isinstance(skill_result, dict):
-                            # Handle different schema keys: proteins, structures, hits, results
                             raw_proteins = (skill_result.get('proteins') or
                                             skill_result.get('structures') or
                                             skill_result.get('hits') or
                                             skill_result.get('results') or [])
                         else:
                             raw_proteins = []
-                        for p in raw_proteins[:5]:
-                            if not isinstance(p, dict):
-                                continue
-                            # Normalise UniProt JSON format (primaryAccession, uniProtkbId, proteinDescription)
-                            desc = p.get('proteinDescription') or {}
-                            rec_name = desc.get('recommendedName') or {}
-                            full_name = rec_name.get('fullName') or {}
-                            uniprot_name = full_name.get('value') or p.get('uniProtkbId') or ''
-                            # PDB: title field, pdb_id field
-                            pdb_title = p.get('title', '')
-                            pdb_id = p.get('pdb_id', '')
-                            name = (p.get('name') or uniprot_name or pdb_title or
-                                    p.get('id') or p.get('primaryAccession') or pdb_id or 'Unknown')
-                            accession = (p.get('primaryAccession') or p.get('accession') or
-                                         p.get('id') or pdb_id or '')
-                            info = p.get('info') or p.get('annotation') or ''
-                            if not info:
-                                # PDB: method + resolution
-                                if pdb_title:
-                                    method = p.get('method', '')
-                                    res = p.get('resolution', '')
-                                    info = f"{method} {res}".strip() if method else ''
-                                else:
-                                    # UniProt organism fallback
-                                    org = p.get('organism') or {}
-                                    if isinstance(org, dict):
-                                        info = org.get('scientificName', '')
-                            results["proteins"].append({
-                                "name": name,
-                                "id": accession,
-                                "info": info[:200],
-                                "source": actual_skill_name,
-                            })
+                        raw_proteins = [p for p in raw_proteins[:5] if isinstance(p, dict)]
+
+                        # Rule A: empty result
+                        if self._is_empty_bucket(raw_proteins):
+                            _quality = "empty"
+                            print(f" ✗ empty result", end="")
+                            _retry_result = self._retry_skill(
+                                skill_name, actual_skill_name, skill_meta, _focused, timeout=60)
+                            if _retry_result is not None:
+                                if isinstance(_retry_result, list):
+                                    raw_proteins = [p for p in _retry_result[:5] if isinstance(p, dict)]
+                                elif isinstance(_retry_result, dict):
+                                    raw_proteins = [p for p in (
+                                        _retry_result.get('proteins') or
+                                        _retry_result.get('structures') or
+                                        _retry_result.get('hits') or
+                                        _retry_result.get('results') or [])[:5]
+                                        if isinstance(p, dict)]
+                                if raw_proteins:
+                                    _quality = "ok"
+                                    skill_result = _retry_result
+
+                        # Rule B: irrelevant results (entity skills only)
+                        if _quality == "ok" and _is_entity_skill and raw_proteins:
+                            if self._is_irrelevant(_focused, raw_proteins):
+                                _quality = "irrelevant"
+                                print(f" ✗ irrelevant result", end="")
+                                # Retry with simplified query
+                                _retry_result = self._retry_skill(
+                                    skill_name, actual_skill_name, skill_meta, _focused, timeout=60)
+                                if _retry_result is not None:
+                                    if isinstance(_retry_result, list):
+                                        retry_proteins = [p for p in _retry_result[:5] if isinstance(p, dict)]
+                                    elif isinstance(_retry_result, dict):
+                                        retry_proteins = [p for p in (
+                                            _retry_result.get('proteins') or
+                                            _retry_result.get('structures') or
+                                            _retry_result.get('hits') or
+                                            _retry_result.get('results') or [])[:5]
+                                            if isinstance(p, dict)]
+                                    else:
+                                        retry_proteins = []
+                                    if retry_proteins and not self._is_irrelevant(_focused, retry_proteins):
+                                        _quality = "ok"
+                                        raw_proteins = retry_proteins
+                                        skill_result = _retry_result
+
+                        if _quality == "ok":
+                            for p in raw_proteins:
+                                # Normalise UniProt JSON format (primaryAccession, uniProtkbId, proteinDescription)
+                                desc = p.get('proteinDescription') or {}
+                                rec_name = desc.get('recommendedName') or {}
+                                full_name = rec_name.get('fullName') or {}
+                                uniprot_name = full_name.get('value') or p.get('uniProtkbId') or ''
+                                # PDB: title field, pdb_id field
+                                pdb_title = p.get('title', '')
+                                pdb_id = p.get('pdb_id', '')
+                                name = (p.get('name') or uniprot_name or pdb_title or
+                                        p.get('id') or p.get('primaryAccession') or pdb_id or 'Unknown')
+                                accession = (p.get('primaryAccession') or p.get('accession') or
+                                             p.get('id') or pdb_id or '')
+                                info = p.get('info') or p.get('annotation') or ''
+                                if not info:
+                                    if pdb_title:
+                                        method = p.get('method', '')
+                                        res = p.get('resolution', '')
+                                        info = f"{method} {res}".strip() if method else ''
+                                    else:
+                                        org = p.get('organism') or {}
+                                        if isinstance(org, dict):
+                                            info = org.get('scientificName', '')
+                                results["proteins"].append({
+                                    "name": name,
+                                    "id": accession,
+                                    "info": info[:200],
+                                    "source": actual_skill_name,
+                                })
+
                     elif 'compound' in category or 'chem' in skill_name:
                         # ChEMBL returns a list of molecule dicts; flatten nested fields
                         raw_list = skill_result if isinstance(skill_result, list) else skill_result.get('compounds', [skill_result] if skill_result else [])
-                        for item in raw_list[:5]:
-                            if not isinstance(item, dict):
-                                continue
-                            # Flatten ChEMBL molecule_structures → smiles
-                            mol_structs = item.get('molecule_structures') or {}
-                            smiles = (mol_structs.get('canonical_smiles') or
-                                      item.get('canonical_smiles') or
-                                      item.get('smiles', ''))
-                            name = (item.get('pref_name') or item.get('name') or
-                                    item.get('molecule_chembl_id', 'Unknown'))
-                            props = item.get('molecule_properties') or {}
-                            results["compounds"].append({
-                                "name": name,
-                                "smiles": smiles,
-                                "mw": props.get('full_mwt', item.get('mw', '')),
-                                "chembl_id": item.get('molecule_chembl_id', ''),
-                                "max_phase": item.get('max_phase', ''),
-                                "source": actual_skill_name,
-                                **{k: v for k, v in item.items()
-                                   if k not in ('molecule_structures', 'molecule_properties',
-                                                'molecule_synonyms', 'cross_references', 'molfile')},
-                            })
+                        candidate_compounds = [item for item in raw_list[:5] if isinstance(item, dict)]
+
+                        # Rule A: empty result
+                        if self._is_empty_bucket(candidate_compounds):
+                            _quality = "empty"
+                            print(f" ✗ empty result", end="")
+                            _retry_result = self._retry_skill(
+                                skill_name, actual_skill_name, skill_meta, _focused, timeout=60)
+                            if _retry_result is not None:
+                                retry_list = _retry_result if isinstance(_retry_result, list) else _retry_result.get('compounds', [_retry_result])
+                                candidate_compounds = [item for item in retry_list[:5] if isinstance(item, dict)]
+                                if candidate_compounds:
+                                    _quality = "ok"
+                                    skill_result = _retry_result
+
+                        # Rule B: irrelevant results (entity skills only)
+                        if _quality == "ok" and _is_entity_skill and candidate_compounds:
+                            if self._is_irrelevant(_focused, candidate_compounds):
+                                _quality = "irrelevant"
+                                print(f" ✗ irrelevant result", end="")
+                                _retry_result = self._retry_skill(
+                                    skill_name, actual_skill_name, skill_meta, _focused, timeout=60)
+                                if _retry_result is not None:
+                                    retry_list = _retry_result if isinstance(_retry_result, list) else _retry_result.get('compounds', [_retry_result])
+                                    retry_compounds = [item for item in retry_list[:5] if isinstance(item, dict)]
+                                    if retry_compounds and not self._is_irrelevant(_focused, retry_compounds):
+                                        _quality = "ok"
+                                        candidate_compounds = retry_compounds
+                                        skill_result = _retry_result
+
+                        if _quality == "ok":
+                            for item in candidate_compounds:
+                                # Rule C: skip compounds with no numeric properties
+                                if not self._compound_has_properties(item):
+                                    continue
+                                mol_structs = item.get('molecule_structures') or {}
+                                smiles = (mol_structs.get('canonical_smiles') or
+                                          item.get('canonical_smiles') or
+                                          item.get('smiles', ''))
+                                name = (item.get('pref_name') or item.get('name') or
+                                        item.get('molecule_chembl_id', 'Unknown'))
+                                props = item.get('molecule_properties') or {}
+                                results["compounds"].append({
+                                    "name": name,
+                                    "smiles": smiles,
+                                    "mw": props.get('full_mwt', item.get('mw', '')),
+                                    "chembl_id": item.get('molecule_chembl_id', ''),
+                                    "max_phase": item.get('max_phase', ''),
+                                    "source": actual_skill_name,
+                                    **{k: v for k, v in item.items()
+                                       if k not in ('molecule_structures', 'molecule_properties',
+                                                    'molecule_synonyms', 'cross_references', 'molfile')},
+                                })
+
                     elif 'pathway' in category or skill_name in ('kegg-database', 'string-database', 'reactome-database'):
                         # Pathway skills return dicts with lists of pathways/genes/proteins/drugs
                         data = skill_result if isinstance(skill_result, dict) else {}
@@ -385,8 +558,23 @@ class DeepInvestigator:
                                             "info": f"String score: {interact.get('score', '')}",
                                         })
 
-                    results["raw"].append({"skill": actual_skill_name, "data": skill_result})
-                    print(f" ✓")
+                    # Save artifact (always, for audit) with quality tag
+                    if self.artifact_store and isinstance(skill_result, dict):
+                        _artifact = self.artifact_store.create_and_save(
+                            skill_used=actual_skill_name,
+                            payload=skill_result,
+                            investigation_id=self._current_investigation_id,
+                            result_quality=_quality,
+                        )
+                        skill_result["_artifact_id"] = _artifact.artifact_id
+
+                    results["raw"].append({"skill": actual_skill_name, "data": skill_result,
+                                           "result_quality": _quality})
+                    if _quality == "ok":
+                        results["productive_tools"].append(actual_skill_name)
+                        print(f" ✓")
+                    else:
+                        print(f" (saved as audit artifact, quality={_quality})")
                 else:
                     print(f" ✗ {result.get('error', 'failed')}")
 
@@ -395,6 +583,17 @@ class DeepInvestigator:
 
         # LLM synthesises insights from whatever the skills returned
         results["insights"] = self._generate_insights(results)
+
+        # LLM identifies what data the investigation still needs — broadcast to peers
+        if self.llm_reasoner:
+            try:
+                results["needs"] = self.llm_reasoner.generate_needs(topic, results)
+            except Exception as _needs_err:
+                print(f"    Note: needs generation failed ({_needs_err})")
+                results["needs"] = []
+        else:
+            results["needs"] = []
+
         return results
 
     def run_computational_validation(
@@ -644,6 +843,7 @@ class DeepInvestigator:
         papers = investigation_results.get("papers", [])
         insights = investigation_results.get("insights", [])
         tools_used = investigation_results.get("tools_used", [])
+        productive_tools = investigation_results.get("productive_tools", []) or tools_used
         proteins = investigation_results.get("proteins", [])
         compounds = investigation_results.get("compounds", [])
 
@@ -659,8 +859,8 @@ class DeepInvestigator:
         if insights:
             hypothesis += f"\n\n**Supporting Evidence:** {insights[0]}"
 
-        method = f"**Investigative Approach:**\nThis investigation self-assembled using {len(tools_used)} tools selected by LLM analysis:\n\n"
-        for i, tool in enumerate(tools_used, 1):
+        method = f"**Investigative Approach:**\nThis investigation self-assembled using {len(productive_tools)} tools selected by LLM analysis:\n\n"
+        for i, tool in enumerate(productive_tools, 1):
             method += f"{i}. **{tool}**\n"
         method += f"\n**Full skill catalog size:** {len(self.skill_registry.skills)} available skills"
 
@@ -754,7 +954,7 @@ class DeepInvestigator:
         result = {
             "title": title,
             "hypothesis": hypothesis.split('\n')[0].replace('**', '').replace('Scientific Question:', '').strip(),
-            "method": f"LLM-assembled investigation using {', '.join(tools_used)}",
+            "method": f"LLM-assembled investigation using {', '.join(productive_tools)}",
             "findings": findings,
             "content": content,
             "figures": figure_paths,
@@ -876,31 +1076,25 @@ class DeepInvestigator:
             for skill_info in skills_to_run:
                 skill_name = skill_info["name"]
                 skill_meta = skill_info["meta"]
-                print(f"    🎯 Running {skill_name} to fill gap: {skill_info['gap'][:60]}...")
+                gap_desc = skill_info["gap"]
+                print(f"    🎯 Running {skill_name} to fill gap: {gap_desc[:60]}...")
                 try:
-                    # Use focused query (same truncation logic as main chain)
-                    _stop_words_gf = {
-                        'mechanism', 'mechanisms', 'pathway', 'pathways', 'analysis',
-                        'inhibition', 'activation', 'regulation', 'effect', 'effects',
-                        'role', 'function', 'study', 'investigation', 'via', 'of', 'in',
-                        'and', 'for', 'the', 'a', 'an', 'with', 'using', 'by',
-                        'selectivity', 'selectivities', 'interaction', 'interactions',
-                        'response', 'responses', 'activity', 'activities',
-                    }
-                    _kw = []
-                    for _w in topic.split():
-                        if _w.lower() in _stop_words_gf:
-                            break
-                        _kw.append(_w)
-                        if len(_kw) >= 3:
-                            break
-                    _gf_query = ' '.join(_kw) if _kw else topic
+                    # Ask LLM what to query given the gap description + accumulated evidence
+                    _gf_query: Optional[str] = None
+                    if self.llm_reasoner:
+                        try:
+                            _gf_query = self.llm_reasoner.derive_query_for_skill(
+                                skill_name=skill_name,
+                                skill_category=skill_meta.get('category', ''),
+                                topic=f"{topic} — gap: {gap_desc}",
+                                results_so_far=results,
+                            )
+                        except Exception:
+                            pass
+                    if not _gf_query:
+                        _gf_query = topic  # fallback
                     _QUERY_PARAM_GF = {'uniprot': 'search', 'blast': 'query'}
                     _gf_qparam = _QUERY_PARAM_GF.get(skill_name, 'query')
-                    # Protein-search skills work best with single-word entity queries
-                    _SINGLE_WORD_GF = {'uniprot', 'blast'}
-                    if skill_name in _SINGLE_WORD_GF:
-                        _gf_query = _gf_query.split()[0] if _gf_query else _gf_query
                     _gf_params = {_gf_qparam: _gf_query}
                     if skill_name in ('uniprot', 'uniprot-database'):
                         _gf_params['format'] = 'json'
@@ -1058,7 +1252,8 @@ class DeepInvestigator:
 
 def run_deep_investigation(agent_name: str, topic: str,
                            community: Optional[str] = None,
-                           agent_profile: Optional[Dict] = None) -> Dict:
+                           agent_profile: Optional[Dict] = None,
+                           skill_query_overrides: Optional[Dict[str, str]] = None) -> Dict:
     """
     Main entry point. LLM selects skills, agent self-assembles, no fallbacks.
     """
@@ -1076,9 +1271,28 @@ def run_deep_investigation(agent_name: str, topic: str,
     if previous.get("investigated"):
         print(f"  💾 {previous['message']}\n")
 
-    # LLM analyses the topic and selects skills from the full catalog
+    # LLM analyses the topic and selects skills — constrained to agent's preferred_tools
+    # if specified, so each agent only exercises its own skill set.
     print(f"  🤖 LLM analysing topic and selecting skills...")
-    all_skills = list(investigator.skill_registry.skills.values())
+    preferred_tools = (agent_profile or {}).get("preferred_tools", [])
+    if preferred_tools:
+        preferred_set = set(preferred_tools)
+        all_skills = [
+            s for s in investigator.skill_registry.skills.values()
+            if s.get("name") in preferred_set
+        ]
+        if not all_skills:
+            # Fallback: skill registry keys may differ — try case-insensitive match
+            all_skills = [
+                s for s in investigator.skill_registry.skills.values()
+                if s.get("name", "").lower() in {p.lower() for p in preferred_tools}
+            ]
+        if not all_skills:
+            # Last resort: use full catalog
+            all_skills = list(investigator.skill_registry.skills.values())
+        print(f"  🎯 Constrained to {len(all_skills)} preferred skill(s): {[s.get('name') for s in all_skills]}")
+    else:
+        all_skills = list(investigator.skill_registry.skills.values())
     analysis, pre_selected_skills = investigator.topic_analyzer.analyze_and_select_skills(
         topic=topic, available_skills=all_skills, max_skills=12, agent_profile=agent_profile
     )
@@ -1094,7 +1308,8 @@ def run_deep_investigation(agent_name: str, topic: str,
     print()
 
     # Initial discovery pass
-    results = investigator.run_tool_chain(topic, pre_selected_skills)
+    results = investigator.run_tool_chain(topic, pre_selected_skills,
+                                          skill_query_overrides=skill_query_overrides)
 
     # Feature 1: Computational validation on discovered entities
     smiles_list, sequences = investigator._extract_smiles_and_sequences(results)
@@ -1129,6 +1344,28 @@ def run_deep_investigation(agent_name: str, topic: str,
 
     content = investigator.generate_sophisticated_content(topic, results)
     investigator.log_investigation(topic, results)
+
+    # Emit a synthesis artifact so peer agents can discover needs signals
+    if investigator.artifact_store:
+        try:
+            _synthesis_payload = {
+                "topic": topic,
+                "tools_used": results.get("tools_used", []),
+                "paper_count": len(results.get("papers", [])),
+                "protein_count": len(results.get("proteins", [])),
+                "compound_count": len(results.get("compounds", [])),
+                "insight_count": len(results.get("insights", [])),
+                "open_questions": content.get("findings", "")[:500],
+                "query": topic[:120],
+            }
+            investigator.artifact_store.create_and_save(
+                skill_used="_synthesis",
+                payload=_synthesis_payload,
+                investigation_id=investigator._current_investigation_id,
+                needs=results.get("needs", []),
+            )
+        except Exception as _syn_err:
+            print(f"  Note: synthesis artifact save failed ({_syn_err})")
 
     content["agent_name"] = agent_name
     content["investigation_results"] = results

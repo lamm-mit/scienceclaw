@@ -9,6 +9,7 @@ Uses the autonomous loop controller for full scientific investigation
 cycles.
 """
 
+import argparse
 import time
 import subprocess
 import json
@@ -17,10 +18,14 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 # Configuration
-HEARTBEAT_INTERVAL = 6 * 60 * 60  # 6 hours in seconds
+DEFAULT_HEARTBEAT_INTERVAL = 6 * 60 * 60  # 6 hours in seconds
 SCIENCECLAW_DIR = Path(__file__).parent.parent  # scienceclaw root (parent of autonomous/)
-STATE_FILE = Path.home() / ".scienceclaw" / "heartbeat_state.json"
-LOG_FILE = Path.home() / ".scienceclaw" / "heartbeat_daemon.log"
+
+# These are set after arg parsing
+HEARTBEAT_INTERVAL: int = DEFAULT_HEARTBEAT_INTERVAL
+AGENT_PROFILE_NAME: str = ""  # empty = default single-agent path
+STATE_FILE: Path = Path.home() / ".scienceclaw" / "heartbeat_state.json"
+LOG_FILE: Path = Path.home() / ".scienceclaw" / "heartbeat_daemon.log"
 
 def log(message):
     """Log message with timestamp."""
@@ -63,12 +68,24 @@ def platform_configured():
 
 
 def load_agent_profile():
-    """Load agent profile from config."""
-    profile_file = Path.home() / ".scienceclaw" / "agent_profile.json"
+    """Load agent profile from config.
+
+    If AGENT_PROFILE_NAME is set, loads from:
+        ~/.scienceclaw/profiles/{AGENT_PROFILE_NAME}/agent_profile.json
+    Otherwise falls back to the default single-agent path:
+        ~/.scienceclaw/agent_profile.json
+    """
+    if AGENT_PROFILE_NAME:
+        profile_file = (
+            Path.home() / ".scienceclaw" / "profiles" / AGENT_PROFILE_NAME / "agent_profile.json"
+        )
+    else:
+        profile_file = Path.home() / ".scienceclaw" / "agent_profile.json"
+
     if not profile_file.exists():
-        log("⚠ No agent profile found. Run setup.py to create one.")
+        log(f"⚠ No agent profile found at {profile_file}. Run setup.py to create one.")
         return None
-    
+
     try:
         with open(profile_file) as f:
             return json.load(f)
@@ -142,16 +159,57 @@ def should_run_heartbeat(state):
     """Check if it's time to run heartbeat."""
     if not state.get("lastHeartbeat"):
         return True
-    
+
     last_heartbeat = datetime.fromisoformat(state["lastHeartbeat"])
     next_heartbeat = last_heartbeat + timedelta(seconds=HEARTBEAT_INTERVAL)
-    
+
     return datetime.now() >= next_heartbeat
+
+
+def _parse_args():
+    """Parse CLI arguments and configure globals."""
+    global HEARTBEAT_INTERVAL, AGENT_PROFILE_NAME, STATE_FILE, LOG_FILE
+
+    parser = argparse.ArgumentParser(description="ScienceClaw Heartbeat Daemon")
+    parser.add_argument(
+        "--profile",
+        default="",
+        help=(
+            "Named agent profile to load from "
+            "~/.scienceclaw/profiles/<name>/agent_profile.json. "
+            "If omitted, uses the default ~/.scienceclaw/agent_profile.json."
+        ),
+    )
+    parser.add_argument(
+        "--interval",
+        type=int,
+        default=int(DEFAULT_HEARTBEAT_INTERVAL),
+        help=(
+            "Heartbeat interval in seconds (default: 21600 = 6 hours). "
+            "Set to 180 for a 3-minute demo cycle."
+        ),
+    )
+    args = parser.parse_args()
+
+    HEARTBEAT_INTERVAL = args.interval
+    AGENT_PROFILE_NAME = args.profile
+
+    # Per-profile state and log files so multiple daemons don't collide
+    if AGENT_PROFILE_NAME:
+        base = Path.home() / ".scienceclaw" / "profiles" / AGENT_PROFILE_NAME
+        base.mkdir(parents=True, exist_ok=True)
+        STATE_FILE = base / "heartbeat_state.json"
+        LOG_FILE = base / "heartbeat_daemon.log"
+
 
 def main():
     """Main daemon loop."""
+    _parse_args()
+
     log("🚀 ScienceClaw Heartbeat Daemon starting...")
-    log(f"Heartbeat interval: {HEARTBEAT_INTERVAL / 3600} hours")
+    if AGENT_PROFILE_NAME:
+        log(f"Agent profile: {AGENT_PROFILE_NAME}")
+    log(f"Heartbeat interval: {HEARTBEAT_INTERVAL}s ({HEARTBEAT_INTERVAL / 60:.1f} min)")
     log(f"Working directory: {SCIENCECLAW_DIR}")
     log(f"State file: {STATE_FILE}")
     log(f"Log file: {LOG_FILE}")
@@ -191,10 +249,11 @@ def main():
                 last_heartbeat = datetime.fromisoformat(state["lastHeartbeat"])
                 next_time = last_heartbeat + timedelta(seconds=HEARTBEAT_INTERVAL)
                 time_until = (next_time - datetime.now()).total_seconds()
-                log(f"Next heartbeat in {time_until / 3600:.1f} hours at {next_time.strftime('%H:%M:%S')}")
-            
-            # Sleep for 10 minutes, then check again
-            time.sleep(600)
+                log(f"Next heartbeat in {time_until:.0f}s at {next_time.strftime('%H:%M:%S')}")
+
+            # Sleep for up to 10 % of the interval (min 10 s, max 600 s) before re-checking
+            sleep_secs = min(max(int(HEARTBEAT_INTERVAL * 0.1), 10), 600)
+            time.sleep(sleep_secs)
             
         except KeyboardInterrupt:
             log("🛑 Daemon stopped by user")

@@ -1,12 +1,26 @@
 ---
 name: biopython
-description: Comprehensive molecular biology toolkit. Use for sequence manipulation, file parsing (FASTA/GenBank/PDB), phylogenetics, and programmatic NCBI/PubMed access (Bio.Entrez). Best for batch processing, custom bioinformatics pipelines, BLAST automation. For quick lookups use gget; for multi-service integration use bioservices.
+description: "Computational molecular biology library (sequence I/O, alignment, phylogenetics). Input: FASTA/GenBank/PDB files you already have. Output: parsed sequences, alignments, phylogenetic trees, structural analysis. Does NOT search databases — invoking by topic returns only a placeholder stub. For literature use pubmed, for protein lookup use uniprot, for sequence homology use blast."
 license: Unknown
 metadata:
     skill-author: K-Dense Inc.
 ---
 
 # Biopython: Computational Molecular Biology in Python
+
+## ⚠️ When NOT To Use This Skill
+
+**Do NOT invoke biopython** if you want to:
+- Search literature about a topic (e.g. "KRAS covalent inhibitors") → use **pubmed**
+- Look up a protein by name or accession → use **uniprot**
+- Find compounds or chemical data → use **pubchem** or **chembl**
+- Run a BLAST sequence search → use the **blast** skill
+
+**The biopython `demo.py` script returns only a placeholder message** — it contains no actual scientific data. It exists to confirm the library is installed. Real biopython usage requires writing Python code that operates on sequence files you provide.
+
+**Correct agent workflow:**
+1. Retrieve a sequence accession from uniprot or NCBI (e.g. `P01116` for KRAS)
+2. Use the blast skill for homology search, or write biopython code to parse downloaded FASTA/GenBank files
 
 ## Overview
 

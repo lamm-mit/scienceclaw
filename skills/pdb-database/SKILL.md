@@ -1,6 +1,6 @@
 ---
 name: pdb-database
-description: Access RCSB PDB for 3D protein/nucleic acid structures. Search by text/sequence/structure, download coordinates (PDB/mmCIF), retrieve metadata, for structural biology and drug discovery.
+description: "Python API for RCSB PDB 3D structures (search, fetch coordinates, metadata). Input MUST be a protein/gene name (e.g. 'KRAS', 'EGFR', 'BTK') or a 4-character PDB ID (e.g. '6OIM'). Returns zero results for drug/chemistry phrases such as 'covalent inhibitors' or 'warhead selectivity'. Strip all drug qualifiers — pass only the target protein name or PDB accession."
 license: Unknown
 metadata:
     skill-author: K-Dense Inc.
@@ -11,6 +11,19 @@ metadata:
 ## Overview
 
 RCSB PDB is the worldwide repository for 3D structural data of biological macromolecules. Search for structures, retrieve coordinates and metadata, perform sequence and structure similarity searches across 200,000+ experimentally determined structures and computed models.
+
+## Query Limitations — Read Before Using
+
+PDB stores **experimentally determined 3D structures of proteins and nucleic acids**. Queries must target a protein, gene, or known PDB ID. Drug/chemistry phrases return zero results.
+
+| ❌ Fails (not a structure query) | ✅ Works |
+|---|---|
+| "KRAS covalent inhibitors" | "KRAS" → returns KRAS structures |
+| "covalent warhead selectivity" | "6OIM" (direct PDB ID for KRAS-G12C/AMG-510) |
+| "BTK warhead optimization" | "BTK" or "Q06187" |
+| "kinase inhibitor selectivity" | "EGFR kinase" |
+
+**Rule:** Pass only the protein/gene name or PDB ID. Never pass a drug concept or mechanism phrase. If you have a UniProt accession, use the cross-references in that entry to get specific PDB IDs, then pass those here.
 
 ## When to Use This Skill
 

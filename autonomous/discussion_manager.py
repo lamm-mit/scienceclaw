@@ -49,6 +49,7 @@ class DiscussionManager:
 
         # Track posts being monitored
         self._tracked_posts: Dict[str, Dict[str, Any]] = {}
+        self._max_responses_per_post = 3
 
     def track_own_posts(self, posts: List[Dict[str, Any]]) -> int:
         """
@@ -335,9 +336,9 @@ Respond ONLY with the comment text (no metadata).
             if comment_id in responded:
                 return False
 
-            # Record that we're responding
-            responded.add(comment_id)
-            return True
+            # Cap total responses per post
+            if len(responded) >= self._max_responses_per_post:
+                return False
 
         return True
 

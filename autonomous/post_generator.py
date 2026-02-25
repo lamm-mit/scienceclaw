@@ -146,6 +146,52 @@ class AutomatedPostGenerator:
             except Exception:
                 pass
         return None
+
+    def extract_artifact_metadata(self, agent_name: str, investigation_results: dict) -> list:
+        """Extract artifact metadata from investigation for upload to Infinite."""
+        try:
+            from artifacts.artifact import ArtifactStore
+        except ImportError:
+            return []
+
+        artifact_ids = investigation_results.get('artifact_ids', [])
+        if not artifact_ids:
+            return []
+
+        store = ArtifactStore(agent_name)
+        metadata = []
+
+        for artifact_id in artifact_ids:
+            artifact = store.get(artifact_id)
+            if artifact:
+                metadata.append({
+                    "artifact_id": artifact.artifact_id,
+                    "artifact_type": artifact.artifact_type,
+                    "skill_used": artifact.skill_used,
+                    "producer_agent": artifact.producer_agent,
+                    "parent_artifact_ids": getattr(artifact, 'parent_artifact_ids', []),
+                    "timestamp": artifact.timestamp,
+                    "summary": self._generate_artifact_summary(artifact)
+                })
+
+        return metadata
+
+    def _generate_artifact_summary(self, artifact) -> str:
+        """Generate brief summary from artifact payload."""
+        payload = artifact.payload
+
+        if artifact.artifact_type == "pubmed_results":
+            count = len(payload.get('papers', []))
+            return f"Found {count} papers via PubMed"
+        elif artifact.artifact_type == "protein_data":
+            return f"Protein: {payload.get('id', 'unknown')}"
+        elif artifact.artifact_type == "compound_data":
+            return f"Compound: {payload.get('name', 'unknown')}"
+        elif artifact.artifact_type == "admet_prediction":
+            return f"ADMET ({payload.get('model', 'unknown')}): {payload.get('prediction', 'N/A')}"
+        else:
+            summary = f"{artifact.artifact_type} from {artifact.skill_used}"
+            return summary[:500]
     
     def run_pubmed_search(self, query: str, max_results: int = 3) -> Dict:
         """
@@ -369,16 +415,17 @@ This analysis highlights key opportunities for advancing {topic}:
             # Fallback to simple if enhanced module not available
             return self.generate_content(topic, {"papers": papers}, detailed=False)
     
-    def post_to_infinite(self, 
+    def post_to_infinite(self,
                         community: str,
                         title: str,
                         hypothesis: str,
                         method: str,
                         findings: str,
-                        content: str) -> Dict:
+                        content: str,
+                        investigation_results: Optional[Dict] = None) -> Dict:
         """
         Post to Infinite platform.
-        
+
         Args:
             community: Target community (chemistry, biology, materials, scienceclaw)
             title: Post title
@@ -386,28 +433,40 @@ This analysis highlights key opportunities for advancing {topic}:
             method: Methodology
             findings: Key findings
             content: Full content with conclusion
-        
+            investigation_results: Optional investigation results containing artifact_ids
+
         Returns:
             Response from API
         """
         if not self._ensure_authenticated():
             return {"error": "Not authenticated"}
-        
+
+        # Extract artifact metadata if investigation results provided
+        artifact_metadata = []
+        if investigation_results:
+            artifact_metadata = self.extract_artifact_metadata(self.agent_name, investigation_results)
+
         try:
+            payload = {
+                "community": community,
+                "title": title,
+                "hypothesis": hypothesis,
+                "method": method,
+                "findings": findings,
+                "content": content
+            }
+
+            # Add artifact metadata if available
+            if artifact_metadata:
+                payload["artifact_metadata"] = artifact_metadata
+
             response = requests.post(
                 f"{self.api_base}/posts",
                 headers={"Authorization": f"Bearer {self.jwt_token}"},
-                json={
-                    "community": community,
-                    "title": title,
-                    "hypothesis": hypothesis,
-                    "method": method,
-                    "findings": findings,
-                    "content": content
-                },
+                json=payload,
                 timeout=10
             )
-            
+
             if response.status_code in [200, 201]:
                 result = response.json()
                 # Ensure post ID is accessible
@@ -423,13 +482,14 @@ This analysis highlights key opportunities for advancing {topic}:
         except Exception as e:
             return {"error": str(e)}
     
-    def generate_and_post(self, 
+    def generate_and_post(self,
                          topic: str,
                          community: Optional[str] = None,
                          search_query: Optional[str] = None,
                          max_results: int = 3,
                          deep_investigation: bool = True,
-                         agent_profile: Optional[Dict] = None) -> Dict:
+                         agent_profile: Optional[Dict] = None,
+                         dry_run: bool = False) -> Dict:
         """
         Complete automated workflow: search → analyze → generate → post.
         
@@ -470,11 +530,28 @@ This analysis highlights key opportunities for advancing {topic}:
                     community=community,
                     agent_profile=agent_profile
                 )
-                
+
+                # Substance gate: skip posting if no real results came back
+                inv = content_data.get("investigation_results", {})
+                if not inv.get("papers") and not inv.get("proteins") and not inv.get("compounds"):
+                    print("  ⚠️  No substance from skills — skipping post.")
+                    return {"skipped": True, "reason": "no substance from skills"}
+
                 # Select community
                 selected_community = community or self.select_community(topic)
                 print(f"  📍 Community: {selected_community}\n")
-                
+
+                # Dry-run: print content and stop before posting
+                if dry_run:
+                    inv = content_data.get("investigation_results", {})
+                    print("  🏃 DRY RUN — would post:")
+                    print(f"    Title: {content_data.get('title')}")
+                    print(f"    Community: {selected_community}")
+                    print(f"    Productive tools: {inv.get('productive_tools', [])}")
+                    print(f"    Papers: {len(inv.get('papers', []))}, Proteins: {len(inv.get('proteins', []))}, Compounds: {len(inv.get('compounds', []))}")
+                    print(f"    Findings preview: {content_data.get('findings', '')[:300]}...")
+                    return {"dry_run": True, "title": content_data.get("title"), "community": selected_community}
+
                 # Post to Infinite
                 print("  📤 Posting to Infinite...")
                 result = self.post_to_infinite(
@@ -483,7 +560,8 @@ This analysis highlights key opportunities for advancing {topic}:
                     hypothesis=content_data["hypothesis"],
                     method=content_data["method"],
                     findings=content_data["findings"],
-                    content=content_data["content"]
+                    content=content_data["content"],
+                    investigation_results=content_data.get("investigation_results")
                 )
                 
                 if "error" in result:
@@ -570,15 +648,17 @@ if __name__ == "__main__":
     parser.add_argument("--community", help="Target community (auto-selected if not specified)")
     parser.add_argument("--query", help="Custom PubMed query (uses topic if not specified)")
     parser.add_argument("--max-results", type=int, default=3, help="Max PubMed results")
-    
+    parser.add_argument("--dry-run", action="store_true", help="Run investigation but do not post")
+
     args = parser.parse_args()
-    
+
     generator = AutomatedPostGenerator(agent_name=args.agent)
     result = generator.generate_and_post(
         topic=args.topic,
         community=args.community,
         search_query=args.query,
-        max_results=args.max_results
+        max_results=args.max_results,
+        dry_run=args.dry_run
     )
     
     if "error" in result:

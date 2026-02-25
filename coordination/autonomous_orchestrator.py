@@ -124,8 +124,20 @@ class AutonomousOrchestrator:
             logger.info(f"Anchor post created: {post_id}")
 
             thread_result = self._run_emergent_discussion(
-                topic, agents, strategy, emergent_session
+                topic, agents, strategy, emergent_session, session_id=session_id
             )
+
+            # Mark emergent session complete (triggers judge + paper generation)
+            try:
+                self.session_manager.complete_session(
+                    session_id=session_id,
+                    summary=thread_result.get(
+                        "convergence_reason", "Emergent discussion converged"
+                    ),
+                    post_id=post_id,
+                )
+            except Exception as _e:
+                logger.warning(f"Could not mark emergent session complete: {_e}")
 
             logger.info(f"Emergent investigation complete! Anchor post: {post_id}")
             return {
@@ -147,6 +159,27 @@ class AutonomousOrchestrator:
             session_id, agents, strategy
         )
 
+        # Agent judge: has the collaboration answered the question?
+        try:
+            import re as _re
+            from autonomous.investigation_conclusion import CompletionJudge, ArtifactCollector
+            _findings = self.session_manager.get_session_state(session_id).get("findings", [])
+            _collector = ArtifactCollector()
+            _inv_id = _re.sub(r"[^a-z0-9]+", "_", topic.lower()).strip("_")[:64]
+            _index_entries = _collector.collect_index_entries(_inv_id)
+            _verdict = CompletionJudge(agent_name="Orchestrator").judge(
+                topic, _findings, _index_entries
+            )
+            logger.info(
+                f"Completion verdict: {'COMPLETE' if _verdict.complete else 'INCOMPLETE'} "
+                f"({_verdict.confidence}) — {_verdict.reasoning}"
+            )
+            if not _verdict.complete:
+                logger.warning(f"Missing evidence: {_verdict.missing_evidence}")
+                # Proceed with synthesis anyway (single pass, no retry)
+        except Exception as _e:
+            logger.warning(f"Completion judge unavailable: {_e}")
+
         # Phase 5: Synthesize findings
         logger.info("Synthesizing findings from all agents...")
         synthesis = self._synthesize_findings(
@@ -156,6 +189,16 @@ class AutonomousOrchestrator:
         # Phase 6: Post to Infinite
         logger.info("Posting synthesis to Infinite...")
         post_id = self._post_synthesis(topic, synthesis, community)
+
+        # Mark session complete (triggers judge + paper generation inside complete_session)
+        try:
+            self.session_manager.complete_session(
+                session_id=session_id,
+                summary=synthesis.get("synthesis_text", "")[:500],
+                post_id=post_id,
+            )
+        except Exception as _e:
+            logger.warning(f"Could not mark session complete: {_e}")
 
         logger.info(f"Investigation complete! Post ID: {post_id}")
 
@@ -175,6 +218,7 @@ class AutonomousOrchestrator:
         agents: List[Dict[str, Any]],
         strategy: Dict[str, Any],
         emergent_session,
+        session_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Run the emergent discussion loop.
@@ -319,7 +363,32 @@ class AutonomousOrchestrator:
                 except Exception:
                     pass
 
-            # Convergence check
+            # Judge-based convergence check (runs every turn, alongside empty-turn fallback)
+            try:
+                import re as _re
+                from autonomous.investigation_conclusion import CompletionJudge, ArtifactCollector
+                _session_state = (
+                    self.session_manager.get_session_state(session_id)
+                    if session_id else {}
+                ) or {}
+                _findings = _session_state.get("findings", [])
+                _inv_id = _re.sub(r"[^a-z0-9]+", "_", topic.lower()).strip("_")[:64]
+                _index_entries = ArtifactCollector().collect_index_entries(_inv_id)
+                _verdict = CompletionJudge("Orchestrator").judge(
+                    topic, _findings, _index_entries
+                )
+                if _verdict.complete:
+                    reason = (
+                        f"Agent judge: {_verdict.reasoning} "
+                        f"(confidence={_verdict.confidence})"
+                    )
+                    logger.info(f"Convergence by judge: {reason}")
+                    print(f"\n  Converged (judge): {reason}")
+                    break
+            except Exception:
+                pass  # Fall through to empty-turn check
+
+            # Convergence check (empty-turn fallback)
             if not turn_had_contribution:
                 consecutive_empty_turns += 1
                 logger.info(
