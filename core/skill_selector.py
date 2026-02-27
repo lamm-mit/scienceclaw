@@ -95,8 +95,8 @@ CRITICAL GUIDANCE FOR SKILL SELECTION:
 For ORGANIC/SYNTHETIC CHEMISTRY topics (reactions, synthesis, catalysis, coupling):
 - AVOID: pubmed-database (it's for biomedical literature, not chemistry)
 - PREFER: openalex-database, arxiv, biorxiv-database (chemistry literature)
-- INCLUDE: chembl-database, pubchem-database, zinc-database (compounds)
-- INCLUDE: nistwebbook, cas (chemistry reference data)
+- INCLUDE: chembl, pubchem, cas, nistwebbook (compounds and chemical data)
+- For RETROSYNTHESIS topics: askcos (requires smiles param — use pubchem or cas first)
 
 For BIOMEDICAL topics (drugs, diseases, proteins):
 - USE: pubmed-database (appropriate for biomedical)

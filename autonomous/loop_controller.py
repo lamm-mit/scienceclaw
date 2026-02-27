@@ -1226,6 +1226,18 @@ class AutonomousLoopController:
             print("   No tools configured — skipping")
             return None, None
 
+        # Filter to only skills present in the registry (avoids "not found" skips)
+        from core.skill_registry import get_registry as _get_registry
+        registry_skills = set(_get_registry().skills.keys())
+        available_tools = [t for t in preferred_tools if t in registry_skills]
+        if not available_tools:
+            print(f"   None of the preferred tools are registered — skipping")
+            return None, None
+        if len(available_tools) < len(preferred_tools):
+            missing = set(preferred_tools) - set(available_tools)
+            print(f"   Skipping unregistered tools: {sorted(missing)}")
+        preferred_tools = available_tools
+
         # Skip re-investigation if we already posted a comment on the seed post
         # Agents with allow_reinvestigation=True in their profile bypass this guard;
         # tool rotation (random.sample) ensures each re-run fires different tools.
@@ -1403,12 +1415,9 @@ class AutonomousLoopController:
                     focused_query = _thread_entity
                     print(f"   Entity override for {tool_name}: {focused_query!r}")
             elif tool_name not in _ENTITY_TOOLS:
-                # Discovery tools: clean topic into keyword soup so PubMed/websearch
-                # don't choke on English connectors ("via", "in", "with", "of", etc.)
-                _cleaned = re.sub(
-                    r'\b(via|in|with|of|for|and|through|using|by|from|on|to|the|a|an)\b',
-                    ' ', topic, flags=re.IGNORECASE)
-                focused_query = re.sub(r'\s+', ' ', _cleaned).strip()
+                # Discovery tools: use the LLM-extracted key entity as the query.
+                # The full topic string is too noisy for database APIs.
+                focused_query = _key_entity
 
             # Build params — let the skill's own SKILL.md define what it needs;
             # we just provide the most useful query we have.
@@ -1428,6 +1437,12 @@ class AutonomousLoopController:
                 params = {"query": focused_query}
             elif tool_name == "chembl":
                 params = {"query": focused_query, "max_results": "5"}
+            elif tool_name == "askcos":
+                compounds = self.agent_profile.get("research", {}).get("compounds", [])
+                if not compounds:
+                    print(f"   {tool_name}: no SMILES in profile — skipping")
+                    continue
+                params = {"smiles": compounds[0], "top": "5"}
             elif tool_name in ("tdc", "pytdc"):
                 compounds = self.agent_profile.get("research", {}).get("compounds", [])
                 if not compounds:
@@ -1490,7 +1505,10 @@ class AutonomousLoopController:
                     artifact = None
                     print(f"artifact save failed: {scrub(str(e))}")
                 summary = self._summarise_payload(tool_name, agg_payload, topic=topic)
-                tool_sections.append(f"**{tool_name}** (artifact `{short_id}…`)\n{summary}")
+                if not self._is_junk_summary(summary):
+                    tool_sections.append(f"**{tool_name}** (artifact `{short_id}…`)\n{summary}")
+                else:
+                    print(f"   ↳ {tool_name}: suppressing junk section (artifact saved for audit)")
                 if artifact:
                     artifact_refs.append((artifact.artifact_id, artifact.artifact_type, tool_name, summary))
                 continue  # skip the generic execute below
@@ -1558,7 +1576,10 @@ class AutonomousLoopController:
                     artifact = None
                     print(f"artifact save failed: {scrub(str(e))}")
                 summary = self._summarise_payload(tool_name, agg_payload, topic=topic)
-                tool_sections.append(f"**{tool_name}** (artifact `{short_id}…`)\n{summary}")
+                if not self._is_junk_summary(summary):
+                    tool_sections.append(f"**{tool_name}** (artifact `{short_id}…`)\n{summary}")
+                else:
+                    print(f"   ↳ {tool_name}: suppressing junk section (artifact saved for audit)")
                 if artifact:
                     artifact_refs.append((artifact.artifact_id, artifact.artifact_type, tool_name, summary))
                 continue  # skip the generic execute below
@@ -1589,7 +1610,7 @@ class AutonomousLoopController:
                 # Build structured payload so the artifact reactor can match keys
                 # against downstream skill --params (e.g. "query" matches --query,
                 # "accession" matches --accession).
-                structured: dict = {"output": raw[:500]}
+                structured: dict = {"output": raw[:500], "raw": raw}
                 # Carry forward the query that produced this artifact so any skill
                 # accepting --query / --search can react to it.
                 if params.get("query"):
@@ -1627,7 +1648,10 @@ class AutonomousLoopController:
                 short_id = "n/a"
                 artifact = None
 
-            # Cross-agent duplicate check via content_hash in global_index
+            # Cross-agent duplicate check: if another agent already produced the same
+            # content (same content_hash) within the same investigation, skip it.
+            # Different investigations are independent — no cross-investigation dedup.
+            # Same-agent re-runs are always allowed (agent posts its own findings).
             _duplicate = False
             if artifact:
                 try:
@@ -1641,9 +1665,11 @@ class AutonomousLoopController:
                             except Exception:
                                 continue
                             if (_ge.get("content_hash") == artifact.content_hash
-                                    and _ge.get("artifact_id") != artifact.artifact_id):
+                                    and _ge.get("artifact_id") != artifact.artifact_id
+                                    and _ge.get("producer_agent") != self.agent_name
+                                    and _ge.get("investigation_id") == investigation_id):
                                 _duplicate = True
-                                print(f"   ↳ {tool_name}: content_hash already in global index "
+                                print(f"   ↳ {tool_name}: content_hash already in this investigation "
                                       f"(producer={_ge.get('producer_agent','?')}) — skipping section")
                                 break
                 except Exception:
@@ -1772,6 +1798,8 @@ class AutonomousLoopController:
         "entirely of unrelated", "does not contain any scientifically",
         "not return any specific", "failed to retrieve relevant",
         "no scientifically meaningful",
+        "cannot connect to askcos", "start a local deployment",
+        "requires authentication",
     ]
 
     def _is_junk_summary(self, text: str) -> bool:
@@ -1788,12 +1816,35 @@ class AutonomousLoopController:
         """
         lines = []
         # Tool-specific key extraction for common structured outputs
-        if tool_name == "pubmed":
-            papers = payload.get("papers") or payload.get("articles") or payload.get("items") or []
+        if tool_name == "askcos":
+            if payload.get("error"):
+                return payload["error"]
+            suggestions = payload.get("suggestions", [])
+            total = payload.get("total_templates_matched", 0)
+            target = payload.get("target", "")
+            model = payload.get("model", "reaxys")
+            if suggestions:
+                lines.append(
+                    f"ASKCOS ({model}): {total} templates matched for {target}"
+                )
+                for s in suggestions[:5]:
+                    reagent = f" [reagent: {s['necessary_reagent']}]" if s.get("necessary_reagent") else ""
+                    lines.append(
+                        f"  #{s['rank']} score={s['score']:.4f} "
+                        f"(n={s['template_count']}) → {s['reactants_smiles']}{reagent}"
+                    )
+            elif total == 0:
+                return f"ASKCOS ({model}): no templates matched for {target}"
+        elif tool_name in ("pubmed", "openalex-database", "arxiv", "semantic-scholar"):
+            papers = (
+                payload.get("papers") or payload.get("articles")
+                or payload.get("items") or payload.get("results") or []
+            )
             total = payload.get("total") or payload.get("count") or len(papers)
             if papers and isinstance(papers[0], dict):
                 titles = [p.get("title", "")[:80] for p in papers[:3] if p.get("title")]
-                lines.append(f"{total} paper(s). Top: {'; '.join(titles)}")
+                if titles:
+                    lines.append(f"{total} paper(s). Top: {'; '.join(titles)}")
         elif tool_name in ("uniprot", "uniprot_fetch"):
             acc = payload.get("primaryAccession") or payload.get("accession") or payload.get("id", "")
             name = (payload.get("proteinDescription", {}) or {})

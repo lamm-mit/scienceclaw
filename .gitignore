@@ -111,21 +111,14 @@ temp/
 *.bak
 
 # Local/dev scripts and generated CLI
-run_multi_agent_daemon.sh
 oracle/
 scienceclaw-heartbeat.service
 
+# Docs and plans
+docs/plans/
+
 # Demo and test scripts (local/dev only)
-conclude_investigation.py
-demo_emergent_coordination.py
-demo_emergent.sh
-demo_genomics_investigation.py
-demo_multiagent_investigation.py
-demo_polymer_investigation.py
-demo_skill_improvements.py
-show_artifact_chain.py
-setup_polymer_agents.py
-setup_genomics_agents.py
+demo/
 examples/
 figures/
 scripts/

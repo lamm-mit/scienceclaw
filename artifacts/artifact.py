@@ -58,7 +58,7 @@ SKILL_DOMAIN_MAP: Dict[str, List[str]] = {
     "bioservices":                  ["protein_data", "compound_data", "pathway_data"],
     "sequence":                     ["sequence_alignment", "protein_data"],
     "gget":                         ["protein_data", "genomic_data", "sequence_alignment"],
-    "esm":                          ["protein_data", "structure_data"],
+    "esm":                          ["sequence_design", "protein_data", "structure_data"],
     "adaptyv":                      ["protein_data", "admet_prediction"],
     "string-database":              ["network_data", "protein_data"],
     "brenda-database":              ["pathway_data", "protein_data"],
@@ -100,6 +100,7 @@ SKILL_DOMAIN_MAP: Dict[str, List[str]] = {
     # -----------------------------------------------------------------------
     # Cheminformatics / molecular properties
     # -----------------------------------------------------------------------
+    "askcos":                       ["retrosynthesis"],
     "rdkit":                        ["rdkit_properties", "polymer_properties"],
     "datamol":                      ["rdkit_properties", "compound_data", "polymer_properties"],
     "medchem":                      ["rdkit_properties", "compound_data"],

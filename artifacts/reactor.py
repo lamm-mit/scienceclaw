@@ -25,10 +25,14 @@ Execution path:
 """
 
 import json
+import logging
+import math
 import re
 import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
+
+_log = logging.getLogger(__name__)
 
 from artifacts.artifact import Artifact, ArtifactStore, SKILL_DOMAIN_MAP
 from core.skill_registry import get_registry
@@ -152,6 +156,137 @@ def _parse_rich_text_to_results(payload: dict) -> dict:
 
 # Module-level cache: skill_name -> frozenset of normalised param names
 _SKILL_PARAM_CACHE: Dict[str, frozenset] = {}
+
+_SKILL_SCHEMA_CACHE: Dict[str, Optional[dict]] = {}
+
+
+def _get_skill_schema(skill_name: str, skill_meta: dict) -> Optional[dict]:
+    """
+    Call `python3 <script> --describe-schema` and return the parsed JSON schema,
+    or None if the script doesn't support --describe-schema or crashes.
+
+    Result is cached per skill_name.
+    """
+    if skill_name in _SKILL_SCHEMA_CACHE:
+        return _SKILL_SCHEMA_CACHE[skill_name]
+
+    executables = skill_meta.get("executables", [])
+    result = None
+
+    if executables:
+        script = executables[0]
+        try:
+            proc = subprocess.run(
+                ["python3", script, "--describe-schema"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            output = proc.stdout.strip()
+            if output:
+                result = json.loads(output)
+        except Exception as exc:
+            _log.debug("_get_skill_schema(%s): %s", skill_name, exc)
+
+    _SKILL_SCHEMA_CACHE[skill_name] = result
+    return result
+
+
+def _build_input_json(schema: dict, payload: dict) -> Optional[str]:
+    """
+    Extract data from `payload` matching `schema["input_json_fields"]` and return
+    as a JSON string for --input-json, or None if nothing useful was found.
+
+    Extraction rules:
+      "papers"   → payload["papers"] or payload["articles"] (list of dicts)
+      "rows"     → payload["rows"] or derived from payload["benchmarks"] /
+                   payload["papers"] by picking numeric fields as (x, y)
+      "vectors"  → payload["vectors"] or payload["embeddings"]
+      "data"     → payload["data"] or first numeric list found in payload
+    """
+    fields = schema.get("input_json_fields", [])
+    if not fields:
+        return None
+
+    extracted: dict = {}
+
+    for field in fields:
+        if field == "papers":
+            candidates = payload.get("papers") or payload.get("articles") or []
+            if candidates and isinstance(candidates, list):
+                extracted["papers"] = candidates
+        elif field == "rows":
+            if payload.get("rows") and isinstance(payload["rows"], list):
+                extracted["rows"] = payload["rows"]
+            else:
+                rows = _derive_numeric_rows(payload)
+                if rows:
+                    extracted["rows"] = rows
+        elif field == "vectors":
+            vecs = payload.get("vectors") or payload.get("embeddings") or []
+            labels = payload.get("labels") or []
+            if vecs and isinstance(vecs, list):
+                extracted["vectors"] = vecs
+                if labels:
+                    extracted["labels"] = labels
+        elif field == "data":
+            data = payload.get("data") or []
+            if not data:
+                for v in payload.values():
+                    if isinstance(v, list) and v and isinstance(v[0], (int, float)):
+                        data = v
+                        break
+            if data:
+                extracted["data"] = data
+
+    if not extracted:
+        return None
+    return json.dumps(extracted)
+
+
+def _derive_numeric_rows(payload: dict) -> list:
+    """
+    Try to extract (x, y) numeric pairs from benchmarks or papers.
+    For scaling law data: x = log10(params), y = log10(loss) or cross-entropy.
+    Returns list of {"x": float, "y": float} dicts, empty if nothing found.
+    """
+    # x: raw param counts → log10 (params always >> 1000)
+    # y: perplexity → log10 if > 100, otherwise keep raw (loss typically 1-10)
+    candidates = (
+        payload.get("benchmarks")
+        or payload.get("papers")
+        or payload.get("articles")
+        or []
+    )
+    rows = []
+    for item in candidates:
+        if not isinstance(item, dict):
+            continue
+        x_val = None
+        for key in ("params", "parameter_count", "n_params", "parameters", "x"):
+            v = item.get(key)
+            if v is not None:
+                try:
+                    x_val = float(v)
+                    if x_val > 1000:
+                        x_val = math.log10(x_val)
+                    break
+                except (TypeError, ValueError):
+                    pass
+        y_val = None
+        for key in ("loss", "perplexity", "cross_entropy", "test_loss", "y"):
+            v = item.get(key)
+            if v is not None:
+                try:
+                    y_val = float(v)
+                    if y_val > 100:
+                        y_val = math.log10(y_val)
+                    break
+                except (TypeError, ValueError):
+                    pass
+        if x_val is not None and y_val is not None:
+            rows.append({"x": x_val, "y": y_val})
+    return rows
 
 
 def _skill_input_params(skill_name: str, skill_meta: dict) -> frozenset:
@@ -582,7 +717,19 @@ class ArtifactReactor:
         for skill_name, skill_meta in candidate_skills.items():
             params = _skill_input_params(skill_name, skill_meta)
             overlap = params & set(payload_keys.keys())
-            if not overlap:
+
+            # --- Schema-driven --input-json injection ---
+            # Discover skill's declared input schema via --describe-schema,
+            # extract matching data from parent payload, inject as --input-json.
+            # Also serves as a secondary compatibility path when key-overlap alone
+            # does not match (e.g. skill accepts --input-json but payload keys are
+            # domain-specific like "papers" / "vectors").
+            _schema = _get_skill_schema(skill_name, skill_meta)
+            _input_json_str: Optional[str] = None
+            if _schema and "input_json" in params:
+                _input_json_str = _build_input_json(_schema, parent.payload)
+
+            if not overlap and not _input_json_str:
                 continue
 
             # Build parameter dict from all overlapping keys
@@ -595,6 +742,10 @@ class ArtifactReactor:
                 if value is None or isinstance(value, dict):
                     continue
                 exec_params[norm_key] = value
+
+            # Inject --input-json when schema extraction succeeded
+            if _input_json_str:
+                exec_params["input_json"] = _input_json_str
 
             if not exec_params:
                 continue

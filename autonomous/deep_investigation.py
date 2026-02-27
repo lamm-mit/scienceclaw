@@ -105,16 +105,31 @@ class DeepInvestigator:
     def _retry_skill(self, skill_name: str, actual_skill_name: str, skill_meta: dict,
                      original_query: str, timeout: int = 60) -> Optional[Dict]:
         """
-        Retry a skill with a simplified query (first noun phrase or first 5 words).
+        Retry a skill with a simplified, skill-type-aware query.
+        Entity skills (uniprot, pdb, blast) get the shortest plausible entity token.
+        Discovery skills (pubmed, arxiv) get the first meaningful phrase.
         Returns the raw skill result dict on success, or None.
         """
-        # Simplify: take text before separators, or first 5 words
-        for sep in (' for ', ' in ', ' via ', ' of ', ' with '):
-            if sep in original_query.lower():
-                simplified = original_query[:original_query.lower().index(sep)].strip()
-                break
+        _skill_base = actual_skill_name.replace('-database', '')
+        _ENTITY_SKILLS = {'uniprot', 'pdb', 'chembl', 'pubchem', 'blast',
+                          'string', 'kegg', 'reactome'}
+
+        if _skill_base in _ENTITY_SKILLS:
+            # Entity skills need a short, precise name — extract the first short token
+            # that looks like a gene/protein/compound name (≤10 chars, starts uppercase).
+            tokens = [t.strip('.,;:()[]') for t in original_query.split()[:8]]
+            simplified = next(
+                (t for t in tokens if t and len(t) <= 10 and t[0].isupper()),
+                tokens[0] if tokens else original_query,
+            )
         else:
-            simplified = ' '.join(original_query.split()[:5])
+            # Discovery skills: strip context clauses, keep the core scientific phrase
+            for sep in (' for ', ' in ', ' via ', ' of ', ' with '):
+                if sep in original_query.lower():
+                    simplified = original_query[:original_query.lower().index(sep)].strip()
+                    break
+            else:
+                simplified = ' '.join(original_query.split()[:5])
 
         if simplified.lower() == original_query.lower() or not simplified:
             return None
@@ -143,6 +158,46 @@ class DeepInvestigator:
                 print(f" ✗ {result.get('error', 'failed')}")
         except Exception as e:
             print(f" ✗ {e}")
+        return None
+
+    def _resolve_smiles_for_topic(self, topic: str) -> Optional[str]:
+        """
+        Resolve canonical SMILES for a compound name from the topic string.
+        Checks agent profile research.compounds first, then queries chembl/cas.
+        Used only for SMILES-requiring skills (askcos etc) — not in loop controller.
+        """
+        # 1. Use pre-set SMILES from agent profile if available
+        profile_compounds = (self.agent_profile or {}).get('research', {}).get('compounds', [])
+        if profile_compounds:
+            candidate = profile_compounds[0]
+            if candidate and candidate.startswith(('C', 'c', 'O', 'N', '[', 'F', 'Cl', 'Br', 'I')):
+                return candidate
+
+        compound_name = ' '.join(topic.split()[:3])
+
+        for skill_name in ('chembl', 'cas'):
+            skill_meta = self.skill_registry.get_skill(skill_name)
+            if not skill_meta:
+                continue
+            result = self.skill_executor.execute_skill(
+                skill_name=skill_name,
+                skill_metadata=skill_meta,
+                parameters={'query': compound_name},
+                timeout=20
+            )
+            if result.get('status') != 'success':
+                continue
+            data = result.get('result', {})
+            entries = data if isinstance(data, list) else [data]
+            for entry in entries:
+                # Direct key (pubchem: canonical_smiles; cas: smiles)
+                smiles = (entry.get('canonical_smiles') or entry.get('smiles')
+                          or entry.get('canonicalSmiles'))
+                # Nested key (chembl: molecule_structures.canonical_smiles)
+                if not smiles and isinstance(entry.get('molecule_structures'), dict):
+                    smiles = entry['molecule_structures'].get('canonical_smiles')
+                if smiles and smiles.startswith(('C', 'c', 'O', 'N', '[', 'F', 'Cl', 'Br', 'I')):
+                    return smiles
         return None
 
     def run_tool_chain(self, topic: str, pre_selected_skills: List[Dict[str, Any]],
@@ -218,18 +273,24 @@ class DeepInvestigator:
 
                 if _skill_base in _ENTITY_SKILLS:
                     # Check thread-aware overrides first (highest quality signal).
-                    # Fall back to topic word splitting if no override available.
                     _override = (skill_query_overrides or {}).get(_skill_base)
                     if _override:
                         _focused = _override
                     else:
-                        # Hard fallback: strip everything after "via/in/with/of" —
-                        # keeps the entity part and drops the context clause.
+                        # Strip context clauses after common separators.
                         import re as _re2
-                        _focused = _re2.split(r'\s+(?:via|in|with|of|for|and)\s+',
-                                              topic, maxsplit=1)[0].strip()
+                        _parts = _re2.split(r'\s+(?:via|in|with|of|for|and)\s+',
+                                            topic, maxsplit=1)
+                        _candidate = _parts[0].strip()
+                        # If no separator found, _candidate == full topic.
+                        # Cap entity queries at 3 words — entity skills need short,
+                        # precise names (e.g. "PCSK9", "LDLR"), not whole sentences.
+                        if _candidate == topic:
+                            _candidate = ' '.join(topic.split()[:3])
+                        _focused = _candidate
                 else:
-                    # Broad discovery skills — use full topic
+                    # Broad discovery skills — use full topic so the LLM-selector's
+                    # differentiated queries are built from the complete context.
                     _focused = topic
 
                 if _skill_base in _QUERY_REMAP:
@@ -248,12 +309,38 @@ class DeepInvestigator:
                     # Standard skills
                     if not _query_already_set():
                         params['query'] = _focused
-                    else:
-                        # Override LLM-selector's topic paraphrase with derived query
+                    elif _skill_base in _ENTITY_SKILLS:
+                        # Entity skills: always use the derived focused entity name —
+                        # the LLM selector tends to copy the full topic verbatim here.
                         for _k in ('query', 'search', 'term', 'keyword', 'topic'):
                             if _k in params:
                                 params[_k] = _focused
                                 break
+                    # else: discovery skill with LLM-set query — preserve it.
+                    # The LLM selector intentionally differentiates multiple pubmed/arxiv
+                    # calls; overriding them all with the same topic string is what caused
+                    # every pubmed call to execute the identical query.
+
+                # Skills that require --smiles instead of a query string
+                _SMILES_SKILLS = {'askcos'}
+
+                if _skill_base in _SMILES_SKILLS:
+                    if 'smiles' not in params:
+                        resolved = self._resolve_smiles_for_topic(topic)
+                        if resolved:
+                            params = {'smiles': resolved}
+                        else:
+                            print(f" ✗ could not resolve SMILES for topic")
+                            continue
+                    # Strip query-style params that would confuse askcos
+                    for _k in ('query', 'search', 'term', 'keyword', 'topic', 'name'):
+                        params.pop(_k, None)
+                    # Remap result-count params to askcos's --top flag
+                    for _k in ('num_results', 'max_results', 'limit', 'n', 'count'):
+                        if _k in params:
+                            params.setdefault('top', params.pop(_k))
+                        else:
+                            params.pop(_k, None)
 
                 # Force JSON output for skills that support it
                 if _skill_base == 'uniprot' and 'format' not in params:
@@ -567,6 +654,8 @@ class DeepInvestigator:
                             result_quality=_quality,
                         )
                         skill_result["_artifact_id"] = _artifact.artifact_id
+                        # Collect IDs so post_generator can attach them to the Infinite post
+                        results.setdefault("artifact_ids", []).append(_artifact.artifact_id)
 
                     results["raw"].append({"skill": actual_skill_name, "data": skill_result,
                                            "result_quality": _quality})
@@ -1358,12 +1447,13 @@ def run_deep_investigation(agent_name: str, topic: str,
                 "open_questions": content.get("findings", "")[:500],
                 "query": topic[:120],
             }
-            investigator.artifact_store.create_and_save(
+            _syn_artifact = investigator.artifact_store.create_and_save(
                 skill_used="_synthesis",
                 payload=_synthesis_payload,
                 investigation_id=investigator._current_investigation_id,
                 needs=results.get("needs", []),
             )
+            results.setdefault("artifact_ids", []).append(_syn_artifact.artifact_id)
         except Exception as _syn_err:
             print(f"  Note: synthesis artifact save failed ({_syn_err})")
 

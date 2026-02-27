@@ -40,18 +40,24 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 PLANNER_SYSTEM = """\
 You are a scientific data visualisation specialist. Your task is to design \
 a figure suite for a multi-agent AI investigation. You MUST always propose \
-2–4 figures — the data supplied is real scientific output and is always \
-plottable in some form.
+2–4 figures that visualize the ACTUAL INVESTIGATION RESULTS, not metadata \
+about the investigation process.
+
+PRIORITY: Focus on scientific findings, not process metadata.
+- ✅ GOOD: Plot experimental results (fitness scores, trajectories, correlations, \
+  binding affinities, expression levels, mutation effects, model predictions)
+- ❌ BAD: Plot metadata (paper counts, tool usage, agent activity, publication years)
 
 Rules:
-- Always propose figures using whatever data IS present (papers, proteins, \
-  compounds, variants, pathways, targets, predictions). Do NOT skip.
-- If a list has 3–20 items, a bar chart, pie chart, or horizontal bar chart \
-  works perfectly.
-- If a list has 1–2 items, combine them with other data or use a table-style \
-  figure.
-- Be specific: name the exact data fields (e.g. papers[].year, \
-  proteins[].name, variants[].gene, pathways[].name) that each figure uses.
+- ALWAYS prioritize plotting the core scientific data: sequence_scores, \
+  evo_trajectories, scale_comparisons, predictions, measurements, variants, etc.
+- If investigation has fitness/score data → plot it (bar/line chart)
+- If investigation has trajectories/timeseries → plot it (line chart)
+- If investigation has correlations/comparisons → plot it (scatter plot)
+- If investigation has distributions → plot it (histogram)
+- Only use metadata plots (papers, tools) if NO scientific data is available
+- Be specific: name the exact data fields (e.g. sequence_scores[].mean_pll, \
+  evo_trajectories[].trajectory, scale_comparisons[].pll_35m) that each figure uses.
 - Output valid JSON only — no prose outside the JSON block.
 """
 
@@ -61,13 +67,21 @@ Investigation topic: {topic}
 Investigation results (JSON):
 {results_json}
 
-Design a figure suite for these results. Return a JSON array where each \
-element is an object with:
-  "figure_id"   : short snake_case identifier  (e.g. "pub_timeline")
-  "title"       : descriptive plot title
+Design a figure suite that visualizes the SCIENTIFIC FINDINGS from this investigation.
+
+IMPORTANT: Prioritize plotting actual experimental/computational results over metadata.
+- If you see sequence_scores, evo_trajectories, scale_comparisons, predictions, \
+  measurements, or similar scientific data → PLOT THOSE FIRST
+- Avoid plotting paper counts, tool usage, or publication metadata unless no \
+  scientific data exists
+
+Return a JSON array where each element is an object with:
+  "figure_id"   : short snake_case identifier (e.g. "fitness_scores", "evolution_trajectory")
+  "title"       : descriptive plot title focused on scientific insight
   "plot_type"   : one of bar | line | scatter | histogram | heatmap | radar | pie
   "description" : one sentence explaining the scientific insight this figure conveys
-  "data_fields" : list of dot-paths into the results JSON used as data sources
+  "data_fields" : list of dot-paths into the results JSON used as data sources \
+                  (e.g. ["sequence_scores[].name", "sequence_scores[].mean_pll"])
   "x_label"     : x-axis label (if applicable, else null)
   "y_label"     : y-axis label (if applicable, else null)
 
@@ -477,6 +491,15 @@ class PlotAgent:
                           "drugs", "tractability", "source")}
                 for t in results["targets"][:10]
             ]
+
+        # Mech-interp / CS-AI specific plottable fields
+        for key in (
+            "circuits_found", "models_studied", "paper_years",
+            "category_distribution", "citation_counts",
+            "scaling_fits", "network_stats", "benchmarks",
+        ):
+            if key in results:
+                slim[key] = results[key]
 
         return slim
 
