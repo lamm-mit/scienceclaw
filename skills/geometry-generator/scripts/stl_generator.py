@@ -49,6 +49,7 @@ You will generate valid OpenSCAD code for a ribbed membrane resonator.
 
 DESIGN SPECIFICATION (derived from structural analysis of biological specimens):
   Biological model     : {biological_inspiration}
+  Topology type        : {topology_type}
   Width                : {width_mm} mm
   Height               : {height_mm} mm
   Base thickness       : {thickness_mm} mm
@@ -65,23 +66,100 @@ REQUIREMENTS:
    except variable definitions at the top.
 2. Use named variables for every dimension (copy from spec above).
 3. Build the geometry with difference() / union() / for loops — NO external libraries.
-4. Structure:
-   a. Base plate: cube([width, height, thickness])
-   b. Frame: 4 border walls around perimeter, height = thickness + rib_height
-   c. Primary ribs: parallel strips running along the X-axis,
-      spaced every primary_rib_spacing_mm in Y, within the frame interior.
-   d. Secondary ribs (if has_secondary): perpendicular strips along Y-axis,
-      spaced every secondary_rib_spacing_mm in X, height = secondary_rib_height.
-5. All geometry must be manifold (watertight).
-6. Do NOT use hull(), minkowski(), or import() statements.
+4. All geometry must be manifold (watertight).
+5. Do NOT use hull(), minkowski(), or import() statements.
+6. FORBIDDEN FALLBACK — you must NOT generate a plain flat plate with a uniform
+   grid of identical-height rectangular ribs. That topology is the default and
+   must not appear here. The topology instructions below define a DIFFERENT
+   structure. Violating this produces a useless result.
+7. The topology type dictates the 3-D structure — follow these instructions EXACTLY:
+
+{topology_instructions}
 """
 
+# Per-topology structural instructions injected into the prompt.
+# Each entry describes a distinct 3-D form so the LLM cannot collapse them.
+_TOPOLOGY_INSTRUCTIONS = {
 
-def _derive_spec_params(spec: Dict[str, Any]) -> Dict[str, Any]:
+    "cricket_harp": """\
+TOPOLOGY: Cricket wing harp (flat membrane with diagonal file ridge)
+  a. Base plate: cube([width, height, thickness]) — rectangular, flat.
+  b. Outer frame: 4 border walls (cube strips) around the perimeter,
+     wall thickness = frame_width, total wall height = thickness + primary_rib_height.
+  c. File ridge: a single diagonal rib running from (frame_width, frame_width, thickness)
+     to (width - frame_width, height - frame_width, thickness), rotated ~45° in XY plane,
+     cross-section primary_rib_width × primary_rib_height, placed with translate/rotate.
+  d. Parallel harp veins: primary ribs running along the X-axis (length = width - 2*frame_width),
+     spaced primary_rib_spacing_mm apart in Y, height = primary_rib_height * 0.6 (shorter than ridge).
+  e. If has_secondary=="yes": add a second set of shorter veins perpendicular to the harp veins
+     (along Y-axis), spaced secondary_rib_spacing_mm in X, height = secondary_rib_height.
+  The distinctive feature is the diagonal file ridge — it must be visible and prominent.""",
+
+    "cicada_tymbal": """\
+TOPOLOGY: Cicada tymbal (flat base + corrugation ribs of GRADED HEIGHT simulating a convex profile)
+  The tymbal looks like a shallow dome because the ribs in the centre are tallest and
+  taper toward zero at the edges — creating a convex silhouette without using sphere().
+
+  a. Base plate: cube([width, height, thickness]) — flat rectangular base.
+  b. Perimeter rim: 4 border walls (cube strips), wall thickness = frame_width,
+     total rim height = thickness + primary_rib_height * 0.4.
+  c. Corrugation ribs: N = floor((height - 2*frame_width) / primary_rib_spacing_mm) ribs,
+     each running along the X-axis (length = width - 2*frame_width, width = primary_rib_width).
+     Rib i is placed at y_i = frame_width + i * primary_rib_spacing_mm.
+     The HEIGHT of rib i follows a cosine envelope so centre ribs are tallest:
+       rib_h_i = primary_rib_height * cos(180 * (i - N/2) / N)   [use OpenSCAD cos() in degrees]
+     Only place ribs where rib_h_i > 0 (i.e. the middle ~half of the range).
+     Use a for loop: for (i = [0:N-1]) {{ y_i = ...; h_i = ...; if (h_i > 0) translate([frame_width, y_i, thickness]) cube([width-2*frame_width, primary_rib_width, h_i]); }}
+  d. No secondary ribs.
+  The distinctive feature: GRADED RIB HEIGHTS — tall in the middle, absent at the edges,
+  giving a clearly domed silhouette when viewed from the side.""",
+
+    "hierarchical_membrane": """\
+TOPOLOGY: Hierarchical insect membrane (multi-scale branching rib lattice, flat base)
+  a. Base plate: cube([width, height, thickness]) — rectangular, flat.
+  b. Outer frame: 4 border walls, wall thickness = frame_width,
+     total height = thickness + primary_rib_height.
+  c. Level-1 (primary) ribs: thick ribs running along X-axis,
+     spacing = primary_rib_spacing_mm * 3, height = primary_rib_height,
+     width = primary_rib_width * 2.  (few, tall, thick)
+  d. Level-2 (secondary) ribs: medium ribs also along X-axis,
+     placed halfway between each pair of level-1 ribs,
+     height = primary_rib_height * 0.6, width = primary_rib_width.
+  e. Level-3 (tertiary) ribs: fine ribs perpendicular (along Y-axis),
+     spacing = secondary_rib_spacing_mm, height = secondary_rib_height,
+     width = primary_rib_width * 0.5.
+  The distinctive feature is THREE VISIBLE RIB SCALES — coarse, medium, fine — giving
+  a hierarchical lattice appearance clearly different from a uniform grid.""",
+}
+
+_TOPOLOGY_FALLBACK = """\
+TOPOLOGY: Generic ribbed membrane (flat base + uniform grid)
+  a. Base plate: cube([width, height, thickness]).
+  b. Frame: 4 border walls, height = thickness + primary_rib_height.
+  c. Primary ribs: parallel strips along X-axis, spaced primary_rib_spacing_mm in Y.
+  d. Secondary ribs (if has_secondary=="yes"): perpendicular strips along Y-axis,
+     spaced secondary_rib_spacing_mm in X, height = secondary_rib_height."""
+
+
+def _detect_topology(bio: str) -> str:
+    """Map biological_inspiration string → topology key."""
+    b = bio.lower()
+    if any(k in b for k in ("cricket", "gryllus", "harp", "wing")):
+        return "cricket_harp"
+    if any(k in b for k in ("cicada", "tymbal", "meimuna", "dome", "buckl")):
+        return "cicada_tymbal"
+    if any(k in b for k in ("hierarch", "multi-scale", "multiscale", "branching", "fractal")):
+        return "hierarchical_membrane"
+    return "generic"
+
+
+def _derive_spec_params(spec: Dict[str, Any], low_res: bool = False) -> Dict[str, Any]:
     """
     Derive all geometric parameters from upstream artifact spec.
     No hardcoded values — every number comes from spec fields with
     physically-motivated fallback formulae when a field is absent.
+
+    low_res=True: coarsen rib spacing ×2 and halve plate size → ~4–8× fewer triangles.
     """
     s_mm  = float(spec.get("rib_spacing_mm") or spec.get("primary_rib_spacing_mm") or 2.5)
     t_mm  = float(spec.get("thickness_mm") or 0.4)
@@ -90,8 +168,14 @@ def _derive_spec_params(spec: Dict[str, Any]) -> Dict[str, Any]:
     bio   = str(spec.get("biological_inspiration") or
                 "cricket wing harp (Gryllus bimaculatus) — parallel primary veins")
 
+    if low_res:
+        s_mm = s_mm * 2.0   # half as many ribs
+        ar   = min(ar, 2.0) # shorter plate
+
     # Derived dimensions — physically motivated ratios, not magic numbers
     w     = float(spec.get("width_mm") or round(s_mm * 8, 2))
+    if low_res:
+        w = round(w * 0.6, 2)   # narrower plate = fewer rib segments
     h     = float(spec.get("height_mm") or round(w * ar, 2))
     rh    = float(spec.get("primary_rib_height_mm") or round(t_mm * 2.0, 3))
     rw    = float(spec.get("primary_rib_width_mm")  or round(s_mm * 0.25, 3))
@@ -99,8 +183,13 @@ def _derive_spec_params(spec: Dict[str, Any]) -> Dict[str, Any]:
     s2    = float(spec.get("secondary_rib_spacing_mm") or round(s_mm / 3.0, 3)) if ns >= 2 else None
     rh2   = float(spec.get("secondary_rib_height_mm") or round(rh * 0.5, 3)) if ns >= 2 else None
 
+    topo_key  = _detect_topology(bio)
+    topo_inst = _TOPOLOGY_INSTRUCTIONS.get(topo_key, _TOPOLOGY_FALLBACK)
+
     return {
         "biological_inspiration":    bio,
+        "topology_type":             topo_key,
+        "topology_instructions":     topo_inst,
         "width_mm":                  w,
         "height_mm":                 h,
         "thickness_mm":              t_mm,
@@ -126,7 +215,7 @@ def _call_llm(prompt: str) -> str:
     from core.llm_client import LLMClient
     client = LLMClient(agent_name="GeometryGenerator")
     # Large token budget — OpenSCAD code for ribbed membranes is ~60-120 lines
-    raw = client.call(prompt=prompt, max_tokens=2000, temperature=0.2)
+    raw = client.call(prompt=prompt, max_tokens=2500, temperature=0.4)
     if not raw:
         raise RuntimeError("LLM returned empty response")
 
@@ -142,9 +231,14 @@ def _call_llm(prompt: str) -> str:
     return raw.strip()
 
 
-def _render_stl(scad_code: str, stl_path: Path) -> subprocess.CompletedProcess:
+def _render_stl(scad_code: str, stl_path: Path, low_res: bool = False) -> subprocess.CompletedProcess:
     """Write .scad file and render to .stl via openscad CLI."""
     scad_path = stl_path.with_suffix(".scad")
+    if low_res:
+        # Prepend OpenSCAD resolution globals — limits fragment count for any
+        # curved primitives and signals to OpenSCAD's mesh engine to stay coarse.
+        header = "$fn=6; $fs=3; $fa=30;\n"
+        scad_code = header + scad_code
     scad_path.write_text(scad_code, encoding="utf-8")
 
     result = subprocess.run(
@@ -205,6 +299,8 @@ def main() -> None:
     parser.add_argument("--output", default="", help="Output .stl path (auto if omitted)")
     parser.add_argument("--save-scad", action="store_true",
                         help="Keep the .scad file alongside the .stl")
+    parser.add_argument("--low-res", action="store_true",
+                        help="Generate low-resolution STL: coarser ribs, smaller plate (~4-8× fewer triangles)")
     args = parser.parse_args()
 
     # ---- Load upstream spec ------------------------------------------------
@@ -226,7 +322,7 @@ def main() -> None:
         spec = {**spec, **spec["motifs"][0]}
 
     # ---- Derive parameters from spec ---------------------------------------
-    p = _derive_spec_params(spec)
+    p = _derive_spec_params(spec, low_res=args.low_res)
     prompt = _build_prompt(p)
 
     # ---- GPT generates OpenSCAD code ---------------------------------------
@@ -247,7 +343,7 @@ def main() -> None:
 
     # ---- Render STL via openscad ------------------------------------------
     try:
-        result = _render_stl(scad_code, stl_path)
+        result = _render_stl(scad_code, stl_path, low_res=args.low_res)
     except FileNotFoundError:
         print(json.dumps({
             "error": "openscad not found. Install with: sudo apt-get install openscad",
