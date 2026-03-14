@@ -749,7 +749,7 @@ class DeepInvestigator:
             for smiles in smiles_list[:3]:
                 try:
                     proc = _sp.run(
-                        ["python3", str(rdkit_script), "descriptors", "--smiles", smiles],
+                        [sys.executable, str(rdkit_script), "descriptors", "--smiles", smiles],
                         capture_output=True, text=True, timeout=30,
                         cwd=str(self.scienceclaw_dir)
                     )
@@ -1383,7 +1383,7 @@ def run_deep_investigation(agent_name: str, topic: str,
     else:
         all_skills = list(investigator.skill_registry.skills.values())
     analysis, pre_selected_skills = investigator.topic_analyzer.analyze_and_select_skills(
-        topic=topic, available_skills=all_skills, max_skills=12, agent_profile=agent_profile
+        topic=topic, available_skills=all_skills, max_skills=30, agent_profile=agent_profile
     )
 
     from autonomous.skill_diversity import ensure_minimum_skills, measure_diversity

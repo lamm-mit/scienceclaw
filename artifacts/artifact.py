@@ -55,6 +55,12 @@ SKILL_DOMAIN_MAP: Dict[str, List[str]] = {
     "uniprot-database":             ["protein_data"],
     "blast":                        ["sequence_alignment"],
     "biopython":                    ["sequence_alignment", "protein_data"],
+    "peptide-sequences":            ["peptide_sequences"],
+    "peptide-msa":                  ["sequence_alignment"],
+    "conservation-map":             ["conservation_map"],
+    "mutation-generator":           ["mutation_space"],
+    "peptide-stability":            ["stability_scores"],
+    "candidate-ranking":            ["ranked_candidates"],
     "bioservices":                  ["protein_data", "compound_data", "pathway_data"],
     "sequence":                     ["sequence_alignment", "protein_data"],
     "gget":                         ["protein_data", "genomic_data", "sequence_alignment"],
@@ -72,6 +78,7 @@ SKILL_DOMAIN_MAP: Dict[str, List[str]] = {
     "pdb":                          ["structure_data"],
     "pdb-database":                 ["structure_data"],
     "alphafold-database":           ["structure_data"],
+    "structure-contact-analysis":   ["binding_hotspots"],
     "diffdock":                     ["structure_data"],
     "openmm":                       ["simulation_data", "structure_data"],
     "rowan":                        ["simulation_data", "compound_data", "structure_data"],
@@ -209,6 +216,8 @@ SKILL_DOMAIN_MAP: Dict[str, List[str]] = {
     "statistical-analysis":         ["ml_prediction"],
     "statsmodels":                  ["ml_prediction"],
     "hypogenic":                    ["ml_prediction", "report"],
+    # Investigation-specific figure synthesis (post-run)
+    "investigation-plotter":        ["figure"],
 
     # -----------------------------------------------------------------------
     # Simulation / dynamics / CFD
@@ -410,6 +419,15 @@ SKILL_DOMAIN_MAP: Dict[str, List[str]] = {
     "document-skills":              ["raw_output"],
 
     # -----------------------------------------------------------------------
+    # Music / audio / corpus analysis
+    # -----------------------------------------------------------------------
+    "music-corpus":                 ["music_corpus"],
+    "chord-analysis":               ["chord_progressions"],
+    "motif-detection":              ["melodic_motifs"],
+    "motif-clustering":             ["motif_clusters"],
+    "midi-generator":               ["generated_motifs"],
+
+    # -----------------------------------------------------------------------
     # Synthesis / validation / mutation policy (internal cross-cutting types)
     # -----------------------------------------------------------------------
     "_synthesis":                   ["synthesis"],
@@ -509,6 +527,8 @@ class ArtifactStore:
         self.store_path = base / "artifacts" / agent_name / "store.jsonl"
         self.store_path.parent.mkdir(parents=True, exist_ok=True)
         self._global_index_path = base / "artifacts" / "global_index.jsonl"
+        # Byte-offset index for O(1) artifact lookups; built lazily on first get().
+        self._id_index: Optional[Dict[str, int]] = None
 
     # ------------------------------------------------------------------
     # Write
@@ -518,7 +538,12 @@ class ArtifactStore:
         """Append artifact to per-agent store and global index. Returns artifact_id."""
         line = json.dumps(artifact.to_dict(), ensure_ascii=False) + "\n"
         with open(self.store_path, "a", encoding="utf-8") as fh:
+            # Record byte offset before writing so the ID index stays current.
+            offset = fh.seek(0, 2)  # seek to end
             fh.write(line)
+        # Update in-memory index if it has been built already.
+        if self._id_index is not None:
+            self._id_index[artifact.artifact_id] = offset
         self._append_global_index(artifact)
         return artifact.artifact_id
 
@@ -529,6 +554,14 @@ class ArtifactStore:
         Only the fields needed for discovery are stored — not the full payload —
         keeping the index fast to scan even with thousands of artifacts.
         """
+        payload = artifact.payload or {}
+        fulfilled_need = payload.get("_fulfilled_need") if isinstance(payload, dict) else None
+        if not isinstance(fulfilled_need, dict):
+            fulfilled_need = None
+        fulfillment_variant = payload.get("_fulfillment_variant") if isinstance(payload, dict) else None
+        if not isinstance(fulfillment_variant, dict):
+            fulfillment_variant = None
+
         entry = {
             "artifact_id":        artifact.artifact_id,
             "artifact_type":      artifact.artifact_type,
@@ -539,6 +572,12 @@ class ArtifactStore:
             "content_hash":       artifact.content_hash,
             "parent_artifact_ids": artifact.parent_artifact_ids,
             "needs":              artifact.needs,
+            # Optional fulfillment metadata (kept small for fast scanning)
+            "fulfilled_need_parent_id": (fulfilled_need or {}).get("parent_artifact_id") if fulfilled_need else "",
+            "fulfilled_need_index": payload.get("_need_index") if isinstance(payload, dict) else None,
+            "fulfilled_need_type": (fulfilled_need or {}).get("artifact_type") if fulfilled_need else "",
+            "fulfilled_need_query": (fulfilled_need or {}).get("query", "")[:180] if fulfilled_need else "",
+            "fulfillment_variant": fulfillment_variant or {},
         }
         with open(self._global_index_path, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -547,6 +586,7 @@ class ArtifactStore:
         self,
         skill_used: str,
         payload: dict,
+        artifact_type: Optional[str] = None,
         investigation_id: str = "",
         parent_artifact_ids: Optional[List[str]] = None,
         result_quality: str = "ok",
@@ -559,9 +599,13 @@ class ArtifactStore:
         result_quality: "ok" | "empty" | "irrelevant" — tagged for downstream filtering.
         needs: LLM-generated need signals broadcast to peer agents.
         """
-        artifact_type = SKILL_DOMAIN_MAP.get(skill_used, ["raw_output"])[0]
+        resolved_type = (
+            artifact_type
+            if isinstance(artifact_type, str) and artifact_type.strip()
+            else SKILL_DOMAIN_MAP.get(skill_used, ["raw_output"])[0]
+        )
         artifact = Artifact.create(
-            artifact_type=artifact_type,
+            artifact_type=resolved_type,
             producer_agent=self.agent_name,
             skill_used=skill_used,
             payload=payload,
@@ -589,12 +633,44 @@ class ArtifactStore:
                     except json.JSONDecodeError:
                         pass
 
-    def get(self, artifact_id: str) -> Optional[Artifact]:
-        """Retrieve artifact by ID (linear scan — store is typically small)."""
-        for record in self._iter_lines():
-            if record.get("artifact_id") == artifact_id:
-                return Artifact.from_dict(record)
+    def get(self, artifact_id: str) -> Optional["Artifact"]:
+        """Retrieve artifact by ID using a byte-offset index for O(1) seek."""
+        # Build the index lazily on first call.
+        if self._id_index is None:
+            self._build_id_index()
+        if artifact_id not in self._id_index:  # type: ignore[operator]
+            return None
+        try:
+            with open(self.store_path, "rb") as fh:
+                fh.seek(self._id_index[artifact_id])  # type: ignore[index]
+                line = fh.readline().decode("utf-8").strip()
+                if line:
+                    return Artifact.from_dict(json.loads(line))
+        except (OSError, json.JSONDecodeError, KeyError):
+            pass
         return None
+
+    def _build_id_index(self) -> None:
+        """Scan store.jsonl once and record {artifact_id: byte_offset}."""
+        index: Dict[str, int] = {}
+        if self.store_path.exists():
+            try:
+                with open(self.store_path, "rb") as fh:
+                    while True:
+                        offset = fh.tell()
+                        line = fh.readline()
+                        if not line:
+                            break
+                        try:
+                            obj = json.loads(line)
+                            aid = obj.get("artifact_id")
+                            if aid:
+                                index[aid] = offset
+                        except json.JSONDecodeError:
+                            pass
+            except OSError:
+                pass
+        self._id_index = index
 
     def list(
         self,

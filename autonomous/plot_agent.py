@@ -232,6 +232,106 @@ class PlotAgent:
         )
         return saved_paths
 
+    def generate_report_figure_suite(
+        self,
+        topic: str,
+        investigation_results: Dict,
+    ) -> Dict[str, Any]:
+        """
+        Generic helper that generates a four-figure bundle aligned with a
+        narrative-style report and returns both file paths and a markdown block
+        ready to paste into an Infinite/arXiv-style post.
+
+        The current template targets:
+          1) contact / fingerprint view for a key structure,
+          2) motif conservation + sequence fitness,
+          3) stability / physicochemical trade-offs vs reference ligands,
+          4) interaction + literature network around the topic.
+        """
+        print("  🎨 PlotAgent: generating 4‑figure report suite…")
+
+        figure_specs: List[Dict[str, Any]] = [
+            {
+                "figure_id": "contact_fingerprint",
+                "title": "Target–ligand contact fingerprint",
+                "description": (
+                    "Bar/heatmap visualization of per-residue contact counts for a key "
+                    "ligand or motif against its primary target in one representative "
+                    "structure, highlighting interaction hotspots and annotating the "
+                    "most contacted target residues."
+                ),
+            },
+            {
+                "figure_id": "motif_conservation_fitness",
+                "title": "Motif conservation and sequence fitness",
+                "description": (
+                    "Alignment-style visualization of a small panel of sequences with "
+                    "column-wise conservation scores and language-model position-wise "
+                    "log-likelihoods overlaid, emphasizing conserved pharmacophore "
+                    "positions versus more permissive sites where mutations improve fitness."
+                ),
+            },
+            {
+                "figure_id": "stability_physchem_tradeoffs",
+                "title": "Stability and physicochemical trade‑offs vs reference ligands",
+                "description": (
+                    "Scatter or panel plots comparing peptide-stability scores, GRAVY, pI, and charge at pH 7 "
+                    "for native and designed candidates against reference points for approved or literature "
+                    "ligands from external databases (e.g. PubChem/ChEMBL), making explicit how candidate "
+                    "series differ from known drugs in polarity and conformational constraint."
+                ),
+            },
+            {
+                "figure_id": "network_literature_landscape",
+                "title": "Network and literature landscape around the topic",
+                "description": (
+                    "Integrated network diagram combining a small interaction subgraph (e.g. STRING or similar) "
+                    "with an overlaid summary of dominant literature terms and highly cited papers mined from "
+                    "sources like OpenAlex/PubMed, situating the computational study in its broader biological "
+                    "and clinical context."
+                ),
+            },
+        ]
+
+        saved_paths: List[str] = []
+        ts = int(time.time())
+        topic_slug = re.sub(r"[^a-z0-9]+", "_", topic.lower())[:40]
+
+        for spec in figure_specs:
+            fig_id = spec.get("figure_id", f"figure_{len(saved_paths)}")
+            out_path = str(
+                self.figures_dir / f"{topic_slug}_{ts}_{fig_id}.png"
+            )
+            print(f"    📊 Generating (report suite): {fig_id} → {Path(out_path).name}")
+            path = self._generate_one_figure(
+                spec, investigation_results, out_path
+            )
+            if path:
+                saved_paths.append(path)
+                print(f"    ✅ Saved (report suite): {path}")
+            else:
+                print(f"    ⚠️  Skipped (report suite): {fig_id}")
+
+        print(f"  🎨 PlotAgent: {len(saved_paths)}/{len(figure_specs)} figures saved")
+
+        # Build a markdown snippet ready to drop into a post/comment.
+        lines: List[str] = []
+        for spec, path in zip(figure_specs, saved_paths):
+            title = spec.get("title", spec.get("figure_id", "Figure"))
+            desc = spec.get("description", "").strip()
+            rel_name = Path(path).name
+            lines.append(f"![{title}]({rel_name})")
+            if desc:
+                lines.append(f"*{desc}*")
+            lines.append("")  # blank line between figures
+
+        markdown_block = "\n".join(lines).strip()
+
+        return {
+            "figure_paths": saved_paths,
+            "markdown": markdown_block,
+        }
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -554,6 +654,44 @@ def run_plot_agent(
     """
     agent = PlotAgent(agent_name=agent_name)
     return agent.generate_figures(topic, investigation_results, max_figures=max_figures)
+
+
+def run_report_post_figure_agent(
+    agent_name: str,
+    topic: str,
+    investigation_results: Dict,
+    markdown_path: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Convenience wrapper to generate a four-figure report suite aligned with the
+    SynthBot-style narrative and optionally write a markdown block to disk for
+    posting.
+
+    Args:
+        agent_name: Authenticated agent name to use for LLM calls.
+        topic: Investigation topic string (used for file naming).
+        investigation_results: Dict returned by DeepInvestigator.run_tool_chain().
+        markdown_path: If provided, write the markdown snippet to this path.
+
+    Returns:
+        Dict with keys:
+          - "figure_paths": list of PNG paths
+          - "markdown": markdown snippet referencing those images
+    """
+    agent = PlotAgent(agent_name=agent_name)
+    bundle = agent.generate_report_figure_suite(topic=topic, investigation_results=investigation_results)
+
+    if markdown_path:
+        try:
+            md_path = Path(markdown_path)
+            md_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(md_path, "w", encoding="utf-8") as fh:
+                fh.write(bundle.get("markdown", "") + "\n")
+            print(f"  📝 Report-figure markdown written to {md_path}")
+        except Exception as e:
+            print(f"  ⚠️  Failed to write report-figure markdown: {e}")
+
+    return bundle
 
 
 if __name__ == "__main__":

@@ -67,7 +67,7 @@ class LLMSkillSelector:
     def select_skills(self,
                      topic: str,
                      available_skills: List[Dict[str, Any]],
-                     max_skills: int = 5) -> SkillSelection:
+                     max_skills: int = 30) -> SkillSelection:
         """
         Use LLM to select which skills to use for a topic.
         
@@ -87,7 +87,7 @@ class LLMSkillSelector:
 AVAILABLE SKILLS ({len(available_skills)} total):
 {skill_catalog}
 
-TASK: Select 3-{max_skills} most relevant skills from the list above for investigating this topic.
+TASK: Select up to {max_skills} most relevant skills (aim for 10-30 for comprehensive investigation) from the list above for investigating this topic.
 Use multiple skills—do not select only one. Pick skill names exactly as they appear in the list.
 
 CRITICAL GUIDANCE FOR SKILL SELECTION:

@@ -171,7 +171,8 @@ class ExperimentDesigner:
         
         elif tool_name == "materials":
             return {
-                "formula": self._extract_material_formula(hypothesis["statement"])
+                "formula": self._extract_material_formula(hypothesis["statement"]),
+                "format": "json",
             }
         
         elif tool_name == "websearch":

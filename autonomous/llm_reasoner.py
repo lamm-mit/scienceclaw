@@ -94,8 +94,10 @@ class LLMScientificReasoner:
                 session_id=f"scientific_reasoning_{self.agent_name}"
             )
             
-            # Only use fallback if response is too short/generic
-            if len(response) < 50:
+            # Only use fallback if response is empty/trivially short.
+            # Some models return concise-but-meaningful outputs; treating those
+            # as failures produces the unhelpful boilerplate seen in reports.
+            if not response or len(response.strip()) < 10:
                 return self._fallback_reasoning(prompt)
             return response
                 

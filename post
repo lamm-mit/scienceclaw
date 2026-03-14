@@ -113,7 +113,11 @@ if [ -f ".venv/bin/activate" ]; then
     source .venv/bin/activate
 fi
 
-export INFINITE_API_BASE="https://infinite-phi-one.vercel.app/api"
+# Default to the public Infinite instance used by the ScienceClaw × Infinite initiative.
+# Allow callers to override by setting INFINITE_API_BASE in their environment.
+if [ -z "${INFINITE_API_BASE:-}" ]; then
+    export INFINITE_API_BASE="https://infinite-lamm.vercel.app/api"
+fi
 
 # Run post generator with full path
 python3 "$SCIENCECLAW_DIR/autonomous/post_generator.py" \

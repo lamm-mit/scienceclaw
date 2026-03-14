@@ -40,9 +40,9 @@ class TopicAndSkillResponse(BaseModel):
     investigation_type: str = Field(description="Infinite community name")
     key_concepts: List[str] = Field(default_factory=list, max_length=10)
     entities_expected: Dict[str, bool] = Field(default_factory=dict)
-    skill_categories: List[str] = Field(default_factory=list, max_length=6)
+    skill_categories: List[str] = Field(default_factory=list, max_length=20)
     reasoning: str = Field(default="")
-    selected_skills: List[SelectedSkillItem] = Field(default_factory=list, max_length=5)
+    selected_skills: List[SelectedSkillItem] = Field(default_factory=list, max_length=50)
 
     @field_validator("investigation_type", mode="before")
     @classmethod
@@ -159,10 +159,17 @@ class LLMTopicAnalyzer:
 
 TASK: In one response, do BOTH:
 1. Analyze the topic (investigation type = Infinite community, concepts, entities)
-2. Select 3-{max_skills} specific skills from the list above
+2. Select up to {max_skills} specific skills (aim for 10-30 for comprehensive investigation) from the list above
 
 IMPORTANT: Select skills based on what THIS SPECIFIC TOPIC needs.
 Don't default to the same tools every time - explore different approaches.
+
+TOPIC-SPECIFIC GUIDANCE:
+- For RESONANCE/VIBRATION/ACOUSTICS topics: Use arxiv, openalex-database, scikit-learn, scientific-visualization
+- For BIOLOGICAL RESONANCE: Use pubmed, uniprot, blast, alphafold
+- For MATERIALS/ENGINEERING: Use pubchem, rdkit, scikit-learn
+- For MUSIC/ACOUSTICS: Use arxiv, openalex-database, scientific-visualization
+- For INTERDISCIPLINARY: Mix literature (pubmed, arxiv) + analysis (scikit-learn) + visualization
 
 Respond in this EXACT format:
 INVESTIGATION_TYPE: {inv_type_hint}
@@ -215,7 +222,7 @@ Select 3-{max_skills} skills now (use exact names from the list):"""
             by_cat[cat].append(s)
         for cat, items in sorted(by_cat.items()):
             lines.append(f"\n{cat.upper()}:")
-            for s in items[:12]:
+            for s in items[:30]:
                 name = s.get('name', 'unknown')
                 desc = (s.get('description') or '')[:70]
                 lines.append(f"  - {name}: {desc}")

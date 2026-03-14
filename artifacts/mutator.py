@@ -89,19 +89,31 @@ class ArtifactMutator:
     # Public API
     # ------------------------------------------------------------------
 
-    def detect_triggers(self, investigation_id: str) -> List[MutationTrigger]:
+    def detect_triggers(
+        self, investigation_id: str, index_lines: Optional[List[dict]] = None
+    ) -> List[MutationTrigger]:
         """
         Scan global_index.jsonl for topology conditions.
 
         Reads only index entries (no payloads) for speed. Payloads are loaded
         only when a trigger fires.
-        """
-        index = self._read_index(investigation_id)
-        triggers: List[MutationTrigger] = []
 
-        triggers.extend(self._detect_stagnation(index, investigation_id))
-        triggers.extend(self._detect_redundancy(index, investigation_id))
-        triggers.extend(self._detect_conflict(index, investigation_id))
+        Args:
+            index_lines: Pre-loaded global index entries (filtered to this
+                investigation). If None, reads from disk (backwards-compatible).
+        """
+        if index_lines is not None:
+            index = [e for e in index_lines if e.get("investigation_id") == investigation_id]
+        else:
+            index = self._read_index(investigation_id)
+
+        # Load policy once and pass to all helpers to avoid 3× store.list() calls.
+        policy = self._load_policy(investigation_id)
+
+        triggers: List[MutationTrigger] = []
+        triggers.extend(self._detect_stagnation(index, investigation_id, policy=policy))
+        triggers.extend(self._detect_redundancy(index, investigation_id, policy=policy))
+        triggers.extend(self._detect_conflict(index, investigation_id, policy=policy))
 
         return triggers
 
@@ -260,6 +272,40 @@ class ArtifactMutator:
 
         self._store.save(child_a)
         self._store.save(child_b)
+        # Prefer returning the "most informative" fork child to keep the main
+        # investigation path meaningful, while still preserving emergence via
+        # the sibling branch.
+        preferred_keys_by_type: Dict[str, List[str]] = {
+            "pubmed_results": ["papers", "items", "articles", "pmids", "total", "count"],
+            "structure_data": ["items", "pdb_id", "chains", "entities", "resolution"],
+            "sequence_alignment": ["alignment", "msa", "hits", "top_hit", "sequences"],
+            "conservation_map": ["conservation", "scores", "positions", "sequence"],
+            "binding_hotspots": [
+                "peptide_sequence",
+                "binding_hotspots",
+                "hotspot_positions",
+                "per_position_contacts",
+            ],
+            "mutation_space": ["mutations", "positions", "variants", "protected_positions"],
+            "sequence_design": ["final", "final_sequence", "trace", "variants", "start_sequence"],
+            "stability_scores": ["scores", "candidates", "top", "ranking"],
+            "ranked_candidates": ["candidates", "ranked", "table", "top_candidates"],
+        }
+
+        preferred = preferred_keys_by_type.get(artifact.artifact_type, [])
+
+        def _score(a: Artifact) -> tuple:
+            keys = set(a.payload.keys()) if isinstance(a.payload, dict) else set()
+            keys_no_prov = {k for k in keys if k != "mutation_provenance"}
+            # Weighted preference: earlier keys in the list are more important.
+            preferred_score = 0
+            for i, k in enumerate(preferred):
+                if k in keys:
+                    preferred_score += max(1, (len(preferred) - i))
+            return (preferred_score, len(keys_no_prov), len(keys))
+
+        if _score(child_b) > _score(child_a):
+            return child_b, child_a
         return child_a, child_b
 
     def _prune(self, artifact: Artifact, siblings: List[Artifact]) -> Artifact:
@@ -453,7 +499,7 @@ class ArtifactMutator:
         return entries
 
     def _detect_stagnation(
-        self, index: List[dict], investigation_id: str
+        self, index: List[dict], investigation_id: str, *, policy: Optional[MutationPolicy] = None
     ) -> List[MutationTrigger]:
         """
         Find artifacts with 0 children in the index.
@@ -462,7 +508,8 @@ class ArtifactMutator:
         a proxy: an artifact is "stagnant" if it appears as a parent of no
         other artifact in the same investigation.
         """
-        policy = self._load_policy(investigation_id)
+        if policy is None:
+            policy = self._load_policy(investigation_id)
         # Collect all artifact IDs that appear as parents
         has_children: Set[str] = set()
         all_ids: List[str] = []
@@ -488,7 +535,7 @@ class ArtifactMutator:
         return triggers
 
     def _detect_redundancy(
-        self, index: List[dict], investigation_id: str
+        self, index: List[dict], investigation_id: str, *, policy: Optional[MutationPolicy] = None
     ) -> List[MutationTrigger]:
         """
         Find pairs of artifacts that share > P% of their payload keys.
@@ -499,7 +546,8 @@ class ArtifactMutator:
         triggers fire when two artifacts from the same investigation share
         the same artifact_type (strong signal of structural redundancy).
         """
-        policy = self._load_policy(investigation_id)
+        if policy is None:
+            policy = self._load_policy(investigation_id)
 
         # Group by artifact_type
         by_type: Dict[str, List[dict]] = {}
@@ -545,14 +593,15 @@ class ArtifactMutator:
         return triggers[: policy.max_mutations_per_cycle]
 
     def _detect_conflict(
-        self, index: List[dict], investigation_id: str
+        self, index: List[dict], investigation_id: str, *, policy: Optional[MutationPolicy] = None
     ) -> List[MutationTrigger]:
         """
         Find pairs of sibling artifacts (same parent) — signal of potential
         conflict. Full key-value conflict detection requires loading payloads,
         so we conservatively flag any two children of the same parent.
         """
-        policy = self._load_policy(investigation_id)
+        if policy is None:
+            policy = self._load_policy(investigation_id)
 
         # Build parent → [child_ids] map from index
         parent_to_children: Dict[str, List[str]] = {}

@@ -58,7 +58,7 @@ class AutomatedPostGenerator:
         
         Args:
             agent_name: Name of the agent creating posts
-            api_base: Infinite API base URL (default: https://infinite-phi-one.vercel.app/api)
+            api_base: Infinite API base URL (default: https://infinite-lamm.vercel.app/api)
             config_file: Optional path to infinite_config.json (for per-agent auth)
         """
         self.agent_name = agent_name
@@ -571,12 +571,13 @@ This analysis highlights key opportunities for advancing {topic}:
                 print("  ✅ Post created successfully!")
                 post_id = result.get("id", "unknown")
                 print(f"  📎 Post ID: {post_id}")
-                print(f"  🌐 https://infinite-phi-one.vercel.app/post/{post_id}")
+                web_base = self.api_base[:-4] if self.api_base.endswith("/api") else self.api_base
+                print(f"  🌐 {web_base}/post/{post_id}")
                 
                 return {
                     "success": True,
                     "post_id": post_id,
-                    "url": f"https://infinite-phi-one.vercel.app/post/{post_id}",
+                    "url": f"{web_base}/post/{post_id}",
                     "agent": self.agent_name,
                     "investigation_type": "deep_multi_tool"
                 }
@@ -630,7 +631,8 @@ This analysis highlights key opportunities for advancing {topic}:
         if post_id:
             print(f"✅ Post created successfully!")
             print(f"📎 Post ID: {post_id}")
-            print(f"🌐 https://infinite-phi-one.vercel.app/post/{post_id}")
+            web_base = self.api_base[:-4] if self.api_base.endswith("/api") else self.api_base
+            print(f"🌐 {web_base}/post/{post_id}")
             return {"success": True, "post_id": post_id, **result}
         
         return result

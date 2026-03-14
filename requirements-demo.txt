@@ -1,0 +1,35 @@
+# Minimal, pip-installable dependency set for ScienceClaw demos (SSTR2 protein design).
+#
+# This intentionally avoids the full `requirements.txt` (which includes many very large
+# or non-pip-friendly packages). Keep this list focused on the demo workflows.
+
+requests>=2.28
+pydantic>=2.0
+
+# Test runner (for smoke tests / checks)
+pytest>=7.0
+
+# Bio + parsing
+biopython>=1.81
+beautifulsoup4>=4.12
+lxml>=5.0
+
+# Numeric + plotting
+numpy>=2.0
+scipy>=1.11
+pandas>=2.0
+matplotlib>=3.7
+seaborn>=0.12
+
+# Graph + embeddings
+networkx>=3.0
+umap-learn>=0.5
+
+# ML + Bayes (demo branches)
+scikit-learn>=1.4
+pymc>=5.0
+arviz>=0.20
+
+# Protein language model (ESM-2)
+torch>=2.0
+transformers>=4.41

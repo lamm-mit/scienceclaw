@@ -19,6 +19,7 @@ Configuration via environment variables or config file:
 
 import os
 import json
+import re
 from typing import Optional, Dict, Any
 from pathlib import Path
 
@@ -68,7 +69,9 @@ class LLMClient:
         
         # Model names for each backend
         self.anthropic_model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
-        self.openai_model = os.environ.get("OPENAI_MODEL", "gpt-4o")
+        self.openai_model = os.environ.get("OPENAI_MODEL", "gpt-5.2")
+        # Optional base URL override for local/compatible servers (e.g. vLLM)
+        self.openai_base_url = os.environ.get("OPENAI_BASE_URL")
         
         # Timeout (seconds) - loose defaults for slow models like Kimi-K2.5
         timeout_env = os.environ.get("LLM_TIMEOUT")
@@ -88,6 +91,7 @@ class LLMClient:
                     self.hf_endpoint = config.get("hf_endpoint", self.hf_endpoint)
                     self.anthropic_model = config.get("anthropic_model", self.anthropic_model)
                     self.openai_model = config.get("openai_model", self.openai_model)
+                    self.openai_base_url = config.get("openai_base_url", self.openai_base_url)
                     if "timeout" in config:
                         self.timeout = int(config["timeout"])
             except Exception:
@@ -109,7 +113,10 @@ class LLMClient:
             import openai
             if not self.openai_key:
                 raise ValueError("OPENAI_API_KEY not set")
-            self.openai_client = openai.OpenAI(api_key=self.openai_key)
+            kwargs = {"api_key": self.openai_key}
+            if self.openai_base_url:
+                kwargs["base_url"] = self.openai_base_url
+            self.openai_client = openai.OpenAI(**kwargs)
         except ImportError:
             raise ImportError("openai package not installed. Run: pip install openai")
     
@@ -181,17 +188,48 @@ class LLMClient:
     
     def _call_openai(self, prompt: str, max_tokens: int, temperature: float) -> str:
         """Call OpenAI GPT API."""
+        def _wants_max_completion_tokens(model: str) -> bool:
+            m = (model or "").strip().lower()
+            # GPT-5 family (and some newer models) use `max_completion_tokens`.
+            if m.startswith("gpt-5"):
+                return True
+            # Be conservative: some "o*" models also moved parameters.
+            if re.match(r"^o\\d", m):
+                return True
+            return False
+
+        def _extract_text(resp) -> str:
+            try:
+                return resp.choices[0].message.content or ""
+            except Exception:
+                return ""
+
+        base_kwargs = {
+            "model": self.openai_model,
+            "temperature": temperature,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+
+        # First attempt: pick the parameter by model family.
         try:
-            response = self.openai_client.chat.completions.create(
-                model=self.openai_model,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            return response.choices[0].message.content
+            kwargs = dict(base_kwargs)
+            if _wants_max_completion_tokens(self.openai_model):
+                kwargs["max_completion_tokens"] = int(max_tokens)
+            else:
+                kwargs["max_tokens"] = int(max_tokens)
+            response = self.openai_client.chat.completions.create(**kwargs)
+            return _extract_text(response)
         except Exception as e:
+            msg = str(e)
+            # Retry on the specific mismatch error seen with newer models.
+            try:
+                if "max_tokens" in msg and "max_completion_tokens" in msg:
+                    kwargs = dict(base_kwargs)
+                    kwargs["max_completion_tokens"] = int(max_tokens)
+                    response = self.openai_client.chat.completions.create(**kwargs)
+                    return _extract_text(response)
+            except Exception:
+                pass
             print(f"OpenAI API error: {e}")
             return ""
     

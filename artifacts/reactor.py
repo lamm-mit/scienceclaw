@@ -29,6 +29,7 @@ import logging
 import math
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -177,7 +178,7 @@ def _get_skill_schema(skill_name: str, skill_meta: dict) -> Optional[dict]:
         script = executables[0]
         try:
             proc = subprocess.run(
-                ["python3", script, "--describe-schema"],
+                [sys.executable, script, "--describe-schema"],
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -306,7 +307,7 @@ def _skill_input_params(skill_name: str, skill_meta: dict) -> frozenset:
         script = executables[0]
         try:
             proc = subprocess.run(
-                ["python3", script, "--help"],
+                [sys.executable, script, "--help"],
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -339,9 +340,21 @@ def _find_match(
         norm = raw_key.replace("-", "_").lower()
         if norm not in skill_params:
             continue
-        # List: take first element as a representative value
+        # List: take first element as a representative value (unless it is a
+        # known multi-valued field that downstream skills accept as nargs="*").
         if isinstance(value, list):
-            value = value[0] if value else None
+            multi_keys = {
+                "sequences",
+                "aligned_sequences",
+                "hotspot_positions",
+                "protected_positions",
+                "conserved_columns",
+                "variable_columns",
+            }
+            if norm in multi_keys and all(not isinstance(x, (dict, list)) for x in value):
+                pass  # keep full list
+            else:
+                value = value[0] if value else None
         # Skip nested objects and empty values
         if value is None or isinstance(value, dict):
             continue
@@ -367,6 +380,7 @@ class ArtifactReactor:
         artifact_store: ArtifactStore,
     ):
         self.agent_name = agent_name
+        self._agent_profile = dict(agent_profile or {})
         self.store = artifact_store
         self._base = Path.home() / ".scienceclaw" / "artifacts"
         self.consumed_path = self._base / agent_name / "consumed.txt"
@@ -387,7 +401,27 @@ class ArtifactReactor:
         partner_list = agent_profile.get("partner_agents", [])
         self._partner_agents: Optional[Set[str]] = set(partner_list) if partner_list else None
 
+        # Optional: scope all scan_* operations to a single investigation_id.
+        # This prevents cross-run pollution when the same agent identities are
+        # reused across multiple demos in the shared global index.
+        self._investigation_id_filter: str = (
+            agent_profile.get("investigation_id_filter")
+            or agent_profile.get("investigation_id")
+            or ""
+        )
+
+        # Needs-driven behavior knobs (kept conservative by default)
+        self._needs_fulfillment_budget: int = int(
+            agent_profile.get("needs_fulfillment_budget", 2) or 2
+        )
+        self._max_variants_default: int = int(
+            agent_profile.get("needs_max_variants_default", 1) or 1
+        )
+
         self._peer_reactors: List["ArtifactReactor"] = []
+        # Lazy-cached LLM reasoner — shared across all entity enrichment calls
+        # within a single reactor instance (avoids per-artifact instantiation).
+        self._reasoner = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -413,7 +447,7 @@ class ArtifactReactor:
             self._mark_consumed(artifact.artifact_id)
         return child
 
-    def scan_available(self) -> List[Artifact]:
+    def scan_available(self, index_lines: Optional[List[str]] = None) -> List[Artifact]:
         """
         Return unclaimed peer artifacts compatible with at least one of this
         agent's skills.
@@ -423,19 +457,25 @@ class ArtifactReactor:
         candidates that pass all filters.
 
         Compatibility = skill.input_params ∩ artifact.payload_keys ≠ ∅
+
+        Args:
+            index_lines: Pre-loaded raw text lines from global_index.jsonl.
+                         If provided, skips the disk read (caller's responsibility).
         """
         global_index = self._base / "global_index.jsonl"
-        if not global_index.exists():
-            return []
+        if index_lines is None:
+            if not global_index.exists():
+                return []
+            try:
+                lines = global_index.read_text(encoding="utf-8").splitlines()
+            except OSError:
+                return []
+        else:
+            lines = index_lines
 
         consumed = self._load_consumed()
         candidate_skills = self._candidate_skills()
         available = []
-
-        try:
-            lines = global_index.read_text(encoding="utf-8").splitlines()
-        except OSError:
-            return []
 
         for line in lines:
             line = line.strip()
@@ -450,6 +490,8 @@ class ArtifactReactor:
                 continue  # no self-loops
             if entry.get("artifact_id") in consumed:
                 continue  # already reacted
+            if self._investigation_id_filter and entry.get("investigation_id") != self._investigation_id_filter:
+                continue
 
             # Load full artifact (with payload) only for viable candidates
             producer = entry.get("producer_agent", "")
@@ -497,11 +539,22 @@ class ArtifactReactor:
 
         Returns list of newly produced child artifacts (including mutations).
         """
+        # Load global index ONCE for this cycle; pass to scan_* helpers.
+        global_index = self._base / "global_index.jsonl"
+        try:
+            index_lines: Optional[List[str]] = (
+                global_index.read_text(encoding="utf-8").splitlines()
+                if global_index.exists()
+                else []
+            )
+        except OSError:
+            index_lines = None  # fall back to per-method reads
+
         # Needs-driven reactions take priority: fulfil explicit peer requests first
-        needs_children = self.react_to_needs(limit=2)
+        needs_children = self.react_to_needs(limit=max(0, int(self._needs_fulfillment_budget)), index_lines=index_lines)
         children = list(needs_children)
 
-        available = self.scan_available()
+        available = self.scan_available(index_lines=index_lines)
 
         # Attempt multi-parent synthesis first
         synthesized = self._react_multi(available, limit=2)
@@ -523,7 +576,18 @@ class ArtifactReactor:
             from artifacts.mutator import ArtifactMutator
 
             mutator = ArtifactMutator(self.agent_name, self.store)
-            triggers = mutator.detect_triggers(investigation_id)
+            # Convert raw str lines to dicts once for mutator (it expects List[dict])
+            parsed_index_lines: Optional[List[dict]] = None
+            if index_lines is not None:
+                parsed_index_lines = []
+                for _l in index_lines:
+                    _l = _l.strip()
+                    if _l:
+                        try:
+                            parsed_index_lines.append(json.loads(_l))
+                        except json.JSONDecodeError:
+                            pass
+            triggers = mutator.detect_triggers(investigation_id, index_lines=parsed_index_lines)
 
             # Load policy to get per-investigation cap
             policy = mutator._load_policy(investigation_id)
@@ -738,7 +802,18 @@ class ArtifactReactor:
                 raw_key = payload_keys[norm_key]
                 value = parent.payload[raw_key]
                 if isinstance(value, list):
-                    value = value[0] if value else None
+                    multi_keys = {
+                        "sequences",
+                        "aligned_sequences",
+                        "hotspot_positions",
+                        "protected_positions",
+                        "conserved_columns",
+                        "variable_columns",
+                    }
+                    if norm_key in multi_keys and all(not isinstance(x, (dict, list)) for x in value):
+                        pass  # keep full list
+                    else:
+                        value = value[0] if value else None
                 if value is None or isinstance(value, dict):
                     continue
                 exec_params[norm_key] = value
@@ -767,7 +842,9 @@ class ArtifactReactor:
                 if is_generic:
                     try:
                         from autonomous.llm_reasoner import LLMScientificReasoner
-                        reasoner = LLMScientificReasoner(self.agent_name)
+                        if self._reasoner is None:
+                            self._reasoner = LLMScientificReasoner(self.agent_name)
+                        reasoner = self._reasoner
                         topic = parent.payload.get("topic", "")
                         results_so_far = _parse_rich_text_to_results(parent.payload)
                         llm_query = reasoner.derive_query_for_skill(
@@ -822,19 +899,40 @@ class ArtifactReactor:
         have already been fulfilled by this agent."""
         return self._base / self.agent_name / "consumed_needs.txt"
 
-    def _load_consumed_needs(self) -> Set[str]:
-        """Return set of 'artifact_id:need_index' strings already fulfilled."""
-        if self.consumed_needs_path.exists():
-            return set(
-                self.consumed_needs_path.read_text(encoding="utf-8").splitlines()
-            )
-        return set()
+    def _load_consumed_needs(self) -> Tuple[Set[str], Set[str]]:
+        """
+        Return (variant_keys, wildcard_keys).
 
-    def _mark_need_consumed(self, artifact_id: str, need_index: int) -> None:
-        """Record that this agent has fulfilled need at need_index for artifact_id."""
+        - variant_keys: strings of form 'artifact_id:need_index:variant_id'
+        - wildcard_keys: strings of form 'artifact_id:need_index' (treat as “all variants consumed”)
+
+        Backwards compatible with older files that stored only wildcard keys.
+        """
+        if self.consumed_needs_path.exists():
+            lines = set(
+                l.strip()
+                for l in self.consumed_needs_path.read_text(encoding="utf-8").splitlines()
+                if l.strip()
+            )
+            wildcards: Set[str] = set()
+            variants: Set[str] = set()
+            for line in lines:
+                parts = line.split(":")
+                if len(parts) >= 2:
+                    wildcards.add(f"{parts[0]}:{parts[1]}")
+                if len(parts) >= 3:
+                    variants.add(f"{parts[0]}:{parts[1]}:{parts[2]}")
+                elif len(parts) == 2:
+                    # legacy wildcard entry
+                    pass
+            return variants, wildcards
+        return set(), set()
+
+    def _mark_need_consumed(self, artifact_id: str, need_index: int, variant_id: str) -> None:
+        """Record that this agent has fulfilled one variant for need at need_index."""
         self.consumed_needs_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.consumed_needs_path, "a", encoding="utf-8") as fh:
-            fh.write(f"{artifact_id}:{need_index}\n")
+            fh.write(f"{artifact_id}:{need_index}:{variant_id}\n")
 
     def _artifact_type_to_skills(self) -> Dict[str, List[str]]:
         """
@@ -851,7 +949,7 @@ class ArtifactReactor:
                 type_to_skills.setdefault(atype, []).append(skill_name)
         return type_to_skills
 
-    def scan_needs(self) -> List[Tuple[dict, int]]:
+    def scan_needs(self, index_lines: Optional[List[str]] = None) -> List[Tuple[dict, int]]:
         """
         Scan global_index.jsonl for peer artifacts that broadcast needs this
         agent can fulfil.
@@ -866,19 +964,24 @@ class ArtifactReactor:
         - (artifact_id, need_index) must not be in consumed_needs
         - need's artifact_type must be producible by at least one of this
           agent's skills (via _artifact_type_to_skills)
+
+        Args:
+            index_lines: Pre-loaded raw text lines from global_index.jsonl.
         """
         global_index = self._base / "global_index.jsonl"
-        if not global_index.exists():
-            return []
+        if index_lines is None:
+            if not global_index.exists():
+                return []
+            try:
+                lines = global_index.read_text(encoding="utf-8").splitlines()
+            except OSError:
+                return []
+        else:
+            lines = index_lines
 
-        consumed_needs = self._load_consumed_needs()
+        consumed_variants, consumed_wildcards = self._load_consumed_needs()
         type_to_skills = self._artifact_type_to_skills()
         results = []
-
-        try:
-            lines = global_index.read_text(encoding="utf-8").splitlines()
-        except OSError:
-            return []
 
         for line in lines:
             line = line.strip()
@@ -896,6 +999,8 @@ class ArtifactReactor:
             # If investigation is closed-team, skip needs from outside agents
             if self._partner_agents is not None and producer not in self._partner_agents:
                 continue
+            if self._investigation_id_filter and entry.get("investigation_id") != self._investigation_id_filter:
+                continue
 
             needs = entry.get("needs", [])
             if not needs:
@@ -904,7 +1009,7 @@ class ArtifactReactor:
             artifact_id = entry.get("artifact_id", "")
             for need_index, need in enumerate(needs):
                 key = f"{artifact_id}:{need_index}"
-                if key in consumed_needs:
+                if key in consumed_wildcards:
                     continue  # already fulfilled
                 atype = need.get("artifact_type", "")
                 if atype in type_to_skills:
@@ -912,7 +1017,7 @@ class ArtifactReactor:
 
         return results
 
-    def react_to_needs(self, limit: int = 2) -> List[Artifact]:
+    def react_to_needs(self, limit: int = 2, index_lines: Optional[List[str]] = None) -> List[Artifact]:
         """
         Fulfil up to `limit` peer needs by running appropriate skills and
         creating child artifacts.
@@ -924,17 +1029,86 @@ class ArtifactReactor:
         4. Save a child artifact with _fulfilled_need and _need_index in payload
         5. Mark the need as consumed
 
+        Args:
+            index_lines: Pre-loaded raw text lines from global_index.jsonl.
+
         Returns list of newly produced fulfillment artifacts.
         """
-        candidates = self.scan_needs()
+        candidates = self.scan_needs(index_lines=index_lines)
         if not candidates:
             return []
 
         type_to_skills = self._artifact_type_to_skills()
         fulfillments: List[Artifact] = []
+        consumed_variants, consumed_wildcards = self._load_consumed_needs()
+
+        # Use pre-loaded index lines for pressure ranking when provided
+        global_lines: List[dict] = []
+        if index_lines is not None:
+            for line in index_lines:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    global_lines.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+        else:
+            global_index = self._base / "global_index.jsonl"
+            if global_index.exists():
+                try:
+                    for line in global_index.read_text(encoding="utf-8").splitlines():
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            global_lines.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            continue
+                except OSError:
+                    global_lines = []
+
+        # Rank candidates by deterministic “artifact pressure”
+        try:
+            from artifacts.pressure import NeedRef, score_need
+
+            scored: List[Tuple[float, Tuple[dict, int]]] = []
+            for entry, need_index in candidates:
+                needs = entry.get("needs", []) or []
+                if need_index >= len(needs) or not isinstance(needs[need_index], dict):
+                    continue
+                need = needs[need_index]
+                ref = NeedRef(
+                    parent_artifact_id=str(entry.get("artifact_id") or ""),
+                    need_index=int(need_index),
+                    producer_agent=str(entry.get("producer_agent") or ""),
+                    investigation_id=str(entry.get("investigation_id") or ""),
+                    artifact_type=str(need.get("artifact_type") or ""),
+                    query=str(need.get("query") or ""),
+                    rationale=str(need.get("rationale") or ""),
+                    parent_timestamp=str(entry.get("timestamp") or ""),
+                )
+                depth = 0
+                try:
+                    depth = int(self.store.get_depth(ref.parent_artifact_id))
+                except Exception:
+                    depth = 0
+                scored.append((score_need(need=ref, depth=depth, global_index_lines=global_lines), (entry, need_index)))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            candidates = [pair for _, pair in scored] or candidates
+        except Exception:
+            pass
+
+        strict_variants = bool(self._agent_profile.get("strict_need_variants", False))
+
+        # `limit` historically behaved like "max fulfillments". For branching
+        # needs (multiple variants per single need), we must allow multiple
+        # artifacts per need or strict variants will fail when the budget is low.
+        # Cap total artifacts to a small multiple of the budget.
+        max_artifacts = max(1, int(limit)) * 6
 
         for entry, need_index in candidates[:limit]:
-            if len(fulfillments) >= limit:
+            if len(fulfillments) >= max_artifacts:
                 break
 
             artifact_id = entry.get("artifact_id", "")
@@ -957,67 +1131,148 @@ class ArtifactReactor:
                 continue
 
             candidate_skills = self._candidate_skills()
-            chosen_skill = None
-            chosen_meta = None
-            for sname in skill_names:
-                if sname in candidate_skills:
-                    chosen_skill = sname
-                    chosen_meta = candidate_skills[sname]
+
+            # Branching controls (optional; backward compatible)
+            branch = bool(need.get("branch", False))
+            max_variants = int(need.get("max_variants") or (self._max_variants_default if branch else 1) or 1)
+            max_variants = max(1, min(6, max_variants))
+            preferred_skills = need.get("preferred_skills") or []
+            if not isinstance(preferred_skills, list):
+                preferred_skills = []
+            param_variants = need.get("param_variants") or []
+            if not isinstance(param_variants, list):
+                param_variants = []
+
+            # Determine variant specs: list of (variant_id, skill_name, exec_params, strategy_label)
+            def _build_exec_params(skill_name: str, skill_meta: dict, q: str, overrides: Optional[dict] = None) -> Dict[str, object]:
+                params = _skill_input_params(skill_name, skill_meta)
+                base: Dict[str, object] = {"query": q}
+                if "search" in params and "query" not in params:
+                    base = {"search": q}
+                elif "smiles" in params and not any(k in params for k in ("query", "search")):
+                    base = {"smiles": q}
+                # Merge overrides last
+                if overrides and isinstance(overrides, dict):
+                    for k, v in overrides.items():
+                        base[k] = v
+                return base
+
+            variants: List[Tuple[str, str, Dict[str, object], str]] = []
+
+            # Param variants: same need, potentially same skill, different parameters
+            if branch and param_variants:
+                for idx_pv, pv in enumerate(param_variants[:max_variants]):
+                    if not isinstance(pv, dict):
+                        continue
+                    pv_skill = pv.get("skill") or None
+                    overrides = dict(pv.get("params") or pv)
+                    overrides.pop("skill", None)
+                    overrides.pop("variant_id", None)
+                    chosen = None
+                    if pv_skill and pv_skill in candidate_skills and pv_skill in skill_names:
+                        chosen = pv_skill
+                    else:
+                        # fall back to first allowed skill
+                        for sname in skill_names:
+                            if sname in candidate_skills:
+                                chosen = sname
+                                break
+                    if not chosen:
+                        continue
+                    vid = str(pv.get("variant_id") or f"pv{idx_pv}")
+                    meta = candidate_skills[chosen]
+                    ex_params = _build_exec_params(chosen, meta, query, overrides=overrides)
+                    variants.append((f"{chosen}:{vid}", chosen, ex_params, "param_variant"))
+
+            # Otherwise: pick distinct skills as competing hypotheses
+            if not variants:
+                pool: List[str] = []
+                if branch and preferred_skills:
+                    for s in preferred_skills:
+                        if s in skill_names and s in candidate_skills:
+                            pool.append(s)
+                if not pool:
+                    for s in skill_names:
+                        if s in candidate_skills:
+                            pool.append(s)
+                if not pool:
+                    continue
+                take = 1 if not branch else min(max_variants, len(pool))
+                for s in pool[:take]:
+                    meta = candidate_skills[s]
+                    variants.append((f"{s}:v0", s, _build_exec_params(s, meta, query), "skill_variant"))
+
+            # Execute variants (branching) for this need
+            wildcard_key = f"{artifact_id}:{need_index}"
+            if wildcard_key in consumed_wildcards:
+                continue
+
+            expected = len(variants)
+            succeeded = 0
+
+            for variant_id, chosen_skill, exec_params, strategy in variants:
+                if len(fulfillments) >= max_artifacts:
                     break
+                consumed_key = f"{artifact_id}:{need_index}:{variant_id}"
+                if consumed_key in consumed_variants:
+                    continue
 
-            if not chosen_skill or not chosen_meta:
-                continue
+                chosen_meta = candidate_skills.get(chosen_skill)
+                if not chosen_meta:
+                    continue
 
-            # Build parameters — try common query param names
-            exec_params: Dict[str, object] = {"query": query}
-            # Some skills use non-standard param names
-            params = _skill_input_params(chosen_skill, chosen_meta)
-            if "search" in params and "query" not in params:
-                exec_params = {"search": query}
-            elif "smiles" in params and not any(
-                k in params for k in ("query", "search")
-            ):
-                exec_params = {"smiles": query}
+                try:
+                    result = self._executor.execute_skill(
+                        skill_name=chosen_skill,
+                        skill_metadata=chosen_meta,
+                        parameters=exec_params,
+                        timeout=45,
+                    )
+                except Exception:
+                    continue
 
-            try:
-                result = self._executor.execute_skill(
-                    skill_name=chosen_skill,
-                    skill_metadata=chosen_meta,
-                    parameters=exec_params,
-                    timeout=30,
+                if result.get("status") != "success":
+                    continue
+
+                payload = result.get("result", {})
+                if not isinstance(payload, dict):
+                    payload = {"output": str(payload)}
+
+                # Tag the payload so loop_controller can detect fulfillment artifacts
+                payload["_fulfilled_need"] = {
+                    "artifact_type": atype,
+                    "query": query,
+                    "rationale": rationale,
+                    "parent_artifact_id": artifact_id,
+                    "producer_agent": producer,
+                }
+                payload["_need_index"] = need_index
+                payload["_fulfillment_variant"] = {
+                    "variant_id": variant_id,
+                    "skill": chosen_skill,
+                    "strategy": strategy,
+                    "params": {k: v for k, v in exec_params.items() if k not in ("input_json",)},
+                }
+
+                child = self.store.create_and_save(
+                    skill_used=chosen_skill,
+                    payload=payload,
+                    investigation_id=entry.get("investigation_id", ""),
+                    parent_artifact_ids=[artifact_id],
                 )
-            except Exception:
-                continue
+                self._mark_need_consumed(artifact_id, need_index, variant_id=variant_id)
+                fulfillments.append(child)
+                succeeded += 1
+                print(
+                    f"  [needs] Fulfilled need #{need_index} from {producer} "
+                    f"({atype}, query='{query[:45]}', variant='{variant_id}')"
+                )
 
-            if result.get("status") != "success":
-                continue
-
-            payload = result.get("result", {})
-            if not isinstance(payload, dict):
-                payload = {"output": str(payload)}
-
-            # Tag the payload so loop_controller can detect fulfillment artifacts
-            payload["_fulfilled_need"] = {
-                "artifact_type": atype,
-                "query": query,
-                "rationale": rationale,
-                "parent_artifact_id": artifact_id,
-                "producer_agent": producer,
-            }
-            payload["_need_index"] = need_index
-
-            child = self.store.create_and_save(
-                skill_used=chosen_skill,
-                payload=payload,
-                investigation_id=entry.get("investigation_id", ""),
-                parent_artifact_ids=[artifact_id],
-            )
-            self._mark_need_consumed(artifact_id, need_index)
-            fulfillments.append(child)
-            print(
-                f"  [needs] Fulfilled need #{need_index} from {producer} "
-                f"({atype}, query='{query[:50]}')"
-            )
+            if strict_variants and branch and succeeded != expected:
+                raise RuntimeError(
+                    f"Need variants failed: {producer} need#{need_index} atype={atype} "
+                    f"query={query!r} succeeded={succeeded}/{expected}"
+                )
 
         return fulfillments
 

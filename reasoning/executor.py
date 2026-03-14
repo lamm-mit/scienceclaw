@@ -144,8 +144,15 @@ class ExperimentExecutor:
             return f"Found {len(structures)} structures"
         
         elif tool == "materials":
-            if "material" in output:
-                return f"Material: {output['material'].get('formula', 'unknown')}"
+            if isinstance(output, dict):
+                formula = None
+                mat_obj = output.get("material")
+                if isinstance(mat_obj, dict):
+                    formula = mat_obj.get("formula")
+                if not formula:
+                    formula = output.get("formula")
+                if formula:
+                    return f"Material: {formula}"
             return "Material data retrieved"
         
         elif tool == "websearch":

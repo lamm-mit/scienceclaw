@@ -54,16 +54,18 @@ class SkillExecutor:
             Dict with execution results
         """
         skill_type = skill_metadata.get('type', 'tool')
-        
+
         try:
             if skill_type == 'database':
-                result = self._execute_database_skill(skill_metadata, parameters, timeout)
+                result = self._execute_database_skill(skill_name, skill_metadata, parameters, timeout)
             elif skill_type == 'package':
-                result = self._execute_package_skill(skill_metadata, parameters)
+                result = self._execute_package_skill(skill_name, skill_metadata, parameters)
             elif skill_type in ['tool', 'integration']:
-                result = self._execute_script_skill(skill_metadata, parameters, timeout)
+                result = self._execute_script_skill(skill_name, skill_metadata, parameters, timeout)
             else:
-                result = self._execute_generic_skill(skill_metadata, parameters, timeout)
+                result = self._execute_generic_skill(skill_name, skill_metadata, parameters, timeout)
+
+            result = self._normalise_result(result, parameters)
             
             return {
                 "status": "success",
@@ -83,26 +85,92 @@ class SkillExecutor:
                 "skill": skill_name,
                 "error": str(e)
             }
+
+    def _normalise_result(self, result: Any, parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Normalise skill outputs to a dict payload so downstream artifact code
+        can reliably hash, store, and react to results.
+
+        Many “database” skills emit a top-level JSON list (e.g. papers). We wrap
+        those as {"items": [...], "count": N} and add light aliases when obvious.
+        """
+        query_val = (
+            parameters.get("query")
+            or parameters.get("search")
+            or parameters.get("term")
+            or parameters.get("keyword")
+            or parameters.get("topic")
+            or ""
+        )
+        query_val = str(query_val) if query_val else ""
+
+        if isinstance(result, dict):
+            if not query_val or "query" in result:
+                return result
+            enriched = dict(result)
+            enriched["query"] = query_val
+            enriched.setdefault("search", query_val)
+            return enriched
+
+        if isinstance(result, list):
+            payload: Dict[str, Any] = {"items": result, "count": len(result)}
+            if query_val:
+                payload["query"] = query_val
+                payload["search"] = query_val
+
+            if result and isinstance(result[0], dict):
+                k0 = set(result[0].keys())
+                # Common literature-ish schemas: title/abstract, pmid/doi/id
+                if {"title", "abstract"} & k0 or {"pmid", "doi", "id"} & k0:
+                    payload.setdefault("papers", result)
+                    payload.setdefault("articles", result)
+                if "pmid" in k0:
+                    payload["pmids"] = [str(r.get("pmid")) for r in result if isinstance(r, dict) and r.get("pmid")]
+            return payload
+
+        raw = str(result)
+        payload = {"output": raw[:500], "raw": raw}
+        if query_val:
+            payload["query"] = query_val
+            payload["search"] = query_val
+        return payload
     
-    def _execute_script_skill(self,
-                             skill_metadata: Dict[str, Any],
-                             parameters: Dict[str, Any],
-                             timeout: int) -> Any:
+    def _rank_executables(self, skill_name: str, executables: List[str]) -> List[str]:
         """
-        Execute Python script-based skill.
-        
-        This is the current ScienceClaw skill format.
+        Heuristic ordering of candidate scripts for a skill.
+
+        Some skills ship helper modules in scripts/ that are not CLI entrypoints.
+        We try to select the most likely runnable CLI first, deterministically.
         """
-        executables = skill_metadata.get('executables', [])
-        
-        if not executables:
-            raise ValueError(f"No executables found for skill")
-        
-        # Use first executable
-        script_path = executables[0]
-        
+        def _score(path: str) -> tuple:
+            p = Path(path)
+            name = p.name
+            score = 0
+            if name == "demo.py":
+                score += 100
+            slug = skill_name.replace("-", "_")
+            if slug in name.replace("-", "_"):
+                score += 50
+            try:
+                head = p.read_text(encoding="utf-8", errors="ignore")[:4000]
+            except Exception:
+                head = ""
+            if head.startswith("#!"):
+                score += 20
+            if "argparse" in head:
+                score += 15
+            if "if __name__" in head:
+                score += 10
+            if "--describe-schema" in head:
+                score += 5
+            return (-score, name)
+
+        return sorted(executables, key=_score)
+
+    def _try_script(self, script_path: str, parameters: Dict[str, Any], timeout: int) -> Any:
         def _build_cmd(params: dict, with_format_json: bool) -> list:
-            c = ["python3", script_path]
+            # Use the same interpreter as the current process so venv installs work.
+            c = [sys.executable, script_path]
             for key, value in params.items():
                 flag = f"--{key.replace('_', '-')}"
                 if isinstance(value, list):
@@ -148,11 +216,26 @@ class SkillExecutor:
                     if result.returncode != 0:
                         result = _run(_build_cmd(minimal_params, with_format_json=False))
                     if result.returncode != 0:
-                        raise RuntimeError(f"Script failed: {result.stderr}")
+                        raise RuntimeError(
+                            "Script failed "
+                            f"(exit={result.returncode}). "
+                            f"stderr={result.stderr.strip()!r} "
+                            f"stdout={result.stdout.strip()!r}"
+                        )
                 else:
-                    raise RuntimeError(f"Script failed: {result.stderr}")
+                    raise RuntimeError(
+                        "Script failed "
+                        f"(exit={result.returncode}). "
+                        f"stderr={result.stderr.strip()!r} "
+                        f"stdout={result.stdout.strip()!r}"
+                    )
             else:
-                raise RuntimeError(f"Script failed: {result.stderr}")
+                raise RuntimeError(
+                    "Script failed "
+                    f"(exit={result.returncode}). "
+                    f"stderr={result.stderr.strip()!r} "
+                    f"stdout={result.stdout.strip()!r}"
+                )
 
         # Try to parse JSON output — structured payloads enable artifact reactor matching
         try:
@@ -166,17 +249,44 @@ class SkillExecutor:
                 except json.JSONDecodeError:
                     continue
             return {"output": stdout}
+
+    def _execute_script_skill(self,
+                             skill_name: str,
+                             skill_metadata: Dict[str, Any],
+                             parameters: Dict[str, Any],
+                             timeout: int) -> Any:
+        """
+        Execute Python script-based skill.
+        
+        This is the current ScienceClaw skill format.
+        """
+        executables = skill_metadata.get('executables', [])
+        
+        if not executables:
+            raise ValueError(f"No executables found for skill")
+        
+        ordered = self._rank_executables(skill_name, executables)
+        last_err: Optional[Exception] = None
+        for script_path in ordered:
+            try:
+                return self._try_script(script_path, parameters, timeout=timeout)
+            except Exception as e:
+                last_err = e
+                continue
+        raise RuntimeError(str(last_err) if last_err else "No runnable executables found for skill")
     
     def _execute_database_skill(self,
+                                skill_name: str,
                                 skill_metadata: Dict[str, Any],
                                 parameters: Dict[str, Any],
                                 timeout: int) -> Any:
         """Execute database/API skill."""
         # For now, treat like script skill
         # Future: Direct API calls without subprocess
-        return self._execute_script_skill(skill_metadata, parameters, timeout)
+        return self._execute_script_skill(skill_name, skill_metadata, parameters, timeout)
     
     def _execute_package_skill(self,
+                               skill_name: str,
                                skill_metadata: Dict[str, Any],
                                parameters: Dict[str, Any]) -> Any:
         """
@@ -185,14 +295,15 @@ class SkillExecutor:
         Future enhancement: Import package and call directly instead of subprocess.
         """
         # For now, delegate to script execution
-        return self._execute_script_skill(skill_metadata, parameters, timeout=30)
+        return self._execute_script_skill(skill_name, skill_metadata, parameters, timeout=30)
     
     def _execute_generic_skill(self,
+                               skill_name: str,
                                skill_metadata: Dict[str, Any],
                                parameters: Dict[str, Any],
                                timeout: int) -> Any:
         """Execute generic skill."""
-        return self._execute_script_skill(skill_metadata, parameters, timeout)
+        return self._execute_script_skill(skill_name, skill_metadata, parameters, timeout)
     
     def execute_skill_chain(self,
                            chain: List[Dict[str, Any]],

@@ -40,6 +40,7 @@ class SkillRegistry:
         self.skills_dir = self.scienceclaw_dir / "skills"
         self.cache_file = Path.home() / ".scienceclaw" / "skill_registry.json"
         self.config_file = Path.home() / ".scienceclaw" / "skill_config.json"
+        self._cache_last_updated: float = 0.0
         
         # Skill catalog (loaded from cache or discovered)
         self.skills: Dict[str, Dict[str, Any]] = {}
@@ -47,11 +48,63 @@ class SkillRegistry:
         # Load or build registry
         if self.cache_file.exists():
             self._load_cache()
+
+            # Cache refresh policy:
+            # - SCIENCECLAW_FORCE_SKILL_REFRESH=1 always refreshes
+            # - Otherwise auto-refresh when the on-disk skills changed since cache build,
+            #   unless SCIENCECLAW_DISABLE_SKILL_AUTO_REFRESH=1
+            force = os.environ.get("SCIENCECLAW_FORCE_SKILL_REFRESH", "").strip().lower() in ("1", "true", "yes")
+            disable = os.environ.get("SCIENCECLAW_DISABLE_SKILL_AUTO_REFRESH", "").strip().lower() in ("1", "true", "yes")
+            if force or (not disable and self._cache_is_stale()):
+                print("🔄 Skill registry cache appears stale — refreshing…")
+                self.discover_skills(force_refresh=True)
         else:
             self.discover_skills()
         
         # Filter out hidden skills (e.g. require credentials you don't have yet)
         self._apply_hidden_skills()
+
+    def _max_scripts_mtime(self, stop_after: Optional[float] = None) -> float:
+        """
+        Return the maximum mtime across scripts/*.py in skills/.
+
+        stop_after: if provided, return early once a file mtime exceeds this threshold.
+        """
+        if not self.skills_dir.exists():
+            return 0.0
+        max_m = 0.0
+        try:
+            for skill_dir in self.skills_dir.iterdir():
+                if not skill_dir.is_dir() or skill_dir.name.startswith("."):
+                    continue
+                scripts = skill_dir / "scripts"
+                if not scripts.exists():
+                    continue
+                for script in scripts.glob("*.py"):
+                    if script.name.startswith("__"):
+                        continue
+                    try:
+                        m = script.stat().st_mtime
+                    except OSError:
+                        continue
+                    if m > max_m:
+                        max_m = m
+                        if stop_after is not None and max_m > stop_after:
+                            return max_m
+        except OSError:
+            return max_m
+        return max_m
+
+    def _cache_is_stale(self) -> bool:
+        """
+        Consider the cache stale if any skill script is newer than the cached
+        last_updated time (or if cache metadata is missing).
+        """
+        if self._cache_last_updated <= 0:
+            return True
+        # Early-exit scan: stop once we find a script newer than cache.
+        newest = self._max_scripts_mtime(stop_after=self._cache_last_updated)
+        return newest > (self._cache_last_updated + 1e-6)
     
     def discover_skills(self, force_refresh: bool = False):
         """
@@ -441,12 +494,14 @@ class SkillRegistry:
         """Save registry to cache file."""
         self.cache_file.parent.mkdir(parents=True, exist_ok=True)
         try:
+            last_updated = float(self._max_scripts_mtime())
             with open(self.cache_file, 'w') as f:
                 json.dump({
                     'skills': self.skills,
                     'version': '1.0',
-                    'last_updated': str(Path(self.skills_dir).stat().st_mtime)
+                    'last_updated': last_updated
                 }, f, indent=2)
+            self._cache_last_updated = last_updated
         except Exception as e:
             print(f"Warning: Could not save skill cache: {e}")
     
@@ -456,6 +511,11 @@ class SkillRegistry:
             with open(self.cache_file) as f:
                 data = json.load(f)
                 self.skills = data.get('skills', {})
+                lu = data.get("last_updated", 0) or 0
+                try:
+                    self._cache_last_updated = float(lu)
+                except Exception:
+                    self._cache_last_updated = 0.0
         except Exception as e:
             print(f"Warning: Could not load skill cache: {e}")
             self.discover_skills()

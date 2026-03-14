@@ -126,7 +126,7 @@ class AutonomousLoopController:
         self.platform = self._initialize_platform()
 
         print(f"[AutonomousLoopController] Initialized for agent: {self.agent_name}")
-        print(f"[AutonomousLoopController] Platform: {self.platform.__class__.__name__}")
+        print(f"[AutonomousLoopController] Platform: {self.platform.__class__.__name__ if self.platform else 'disabled'}")
         print(f"[AutonomousLoopController] Profile: {agent_profile.get('profile', 'mixed')}")
     
     def _initialize_platform(self):
@@ -136,6 +136,8 @@ class AutonomousLoopController:
         Returns:
             InfiniteClient instance
         """
+        if self.agent_profile.get("disable_platform"):
+            return None
         # Per-agent config takes priority (enables distinct identities in multi-agent demo)
         per_agent_config = (
             Path.home() / ".scienceclaw" / "profiles" / self.agent_name / "infinite_config.json"
@@ -149,9 +151,9 @@ class AutonomousLoopController:
             except Exception as e:
                 print(f"[Platform] Infinite initialization failed: {scrub(str(e))}")
 
-        raise RuntimeError(
-            "No platform configured. Run setup.py to configure Infinite."
-        )
+        if self.agent_profile.get("disable_platform"):
+            return None
+        raise RuntimeError("No platform configured. Run setup.py to configure Infinite.")
     
     def run_heartbeat_cycle(self) -> Dict[str, Any]:
         """
@@ -185,7 +187,10 @@ class AutonomousLoopController:
         try:
             # Step 1: Check notifications/DMs
             print("📬 Step 1: Checking notifications and DMs...")
-            self._check_notifications()
+            if self.platform:
+                self._check_notifications()
+            else:
+                print("   (platform disabled) skipping notifications")
             summary["steps_completed"].append("check_notifications")
             
             # Step 1.5: Check for collaborative sessions
@@ -233,9 +238,12 @@ class AutonomousLoopController:
             
             # Step 7: Engage with peers
             print("\n🤝 Step 7: Engaging with peers...")
-            engagement = self.engage_with_peers()
-            print(f"   Upvoted: {engagement['upvotes']}, Commented: {engagement['comments']}")
-            summary["engagement"] = engagement
+            if self.platform:
+                engagement = self.engage_with_peers()
+                print(f"   Upvoted: {engagement['upvotes']}, Commented: {engagement['comments']}")
+                summary["engagement"] = engagement
+            else:
+                print("   (platform disabled) skipping peer engagement")
             summary["steps_completed"].append("engage_with_peers")
             
         except Exception as e:
@@ -691,14 +699,18 @@ class AutonomousLoopController:
                 for notif in notifications[:10]:  # Limit to 10 per cycle
                     notif_type = notif.get("type")
                     
+                    # Handle human intervention comments (highest priority)
+                    comment_type = notif.get("commentType") or notif.get("metadata", {}).get("commentType")
+                    if comment_type in ("progress", "redirect", "conclude", "force-close"):
+                        self._handle_intervention_comment(notif, comment_type)
                     # Handle mentions
-                    if notif_type == "mention":
+                    elif notif_type == "mention":
                         self._handle_mention(notif)
-                    
+
                     # Handle replies
                     elif notif_type == "reply":
                         self._handle_reply(notif)
-                    
+
                     # Mark as read
                     self.platform.mark_notification_read(notif["id"])
             else:
@@ -730,7 +742,61 @@ class AutonomousLoopController:
         """Handle a reply notification (placeholder)."""
         # In production, could analyze reply and respond
         print(f"   Received reply: {notif.get('content', '')[:50]}...")
-    
+
+    def _handle_intervention_comment(self, notif: Dict[str, Any], comment_type: str):
+        """Handle a typed human intervention comment on an active investigation post."""
+        try:
+            metadata = notif.get("metadata", {})
+            post_id = metadata.get("postId")
+            content = notif.get("content", "")
+
+            # Log in journal so intervention is part of auditable provenance
+            if hasattr(self, 'journal') and self.journal:
+                self.journal.log_observation(
+                    f"Human intervention ({comment_type}) on post {post_id}: {content[:200]}",
+                    investigation_id=post_id
+                )
+
+            if comment_type == "progress":
+                # Reply with current investigation status
+                if post_id:
+                    active = []
+                    if hasattr(self, 'investigation_tracker') and self.investigation_tracker:
+                        active = self.investigation_tracker.get_active_investigations()
+                    status_lines = [f"Status update for investigation {post_id[:8]}:"]
+                    if active:
+                        inv = next((i for i in active if i.get("id") == post_id), active[0])
+                        status_lines.append(f"- Steps completed: {', '.join(inv.get('completed_steps', []))}")
+                        status_lines.append(f"- Current hypothesis: {inv.get('current_hypothesis', 'selecting next')}")
+                        status_lines.append(f"- Next planned: {inv.get('next_step', 'gap detection')}")
+                    else:
+                        status_lines.append("- No active investigation found for this post.")
+                    self.platform.create_comment(post_id, "\n".join(status_lines))
+                    print(f"   Responded to progress request on post {post_id[:8]}...")
+
+            elif comment_type == "redirect":
+                # Promote the redirected sub-question to top of hypothesis queue
+                if content:
+                    if not hasattr(self, '_redirected_hypotheses'):
+                        self._redirected_hypotheses = []
+                    self._redirected_hypotheses.insert(0, {
+                        "text": content,
+                        "source": "human_redirect",
+                        "post_id": post_id,
+                        "priority": "high",
+                    })
+                    print(f"   Queued redirect hypothesis (priority override): {content[:80]}...")
+
+            elif comment_type in ("conclude", "force-close"):
+                # Mark current investigation for immediate synthesis and closure
+                if not hasattr(self, '_investigations_to_conclude'):
+                    self._investigations_to_conclude = []
+                self._investigations_to_conclude.append(post_id)
+                print(f"   Flagged post {post_id[:8] if post_id else '?'} for immediate conclusion ({comment_type})...")
+
+        except Exception as e:
+            print(f"   Error handling intervention comment ({comment_type}): {scrub(str(e))}")
+
     def _check_collaborative_sessions(self):
         """Check for collaborative investigation sessions and participate."""
         try:
@@ -1320,7 +1386,17 @@ class AutonomousLoopController:
         if peer_topic and not self.agent_profile.get("demo_topic"):
             print(f"   Topic (from peer open question): {topic}")
         import re as _re
-        investigation_id = _re.sub(r"[^a-z0-9_]", "_", topic.lower())[:40]
+        forced_inv = (
+            self.agent_profile.get("investigation_id")
+            or self.agent_profile.get("investigation_id_override")
+            or ""
+        )
+        if forced_inv:
+            investigation_id = _re.sub(r"[^a-z0-9_]", "_", str(forced_inv).lower())[:60]
+            print(f"   Investigation: {investigation_id} (forced)")
+        else:
+            investigation_id = _re.sub(r"[^a-z0-9_]", "_", topic.lower())[:40]
+            print(f"   Investigation: {investigation_id}")
         print(f"   Topic: {topic}")
         # Per-cycle tool rotation: if more than 4 tools available, sample 4
         # so each round a different subset fires
@@ -1330,27 +1406,45 @@ class AutonomousLoopController:
         print(f"   Tools (this cycle): {preferred_tools}")
 
         community = self._select_community_for_topic(topic)
+        disable_llm = bool(self.agent_profile.get("disable_llm", False))
 
-        # Ask LLM once: what is the key entity (drug name, gene, protein) for this topic?
+        # Ask LLM once: what is the key entity for this topic, given the agent's tools?
         # Used as the default focused query for entity-specific tools.
-        _key_entity = topic
-        try:
-            from core.llm_client import get_llm_client as _get_llm
-            _ke = _get_llm(agent_name=self.agent_name).call(
-                prompt=(
-                    f"Topic: {topic}\n"
-                    f"Agent tools: {', '.join(preferred_tools)}\n\n"
-                    "What is the single most specific entity (drug name, gene symbol, protein name, "
-                    "or compound name) that this agent should search for given its tools? "
-                    "Reply with ONLY that entity name, nothing else."
-                ),
-                max_tokens=20,
-            ).strip().strip("\"'")
-            if _ke and len(_ke.split()) <= 4:
-                _key_entity = _ke
-        except Exception:
-            pass
-        print(f"   Key entity: {_key_entity}")
+        # Skip extraction for screening/discovery domains — there is no single entity;
+        # candidates are found emergently by the screening tool itself.
+        _key_entity = self.agent_profile.get("key_entity_override") or topic
+        _pt = set(preferred_tools)
+        _materials_tools = {"materials", "pymatgen", "ase", "nistwebbook", "materials-project"}
+        _music_tools = {"motif-clustering", "midi-generator", "chord-analysis", "music-corpus"}
+        _bio_tools = {"pubmed", "uniprot", "blast", "tdc", "pubchem", "chembl"}
+        _is_screening_domain = bool(_pt & _materials_tools)
+        _skip_key_entity_llm = bool(self.agent_profile.get("key_entity_override"))
+        if not disable_llm and not _is_screening_domain and not _skip_key_entity_llm:
+            try:
+                from core.llm_client import get_llm_client as _get_llm
+                if _pt & _music_tools and not (_pt & _bio_tools):
+                    _entity_hint = "musical key, composer name, or piece title"
+                else:
+                    _entity_hint = (
+                        "drug name, gene symbol, protein name, compound name, "
+                        "or other domain-specific entity"
+                    )
+                _ke = _get_llm(agent_name=self.agent_name).call(
+                    prompt=(
+                        f"Topic: {topic}\n"
+                        f"Agent tools: {', '.join(preferred_tools)}\n\n"
+                        f"What is the single most specific {_entity_hint} "
+                        "that this agent should search for given its tools and topic? "
+                        "Reply with ONLY that entity name or formula, nothing else."
+                    ),
+                    max_tokens=20,
+                ).strip().strip("\"'")
+                if _ke and len(_ke.split()) <= 4:
+                    _key_entity = _ke
+            except Exception:
+                pass
+        if not _is_screening_domain:
+            print(f"   Key entity: {_key_entity}")
 
         # --- Run each preferred tool and collect results + artifacts ---
         from core.skill_registry import get_registry
@@ -1361,6 +1455,80 @@ class AutonomousLoopController:
         executor = get_executor()
         artifact_store = ArtifactStore(agent_name=self.agent_name)
 
+        # Candidates discovered by the `materials` screening tool within this cycle.
+        # Populated when materials returns {"candidates": [...]} so that pymatgen
+        # can iterate over them instead of using the hardcoded key entity.
+        _discovered_material_candidates: list = []
+
+        # ------------------------------------------------------------------
+        # Deterministic "need broadcast" artifact (emergent coordination seed)
+        # ------------------------------------------------------------------
+        # In demo mode, a seeder can pass explicit broadcast_needs via the agent
+        # profile. Persist them as an artifact early so downstream agents can
+        # react even if a later tool errors or returns empty.
+        try:
+            broadcast_needs = self.agent_profile.get("broadcast_needs", []) or []
+            if broadcast_needs and investigation_id:
+                # Avoid duplicating needs broadcasts for the same (agent, inv_id)
+                # across repeated heartbeats.
+                already = False
+                try:
+                    from pathlib import Path as _PathNB
+                    import json as _jsonNB
+                    _gidx = _PathNB.home() / ".scienceclaw" / "artifacts" / "global_index.jsonl"
+                    if _gidx.exists():
+                        for _line in reversed(_gidx.read_text(encoding="utf-8").splitlines()[-400:]):
+                            try:
+                                _e = _jsonNB.loads(_line)
+                            except Exception:
+                                continue
+                            if (_e.get("producer_agent") == self.agent_name
+                                    and _e.get("investigation_id") == investigation_id
+                                    and _e.get("needs")):
+                                already = True
+                                break
+                except Exception:
+                    already = False
+                if not already:
+                    artifact_store.create_and_save(
+                        skill_used="_synthesis",
+                        payload={
+                            "event": "broadcast_needs",
+                            "topic": topic,
+                            "agent": self.agent_name,
+                            "need_count": len(broadcast_needs),
+                        },
+                        investigation_id=investigation_id,
+                        needs=broadcast_needs,
+                    )
+        except Exception:
+            pass
+
+        tool_query_overrides = self.agent_profile.get("tool_query_overrides", {}) or {}
+        tool_param_overrides = self.agent_profile.get("tool_param_overrides", {}) or {}
+        strict_tools = bool(self.agent_profile.get("strict_tool_results", False))
+
+        def _is_empty_payload(payload_obj) -> bool:
+            if payload_obj is None:
+                return True
+            if isinstance(payload_obj, dict):
+                if payload_obj.get("error"):
+                    return True
+                if "total" in payload_obj:
+                    try:
+                        if int(payload_obj.get("total") or 0) <= 0:
+                            return True
+                    except Exception:
+                        pass
+                for k in ("papers", "articles", "results", "items"):
+                    if k in payload_obj and isinstance(payload_obj.get(k), list) and len(payload_obj.get(k)) == 0:
+                        return True
+            if isinstance(payload_obj, list) and len(payload_obj) == 0:
+                return True
+            if isinstance(payload_obj, str) and not payload_obj.strip():
+                return True
+            return False
+
         tool_sections = []    # For the structured post
         artifact_refs = []    # (artifact_id, artifact_type, tool_name, summary)
 
@@ -1368,8 +1536,7 @@ class AutonomousLoopController:
         # Their demo.py scripts return availability metadata only — no scientific data.
         # Skip direct invocation; the artifact reactor can invoke them once upstream
         # SMILES/sequence data is available.
-        # biopython has no standalone CLI script yet
-        _LIBRARY_ONLY_SKILLS = {"biopython"}
+        _LIBRARY_ONLY_SKILLS = set()
 
         for tool_name in preferred_tools:
             if tool_name in _LIBRARY_ONLY_SKILLS:
@@ -1418,6 +1585,9 @@ class AutonomousLoopController:
                 # Discovery tools: use the LLM-extracted key entity as the query.
                 # The full topic string is too noisy for database APIs.
                 focused_query = _key_entity
+            if tool_name in tool_query_overrides and tool_query_overrides.get(tool_name):
+                focused_query = str(tool_query_overrides[tool_name])
+                print(f"   Query override for {tool_name}: {focused_query!r}")
 
             # Build params — let the skill's own SKILL.md define what it needs;
             # we just provide the most useful query we have.
@@ -1502,9 +1672,9 @@ class AutonomousLoopController:
                     print(f"artifact {short_id}…")
                 except Exception as e:
                     short_id = "n/a"
-                    artifact = None
-                    print(f"artifact save failed: {scrub(str(e))}")
-                summary = self._summarise_payload(tool_name, agg_payload, topic=topic)
+                artifact = None
+                print(f"artifact save failed: {scrub(str(e))}")
+                summary = self._summarise_payload(tool_name, agg_payload, topic=topic, use_llm=not disable_llm)
                 if not self._is_junk_summary(summary):
                     tool_sections.append(f"**{tool_name}** (artifact `{short_id}…`)\n{summary}")
                 else:
@@ -1575,7 +1745,7 @@ class AutonomousLoopController:
                     short_id = "n/a"
                     artifact = None
                     print(f"artifact save failed: {scrub(str(e))}")
-                summary = self._summarise_payload(tool_name, agg_payload, topic=topic)
+                summary = self._summarise_payload(tool_name, agg_payload, topic=topic, use_llm=not disable_llm)
                 if not self._is_junk_summary(summary):
                     tool_sections.append(f"**{tool_name}** (artifact `{short_id}…`)\n{summary}")
                 else:
@@ -1583,10 +1753,136 @@ class AutonomousLoopController:
                 if artifact:
                     artifact_refs.append((artifact.artifact_id, artifact.artifact_type, tool_name, summary))
                 continue  # skip the generic execute below
+            elif tool_name == "materials":
+                # Always run in screening mode with JSON output so candidates are parseable
+                params = {"screen": True, "query": focused_query, "format": "json"}
             elif tool_name == "blast":
                 params = {"query": focused_query, "program": "blastp"}
             elif tool_name in ("pdb", "pdb-database"):
                 params = {"query": focused_query, "limit": "3"}
+            elif tool_name == "motif-clustering":
+                # focused_query may be a JSON motifs blob (set by tool_query_overrides)
+                # Route it to --motifs-json if it looks like JSON, otherwise use --query
+                fq = focused_query.strip()
+                if fq.startswith("{") or fq.startswith("["):
+                    params = {"motifs_json": fq, "query": "bach"}
+                else:
+                    params = {"query": fq}
+            elif tool_name in ("networkx", "networkx-demo"):
+                # focused_query may be a JSON clusters blob — route to --input-json
+                fq = focused_query.strip()
+                if fq.startswith("{") or fq.startswith("["):
+                    params = {"input_json": fq, "query": "music motif clusters"}
+                else:
+                    params = {"query": fq}
+            elif tool_name == "midi-generator":
+                # focused_query may be a JSON clusters blob — route to --clusters-json
+                fq = focused_query.strip()
+                if fq.startswith("{") or fq.startswith("["):
+                    params = {"clusters_json": fq, "query": "{}"}
+                else:
+                    params = {"query": fq or "{}"}
+            elif tool_name == "pymatgen" and not _discovered_material_candidates:
+                print(f"   pymatgen: waiting for materials screening candidates — skipping")
+                continue
+            elif tool_name == "pymatgen" and _discovered_material_candidates:
+                # Panel: run structure_analyzer.py on each screened material candidate
+                import copy as _copy
+                _pymatgen_meta = _copy.deepcopy(skill_meta)
+                _sa = [e for e in _pymatgen_meta.get("executables", [])
+                       if Path(e).name == "structure_analyzer.py"]
+                if _sa:
+                    _pymatgen_meta["executables"] = _sa
+                top_candidates = _discovered_material_candidates[:20]
+                print(f"   Running pymatgen panel ({len(top_candidates)} candidates)...", end=" ", flush=True)
+                all_rows = []
+                for cand in top_candidates:
+                    # Prefer exact MP ID (unambiguous polymorph) over formula
+                    mp_id = cand.get("material_id", "")
+                    query = mp_id if mp_id else (cand.get("formula") or "")
+                    if not query:
+                        continue
+                    try:
+                        _r = executor.execute_skill(
+                            skill_name=tool_name,
+                            skill_metadata=_pymatgen_meta,
+                            parameters={"query": query, "format": "json"},
+                            timeout=45,
+                        )
+                        if _r.get("status") == "success":
+                            row = _r.get("result", {})
+                            if isinstance(row, dict):
+                                row["screened_candidate"] = cand
+                                all_rows.append(row)
+                    except Exception:
+                        pass
+                if not all_rows:
+                    print("no results")
+                    continue
+                import json as _json
+                agg_payload = {
+                    "structures": all_rows,
+                    "count": len(all_rows),
+                    "candidates_analyzed": [r.get("query", r.get("screened_candidate", {}).get("formula", "")) for r in all_rows],
+                }
+                try:
+                    artifact = artifact_store.create_and_save(
+                        skill_used=tool_name,
+                        payload=agg_payload,
+                        investigation_id=investigation_id,
+                    )
+                    short_id = artifact.artifact_id[:12]
+                    print(f"artifact {short_id}…")
+                except Exception as e:
+                    artifact = None
+                    short_id = "n/a"
+                    print(f"artifact save failed: {scrub(str(e))}")
+                summary = self._summarise_payload(tool_name, agg_payload, topic=topic, use_llm=not disable_llm)
+                if not self._is_junk_summary(summary):
+                    tool_sections.append(f"**{tool_name}** (artifact `{short_id}…`)\n{summary}")
+                else:
+                    print(f"   ↳ {tool_name}: suppressing junk section (artifact saved for audit)")
+                if artifact:
+                    artifact_refs.append((artifact.artifact_id, artifact.artifact_type, tool_name, summary))
+                continue  # skip generic execute
+
+            # Optional per-tool extra CLI params for demos (e.g. evolve_steps for esm)
+            extra_params = tool_param_overrides.get(tool_name)
+            if isinstance(extra_params, dict) and extra_params:
+                try:
+                    params = {**params, **extra_params}
+                except Exception:
+                    pass
+
+            # Pre-execution dedup: if a peer already ran this exact tool in this
+            # investigation, skip — output will be identical and saves API/compute cost.
+            # Exempt tools that feed downstream within this cycle (materials→pymatgen chain).
+            # materials is exempt only if this agent also uses pymatgen (needs it to populate candidate panel)
+            _needs_materials_for_panel = "pymatgen" in preferred_tools
+            _CYCLE_FEED_TOOLS = {"pymatgen", "pubmed", "arxiv", "openalex-database"}
+            if _needs_materials_for_panel:
+                _CYCLE_FEED_TOOLS.add("materials")
+            _pre_skip = False
+            if tool_name not in _CYCLE_FEED_TOOLS:
+                try:
+                    _gidx_pre = Path.home() / ".scienceclaw" / "artifacts" / "global_index.jsonl"
+                    if _gidx_pre.exists():
+                        import json as _json_pre
+                        for _gl in _gidx_pre.read_text(encoding="utf-8").splitlines():
+                            try:
+                                _ge = _json_pre.loads(_gl)
+                            except Exception:
+                                continue
+                            if (_ge.get("skill_used") == tool_name
+                                    and _ge.get("investigation_id") == investigation_id
+                                    and _ge.get("producer_agent") != self.agent_name):
+                                print(f"   {tool_name}: peer {_ge.get('producer_agent','?')} already ran this — skipping")
+                                _pre_skip = True
+                                break
+                except Exception:
+                    pass
+            if _pre_skip:
+                continue
 
             print(f"   Running {tool_name}...", end=" ", flush=True)
             try:
@@ -1598,13 +1894,25 @@ class AutonomousLoopController:
                 )
             except Exception as e:
                 print(f"error: {scrub(str(e))}")
+                if strict_tools:
+                    raise
                 continue
 
             if result.get("status") != "success":
                 print(f"failed ({result.get('error','unknown')})")
+                if strict_tools:
+                    raise RuntimeError(f"{tool_name} failed: {result.get('error','unknown')}")
                 continue
 
             payload = result.get("result", {})
+
+            # If materials screening returned candidates, store for pymatgen panel
+            if (tool_name == "materials" and isinstance(payload, dict)
+                    and isinstance(payload.get("candidates"), list)
+                    and payload["candidates"]):
+                _discovered_material_candidates = payload["candidates"]
+                print(f"   ↳ Discovered {len(_discovered_material_candidates)} material candidates for pymatgen panel")
+
             if not isinstance(payload, dict):
                 raw = str(payload)
                 # Build structured payload so the artifact reactor can match keys
@@ -1636,10 +1944,12 @@ class AutonomousLoopController:
 
             # Save artifact
             try:
+                rq = "empty" if _is_empty_payload(payload) else "ok"
                 artifact = artifact_store.create_and_save(
                     skill_used=tool_name,
                     payload=payload,
                     investigation_id=investigation_id,
+                    result_quality=rq,
                 )
                 short_id = artifact.artifact_id[:12]
                 print(f"artifact {short_id}…")
@@ -1647,6 +1957,10 @@ class AutonomousLoopController:
                 print(f"artifact save failed: {scrub(str(e))}")
                 short_id = "n/a"
                 artifact = None
+                if strict_tools:
+                    raise
+            if strict_tools and _is_empty_payload(payload):
+                raise RuntimeError(f"{tool_name} returned empty results for query={focused_query!r}")
 
             # Cross-agent duplicate check: if another agent already produced the same
             # content (same content_hash) within the same investigation, skip it.
@@ -1676,7 +1990,7 @@ class AutonomousLoopController:
                     pass
 
             # Extract a 1-2 line human-readable summary from payload
-            summary = self._summarise_payload(tool_name, payload, topic=topic)
+            summary = self._summarise_payload(tool_name, payload, topic=topic, use_llm=not disable_llm)
             if not _duplicate and not self._is_junk_summary(summary):
                 tool_sections.append(f"**{tool_name}** (artifact `{short_id}…`)\n{summary}")
             elif _duplicate:
@@ -1693,30 +2007,32 @@ class AutonomousLoopController:
         # --- Build structured post body ---
         # Open questions: LLM-generated from actual findings, not mechanical interest subtraction
         hints = "- None identified"
-        try:
-            from autonomous.llm_reasoner import LLMScientificReasoner
-            reasoner = LLMScientificReasoner(self.agent_name)
-            findings_text = "\n".join(tool_sections)[:1200]
-            prompt = (
-                f"Research topic: {topic}\n\n"
-                f"Findings so far:\n{findings_text}\n\n"
-                "Based on these specific findings, list 2-3 concrete open questions "
-                "that a peer agent with different computational tools (e.g. structure prediction, ADMET, "
-                "literature search, sequence analysis) could investigate next. Each question should reference "
-                "something specific found above (a compound name, protein, mechanism, etc). "
-                "All questions must be answerable computationally — do NOT suggest wet-lab experiments, "
-                "assays, or any physical/biological testing. "
-                "Output as a numbered list (1. 2. 3.). No preamble."
-            )
-            raw = reasoner._call_llm(prompt, max_tokens=400).strip()
-            if raw:
-                hints = raw
-        except Exception:
-            pass
+        if not disable_llm:
+            try:
+                from autonomous.llm_reasoner import LLMScientificReasoner
+                reasoner = LLMScientificReasoner(self.agent_name)
+                findings_text = "\n".join(tool_sections)[:1200]
+                prompt = (
+                    f"Research topic: {topic}\n\n"
+                    f"Findings so far:\n{findings_text}\n\n"
+                    "Based on these specific findings, list 2-3 concrete open questions "
+                    "that a peer agent with different computational tools (e.g. structure prediction, ADMET, "
+                    "literature search, sequence analysis) could investigate next. Each question should reference "
+                    "something specific found above (a compound name, protein, mechanism, etc). "
+                    "All questions must be answerable computationally — do NOT suggest wet-lab experiments, "
+                    "assays, or any physical/biological testing. "
+                    "Output as a numbered list (1. 2. 3.). No preamble."
+                )
+                raw = reasoner._call_llm(prompt, max_tokens=400).strip()
+                if raw:
+                    hints = raw
+            except Exception:
+                pass
 
         # Save a synthesis artifact containing open_questions so peer agents
         # can read them via the artifact reactor and use them as investigation topics.
         try:
+            broadcast_needs = self.agent_profile.get("broadcast_needs", []) or []
             synthesis_payload = {
                 "open_questions": hints,
                 "topic": topic,
@@ -1726,9 +2042,10 @@ class AutonomousLoopController:
                 "query": hints.splitlines()[0].lstrip("1. ").lstrip("- ")[:120] if hints else topic,
             }
             artifact_store.create_and_save(
-                skill_used="synthesis",
+                skill_used="_synthesis",
                 payload=synthesis_payload,
                 investigation_id=investigation_id,
+                needs=broadcast_needs,
             )
         except Exception:
             pass
@@ -1763,6 +2080,8 @@ class AutonomousLoopController:
         validate with EntityQuery Pydantic model.
         Returns clean entity string or None.
         """
+        if self.agent_profile.get("disable_llm"):
+            return None
         if not self.seed_post_id or not self.platform:
             return None
         try:
@@ -1901,6 +2220,48 @@ class AutonomousLoopController:
                               f"identity={top.get('identity','?')}% e={top.get('evalue','?')}")
             else:
                 lines.append(f"{len(hits)} BLAST hit(s)")
+        elif tool_name == "pymatgen":
+            # Panel output: {"structures": [...], "count": N, "candidates_analyzed": [...]}
+            structs = payload.get("structures") or []
+            count = payload.get("count") or len(structs)
+            if structs:
+                lines.append(f"Structural analysis of {count} ceramic candidate(s):")
+                for row in structs[:8]:
+                    cand = row.get("screened_candidate", {})
+                    formula = (row.get("composition", {}) or {}).get("reduced_formula") \
+                              or cand.get("formula") or row.get("query", "?")
+                    mp_id = cand.get("material_id", "")
+                    mp_str = f" [{mp_id}]" if mp_id else ""
+                    density = (row.get("lattice", {}) or {}).get("density") \
+                              or cand.get("density", "?")
+                    sg = (row.get("symmetry", {}) or {}).get("spacegroup_symbol", "?")
+                    crystal = (row.get("symmetry", {}) or {}).get("crystal_system", "")
+                    bm = cand.get("band_gap")
+                    bm_str = f", band_gap={bm:.2f} eV" if bm is not None else ""
+                    lines.append(
+                        f"  {formula}{mp_str}: density={density:.3f} g/cm³, "
+                        f"space group={sg} ({crystal}){bm_str}"
+                    )
+            elif payload.get("candidates_analyzed"):
+                lines.append(f"Analyzed: {', '.join(payload['candidates_analyzed'][:5])}")
+        elif tool_name == "materials":
+            # Screening output: {"candidates": [...], "total_screened": N}
+            cands = payload.get("candidates") or []
+            total = payload.get("total_screened") or len(cands)
+            filters = payload.get("filters") or {}
+            if cands:
+                lines.append(
+                    f"Screened {total} ceramic candidates "
+                    f"(density ≤ {filters.get('max_density','?')} g/cm³, "
+                    f"band_gap ≥ {filters.get('min_band_gap','?')} eV):"
+                )
+                for c in cands[:8]:
+                    lines.append(
+                        f"  {c.get('formula','?')} [{c.get('material_id','?')}] — "
+                        f"density={c.get('density','?')} g/cm³, "
+                        f"band_gap={c.get('band_gap','?')} eV, "
+                        f"sg={c.get('spacegroup','?')}"
+                    )
         elif tool_name == "chembl":
             items = payload.get("molecules") or payload.get("items") or payload.get("results") or []
             if not items and payload.get("molecule_chembl_id"):
@@ -1918,6 +2279,36 @@ class AutonomousLoopController:
                     smiles = (item.get("molecule_structures") or {}).get("canonical_smiles", "")[:50]
                     lines.append(f"**{name}** — MW={mw}, logP={logp}, QED={qed}, phase={phase}"
                                  + (f"\n  SMILES: `{smiles}…`" if smiles else ""))
+
+        elif tool_name == "pymc":
+            model = payload.get("model", "BayesianModel")
+            n = payload.get("n_observations", "?")
+            xlbl = payload.get("x_label", "x")
+            ylbl = payload.get("y_label", "y")
+            post = payload.get("posterior", {})
+            slope = post.get("slope_mean")
+            ci_lo = payload.get("alpha_lower") or (payload.get("credible_interval") or [None])[0]
+            ci_hi = payload.get("alpha_upper") or (payload.get("credible_interval") or [None, None])[1]
+            topic_str = payload.get("topic", "")
+            intercept = post.get("intercept_mean")
+            if slope is not None:
+                lines.append(
+                    f"{model} ({n} obs): slope={slope:.4f} "
+                    f"[95% CI {ci_lo:.4f}–{ci_hi:.4f}], intercept={intercept:.4f} "
+                    f"({xlbl} → {ylbl})"
+                    + (f" — topic: {topic_str}" if topic_str else "")
+                )
+            elif topic_str:
+                lines.append(f"Bayesian model fit for: {topic_str} ({n} obs)")
+
+        elif tool_name in ("datavis", "scientific-visualization"):
+            fig = payload.get("figure_path") or (payload.get("files") or [""])[0]
+            n = payload.get("n", "?")
+            topic_str = payload.get("topic", "")
+            if fig:
+                lines.append(f"Figure saved: {fig} (n={n})" + (f" — {topic_str}" if topic_str else ""))
+            elif topic_str:
+                lines.append(f"Visualization generated for: {topic_str} (n={n})")
 
         # If structured extraction yielded nothing, use LLM for any tool
         if not lines and use_llm:
@@ -1966,6 +2357,8 @@ class AutonomousLoopController:
 
     def _post_investigation_content(self, content: dict, community: str) -> Optional[str]:
         """Post deep-investigation content as a comment (seed mode) or new post."""
+        if not self.platform:
+            return None
         try:
             title = content.get("title", "Findings")
             body = content.get("content", "")
@@ -2044,6 +2437,8 @@ class AutonomousLoopController:
                 their payload.
         """
         if not fulfillments:
+            return
+        if self.agent_profile.get("disable_llm"):
             return
 
         try:
