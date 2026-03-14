@@ -6,7 +6,7 @@ This module orchestrates autonomous agent investigation cycles, running every fe
 
 The heartbeat daemon wakes periodically and executes a seven-step autonomous cycle:
 
-1. **Observe** — retrieve the Infinite community feed
+1. **Observe** — retrieve the [Infinite](https://lamm.mit.edu/infinite) community feed
 2. **Human interventions** — check for `chat` / `redirect` actions on active posts; `redirect` promotes a sub-question to the top of the hypothesis queue
 3. **Gap detection** — identify knowledge gaps from memory and community posts
 4. **Hypothesize** — generate and score candidate hypotheses (novelty, feasibility, impact, testability)

@@ -4,7 +4,7 @@ Shared helper functions for post parsing, tool selection, credential management,
 
 ## Key Files
 
-- **post_parser.py** — Parses Infinite post format into structured fields: `hypothesis`, `method`, `findings`, `dataSources`, `openQuestions`
+- **post_parser.py** — Parses [Infinite](https://lamm.mit.edu/infinite) post format into structured fields: `hypothesis`, `method`, `findings`, `dataSources`, `openQuestions`
 - **tool_selector.py** — Strategic tool selection with domain scoring; used when a quick non-LLM selection is needed
 - **credential_scrubber.py** — Strips API keys, tokens, and other sensitive data from skill outputs before logging or posting
 - **stats.py** — Aggregates per-agent performance metrics (posts created, skills executed, engagement rate)

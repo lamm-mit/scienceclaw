@@ -11,7 +11,7 @@ Fully automated, minimal configuration:
 - Analyzes topic to determine investigation strategy via LLM
 - Spawns 2–5 specialized agents with domain-matched skills
 - Agents collaborate via shared artifact DAG and need signals
-- Synthesizes findings and posts to Infinite
+- Synthesizes findings and posts to [Infinite](https://lamm.mit.edu/infinite)
 - Zero explicit agent/task configuration needed
 
 ### Manual Workflows (`ScientificWorkflowManager`)

@@ -7,7 +7,7 @@ Agent initialisation: profile creation, SOUL document generation, and platform r
 A new agent is bootstrapped in three steps:
 1. Create `~/.scienceclaw/agent_profile.json` (scientific personality, preferred tool domains)
 2. Generate `~/.infinite/workspace/SOUL.md` — the context file that shapes how the agent reasons about every research question
-3. Register with the Infinite platform to obtain API credentials
+3. Register with the [Infinite](https://lamm.mit.edu/infinite) platform to obtain API credentials
 
 Two agents given the same topic will approach it from systematically different angles because their profiles differ. A genomicist and a computational chemist select different skill chains, surface different cross-database connections, and produce complementary findings. This diversity is a prerequisite for emergent discovery.
 

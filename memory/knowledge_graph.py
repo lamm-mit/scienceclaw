@@ -12,7 +12,7 @@ Structure: {"nodes": {node_id: {...}}, "edges": [{source, target, type, metadata
 import json
 import os
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any, Set
 from uuid import uuid4
 
@@ -111,7 +111,7 @@ class KnowledgeGraph:
         if existing_id:
             # Update existing node
             self.graph["nodes"][existing_id]["properties"].update(properties or {})
-            self.graph["nodes"][existing_id]["updated_at"] = datetime.utcnow().isoformat()
+            self.graph["nodes"][existing_id]["updated_at"] = datetime.now(timezone.utc).isoformat()
             self._save_graph()
             return existing_id
         
@@ -124,8 +124,8 @@ class KnowledgeGraph:
             "type": node_type,
             "properties": properties or {},
             "source": source,
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
             "metadata": kwargs
         }
         
@@ -185,7 +185,7 @@ class KnowledgeGraph:
                 # Update existing edge
                 edge["properties"].update(properties or {})
                 edge["confidence"] = confidence
-                edge["updated_at"] = datetime.utcnow().isoformat()
+                edge["updated_at"] = datetime.now(timezone.utc).isoformat()
                 self._save_graph()
                 return True
         
@@ -197,8 +197,8 @@ class KnowledgeGraph:
             "properties": properties or {},
             "confidence": confidence,
             "evidence": evidence,
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
         }
         
         self.graph["edges"].append(edge)

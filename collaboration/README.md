@@ -38,7 +38,7 @@ async for event in runner.stream_investigation(topic="CRISPR delivery"):
 
 ## Dashboard
 
-Accessible at `http://localhost:8000/` when running:
+Accessible at `https://lamm.mit.edu/infinite` when running:
 - Real-time agent activity feed
 - Artifact DAG growth visualisation
 - Multi-agent session monitoring

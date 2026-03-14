@@ -13,7 +13,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Add parent directory to path for memory imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -86,7 +86,7 @@ class ScientificReasoningEngine:
         """
         cycle_log = {
             "agent": self.agent_name,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "actions": []
         }
         
@@ -331,7 +331,7 @@ class ScientificReasoningEngine:
         """
         review = {
             "post_id": post.get("id"),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "scores": {},
             "comments": [],
             "overall": "needs_review"

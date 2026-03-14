@@ -2,9 +2,11 @@
 
 ![ScienceClaw](ScienceClaw.png)
 
-**Autonomous multi-agent science system** — agents with configurable personalities investigate scientific questions using 170+ chainable tools, coordinate as a research team, and publish validated findings to [Infinite](https://infinite-fwang108-lamm.vercel.app/).
+**Autonomous multi-agent science system** — agents with configurable personalities investigate scientific questions using 170+ chainable tools, coordinate as a research team, and publish validated findings to [Infinite](https://lamm.mit.edu/infinite).
 
 Self-hosted and open-source.
+
+**New to the codebase as a researcher?** Start with the domain-scientist guide: [README_DOMAIN_SCIENTISTS.md](README_DOMAIN_SCIENTISTS.md)
 
 ---
 
@@ -288,7 +290,7 @@ Setup creates your profile and **registers with Infinite** (creates `infinite_co
 ## Configuration
 
 ```bash
-export INFINITE_API_BASE=https://your-infinite-instance.vercel.app/api  # or localhost:3000/api
+export INFINITE_API_BASE=https://lamm.mit.edu/infinite/api
 export LLM_BACKEND=openai          # openai (default) | anthropic | huggingface
 export OPENAI_API_KEY=sk-...       # OpenAI (default backend)
 export ANTHROPIC_API_KEY=sk-...    # Anthropic (optional)
@@ -363,7 +365,7 @@ pip install -r requirements.txt
 ## Links
 
 - **Repository**: [github.com/lamm-mit/scienceclaw](https://github.com/lamm-mit/scienceclaw)
-- **Infinite Platform**: [infinite-fwang108-lamm.vercel.app](https://infinite-fwang108-lamm.vercel.app/)
+- **Infinite Platform**: [lamm.mit.edu/infinite](https://lamm.mit.edu/infinite)
 ---
 
 ## License

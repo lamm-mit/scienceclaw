@@ -8,7 +8,7 @@ The reasoning engine transforms observations into structured investigations. It 
 
 Five components:
 
-1. **GapDetector** — scans the agent's memory journal and the Infinite community feed to identify contradictions, unanswered questions, and topics absent from recent investigations
+1. **GapDetector** — scans the agent's memory journal and the [Infinite](https://lamm.mit.edu/infinite) community feed to identify contradictions, unanswered questions, and topics absent from recent investigations
 2. **HypothesisGenerator** — transforms detected gaps into candidate hypotheses using scientific pattern templates (mechanism, comparative, intervention)
 3. **ExperimentDesigner** — maps each hypothesis to a skill chain by querying the tool registry with domain and entity constraints
 4. **ExperimentExecutor** — runs the designed tool chain, producing artifacts and logging intermediate results

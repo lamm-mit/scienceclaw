@@ -25,8 +25,14 @@ import json
 import os
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
+from contextlib import contextmanager
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover
+    fcntl = None
 
 try:
     from core.skill_registry import get_registry
@@ -40,12 +46,6 @@ try:
 except ImportError:
     CoordinationEventLogger = None
 
-try:
-    from artifacts.artifact import ArtifactStore, ArtifactDomainError
-except ImportError:
-    ArtifactStore = None
-    ArtifactDomainError = Exception
-
 
 class SessionManager:
     """
@@ -54,7 +54,7 @@ class SessionManager:
     Uses distributed coordination:
     - No central server
     - Agents poll session files during heartbeat
-    - Shared state in agent workspace
+    - Shared state in OpenClaw workspace
     - Automatic task claiming with conflict resolution
     """
     
@@ -67,7 +67,7 @@ class SessionManager:
         """
         self.agent_name = agent_name
 
-        # Session storage in Infinite workspace
+        # Session storage in Infinite workspace (analogous to OpenClaw workspace)
         self.workspace_dir = Path.home() / ".infinite" / "workspace"
         self.sessions_dir = self.workspace_dir / "sessions"
         self.sessions_dir.mkdir(parents=True, exist_ok=True)
@@ -75,26 +75,9 @@ class SessionManager:
         # Event logger (initialized per-session)
         self.event_logger = None
 
-        # Artifact store for domain gating
-        self._artifact_store = ArtifactStore(agent_name) if ArtifactStore else None
-
-        # Cache agent profile for domain gating
-        self._agent_profile: Optional[Dict[str, Any]] = self._load_agent_profile()
-
         print(f"[SessionManager] Initialized for agent: {agent_name}")
         print(f"[SessionManager] Sessions directory: {self.sessions_dir}")
-
-    def _load_agent_profile(self) -> Dict[str, Any]:
-        """Load agent profile from ~/.scienceclaw/agent_profile.json for domain gating."""
-        profile_path = Path.home() / ".scienceclaw" / "agent_profile.json"
-        if profile_path.exists():
-            try:
-                with open(profile_path, "r", encoding="utf-8") as fh:
-                    return json.load(fh)
-            except Exception:
-                pass
-        return {}
-
+    
     def create_collaborative_session(
         self,
         topic: str,
@@ -103,7 +86,6 @@ class SessionManager:
         max_participants: int = 5,
         investigation_type: str = "multi-agent",
         metadata: Optional[Dict[str, Any]] = None,
-        tasks: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         """
         Create a new collaborative investigation session (hybrid model).
@@ -136,10 +118,6 @@ class SessionManager:
                 max_participants=4
             )
         """
-        # `tasks` is an alias for `suggested_investigations`
-        if tasks is not None and suggested_investigations is None:
-            suggested_investigations = tasks
-
         session_id = f"scienceclaw-collab-{uuid4().hex[:8]}"
 
         session = {
@@ -147,14 +125,13 @@ class SessionManager:
             "topic": topic,
             "description": description,
             "created_by": self.agent_name,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "status": "active",  # active, complete, abandoned
             "investigation_type": investigation_type,
             "max_participants": max_participants,
             "participants": [self.agent_name],
             # Hybrid model: suggested investigations + independent findings
             "suggested_investigations": suggested_investigations or [],  # Optional suggestions
-            "tasks": suggested_investigations or [],  # Alias used by get_workflow_status
             "claimed_investigations": {},  # inv_id -> agent_name (agents can claim if interested)
             "findings": [],  # List of posted findings (both from claimed invs and independent)
             # Optional task graph for fine-grained tracking
@@ -247,7 +224,7 @@ class SessionManager:
                 ],
             }
 
-        session["metadata"][f"skill_plan_updated_at"] = datetime.utcnow().isoformat()
+        session["metadata"][f"skill_plan_updated_at"] = datetime.now(timezone.utc).isoformat()
         self._save_session(session_id, session)
         return {"status": "ok", "tasks": len(session.get("tasks", []))}
 
@@ -283,41 +260,40 @@ class SessionManager:
             session_id: Session to update.
             graph_spec: List of node dicts (see above).
         """
-        session = self._load_session(session_id)
-        if not session:
-            return {"error": "Session not found"}
+        with self._locked_session_update(session_id) as session:
+            if not session:
+                return {"error": "Session not found"}
 
-        # Minimal sanity: ensure ids are unique and present
-        seen_ids = set()
-        cleaned: List[Dict[str, Any]] = []
-        for node in graph_spec:
-            node_id = node.get("id")
-            if not node_id:
-                continue
-            if node_id in seen_ids:
-                continue
-            seen_ids.add(node_id)
-            cleaned.append(
-                {
-                    "id": node_id,
-                    "label": node.get("label") or node.get("description") or node_id,
-                    "description": node.get("description", ""),
-                    "task_id": node.get("task_id"),
-                    "status": node.get("status", "pending"),
-                    "assigned_agent": node.get("assigned_agent"),
-                    "upstream_ids": list(node.get("upstream_ids", []) or []),
-                    "downstream_ids": list(node.get("downstream_ids", []) or []),
-                }
-            )
+            # Minimal sanity: ensure ids are unique and present
+            seen_ids = set()
+            cleaned: List[Dict[str, Any]] = []
+            for node in graph_spec:
+                node_id = node.get("id")
+                if not node_id:
+                    continue
+                if node_id in seen_ids:
+                    continue
+                seen_ids.add(node_id)
+                cleaned.append(
+                    {
+                        "id": node_id,
+                        "label": node.get("label") or node.get("description") or node_id,
+                        "description": node.get("description", ""),
+                        "task_id": node.get("task_id"),
+                        "status": node.get("status", "pending"),
+                        "assigned_agent": node.get("assigned_agent"),
+                        "upstream_ids": list(node.get("upstream_ids", []) or []),
+                        "downstream_ids": list(node.get("downstream_ids", []) or []),
+                    }
+                )
 
-        session["graph"] = cleaned
-        # Ensure links mapping exists
-        if "graph_links" not in session or not isinstance(session["graph_links"], dict):
-            session["graph_links"] = {}
+            session["graph"] = cleaned
+            # Ensure links mapping exists
+            if "graph_links" not in session or not isinstance(session["graph_links"], dict):
+                session["graph_links"] = {}
 
-        session["metadata"][f"graph_updated_at"] = datetime.utcnow().isoformat()
-        self._save_session(session_id, session)
-        return {"status": "ok", "nodes": len(cleaned)}
+            session["metadata"][f"graph_updated_at"] = datetime.now(timezone.utc).isoformat()
+            return {"status": "ok", "nodes": len(cleaned)}
 
     def update_task_node(
         self,
@@ -332,29 +308,28 @@ class SessionManager:
         onto the node dict, so callers can update status, assigned_agent,
         label/description, etc., without a rigid schema dependency.
         """
-        session = self._load_session(session_id)
-        if not session:
-            return {"error": "Session not found"}
+        with self._locked_session_update(session_id) as session:
+            if not session:
+                return {"error": "Session not found"}
 
-        graph = session.get("graph") or []
-        node = None
-        for n in graph:
-            if n.get("id") == node_id:
-                node = n
-                break
+            graph = session.get("graph") or []
+            node = None
+            for n in graph:
+                if n.get("id") == node_id:
+                    node = n
+                    break
 
-        if not node:
-            return {"error": "Node not found"}
+            if not node:
+                return {"error": "Node not found"}
 
-        for key, value in fields.items():
-            # Avoid clobbering node id
-            if key == "id":
-                continue
-            node[key] = value
+            for key, value in fields.items():
+                # Avoid clobbering node id
+                if key == "id":
+                    continue
+                node[key] = value
 
-        session["metadata"][f"graph_node_{node_id}_updated_at"] = datetime.utcnow().isoformat()
-        self._save_session(session_id, session)
-        return {"status": "ok", "node": node}
+            session["metadata"][f"graph_node_{node_id}_updated_at"] = datetime.now(timezone.utc).isoformat()
+            return {"status": "ok", "node": node}
 
     def link_task_to_comment(
         self,
@@ -371,26 +346,25 @@ class SessionManager:
         so later tooling / UI can render investigation graphs without
         modifying the Infinite schema.
         """
-        session = self._load_session(session_id)
-        if not session:
-            return {"error": "Session not found"}
+        with self._locked_session_update(session_id) as session:
+            if not session:
+                return {"error": "Session not found"}
 
-        if "graph_links" not in session or not isinstance(session["graph_links"], dict):
-            session["graph_links"] = {}
+            if "graph_links" not in session or not isinstance(session["graph_links"], dict):
+                session["graph_links"] = {}
 
-        links = session["graph_links"].get(node_id) or {"post_id": post_id, "comment_ids": []}
-        # If we already have a post_id and it's different, we still keep
-        # the original as canonical, but avoid hard failing.
-        if "post_id" not in links or not links["post_id"]:
-            links["post_id"] = post_id
+            links = session["graph_links"].get(node_id) or {"post_id": post_id, "comment_ids": []}
+            # If we already have a post_id and it's different, we still keep
+            # the original as canonical, but avoid hard failing.
+            if "post_id" not in links or not links["post_id"]:
+                links["post_id"] = post_id
 
-        if comment_id and comment_id not in links.get("comment_ids", []):
-            links.setdefault("comment_ids", []).append(comment_id)
+            if comment_id and comment_id not in links.get("comment_ids", []):
+                links.setdefault("comment_ids", []).append(comment_id)
 
-        session["graph_links"][node_id] = links
-        session["metadata"][f"graph_node_{node_id}_linked_at"] = datetime.utcnow().isoformat()
-        self._save_session(session_id, session)
-        return {"status": "ok", "links": links}
+            session["graph_links"][node_id] = links
+            session["metadata"][f"graph_node_{node_id}_linked_at"] = datetime.now(timezone.utc).isoformat()
+            return {"status": "ok", "links": links}
     
     def join_session(self, session_id: str, agent_name: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -410,25 +384,23 @@ class SessionManager:
         if not session_file.exists():
             return {"error": "Session not found"}
 
-        # Load session with lock to prevent race conditions
-        session = self._load_session(session_id)
+        with self._locked_session_update(session_id) as session:
+            if not session:
+                return {"error": "Session not found"}
 
-        joiner = agent_name or self.agent_name
+            joiner = agent_name or self.agent_name
 
-        # Check if already a participant
-        if joiner in session["participants"]:
-            return {"status": "already_joined", "session": session}
+            # Check if already a participant
+            if joiner in session["participants"]:
+                return {"status": "already_joined", "session": session}
 
-        # Check participant limit
-        if len(session["participants"]) >= session["max_participants"]:
-            return {"error": "Session full"}
+            # Check participant limit
+            if len(session["participants"]) >= session["max_participants"]:
+                return {"error": "Session full"}
 
-        # Add participant
-        session["participants"].append(joiner)
-        session["metadata"][f"{joiner}_joined_at"] = datetime.utcnow().isoformat()
-
-        # Save
-        self._save_session(session_id, session)
+            # Add participant
+            session["participants"].append(joiner)
+            session["metadata"][f"{joiner}_joined_at"] = datetime.now(timezone.utc).isoformat()
 
         # Log event (initialize logger if needed)
         if CoordinationEventLogger:
@@ -462,38 +434,33 @@ class SessionManager:
         Returns:
             Claim status
         """
-        session = self._load_session(session_id)
+        with self._locked_session_update(session_id) as session:
+            if not session:
+                return {"error": "Session not found"}
 
-        if not session:
-            return {"error": "Session not found"}
+            if self.agent_name not in session["participants"]:
+                return {"error": "Not a participant. Join session first."}
 
-        if self.agent_name not in session["participants"]:
-            return {"error": "Not a participant. Join session first."}
+            # Find the suggested investigation
+            investigation = None
+            for inv in session.get("suggested_investigations", []):
+                if inv["id"] == investigation_id:
+                    investigation = inv
+                    break
 
-        # Find the suggested investigation
-        investigation = None
-        for inv in session.get("suggested_investigations", []):
-            if inv["id"] == investigation_id:
-                investigation = inv
-                break
+            if not investigation:
+                return {"error": "Investigation not found"}
 
-        if not investigation:
-            return {"error": "Investigation not found"}
-
-        # Check if already claimed
-        if investigation_id in session.get("claimed_investigations", {}):
-            current_claimer = session["claimed_investigations"][investigation_id]
-            if current_claimer == self.agent_name:
-                return {"status": "already_claimed_by_you", "investigation": investigation}
-            else:
+            # Check if already claimed
+            if investigation_id in session.get("claimed_investigations", {}):
+                current_claimer = session["claimed_investigations"][investigation_id]
+                if current_claimer == self.agent_name:
+                    return {"status": "already_claimed_by_you", "investigation": investigation}
                 return {"status": "already_claimed", "claimed_by": current_claimer}
 
-        # Claim investigation (optional)
-        session["claimed_investigations"][investigation_id] = self.agent_name
-        session["metadata"][f"investigation_{investigation_id}_claimed_at"] = datetime.utcnow().isoformat()
-
-        # Save
-        self._save_session(session_id, session)
+            # Claim investigation (optional)
+            session["claimed_investigations"][investigation_id] = self.agent_name
+            session["metadata"][f"investigation_{investigation_id}_claimed_at"] = datetime.now(timezone.utc).isoformat()
 
         # Log event
         if CoordinationEventLogger:
@@ -516,8 +483,7 @@ class SessionManager:
         result: str,
         evidence: Optional[Dict[str, Any]] = None,
         confidence: float = 0.8,
-        reasoning_trace: str = "",
-        artifact_ids: Optional[List[str]] = None,
+        reasoning_trace: str = ""
     ) -> Dict[str, Any]:
         """
         Post a finding to the session.
@@ -536,43 +502,29 @@ class SessionManager:
         Returns:
             Finding ID and status
         """
-        session = self._load_session(session_id)
+        with self._locked_session_update(session_id) as session:
+            if not session:
+                return {"error": "Session not found"}
 
-        if not session:
-            return {"error": "Session not found"}
+            if self.agent_name not in session["participants"]:
+                return {"error": "Not a participant. Join session first."}
 
-        if self.agent_name not in session["participants"]:
-            return {"error": "Not a participant. Join session first."}
+            # Create finding
+            finding_id = f"finding_{uuid4().hex[:8]}"
+            finding = {
+                "id": finding_id,
+                "agent": self.agent_name,
+                "result": result,
+                "evidence": evidence or {},
+                "confidence": confidence,
+                "reasoning_trace": reasoning_trace,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "validations": []  # Will be filled by validators
+            }
 
-        # Domain gating: verify agent may claim each referenced artifact
-        artifact_ids = artifact_ids or []
-        if artifact_ids and self._artifact_store:
-            for aid in artifact_ids:
-                try:
-                    self._artifact_store.assert_agent_can_claim(aid, self._agent_profile)
-                except ArtifactDomainError as exc:
-                    return {"error": f"Domain gating violation: {exc}"}
-
-        # Create finding
-        finding_id = f"finding_{uuid4().hex[:8]}"
-        finding = {
-            "id": finding_id,
-            "agent": self.agent_name,
-            "result": result,
-            "evidence": evidence or {},
-            "confidence": confidence,
-            "reasoning_trace": reasoning_trace,
-            "timestamp": datetime.utcnow().isoformat(),
-            "artifact_ids": artifact_ids,
-            "validations": []  # Will be filled by validators
-        }
-
-        # Add to findings
-        session["findings"].append(finding)
-        session["metadata"][f"finding_{finding_id}_posted_at"] = datetime.utcnow().isoformat()
-
-        # Save
-        self._save_session(session_id, session)
+            # Add to findings
+            session["findings"].append(finding)
+            session["metadata"][f"finding_{finding_id}_posted_at"] = datetime.now(timezone.utc).isoformat()
 
         # Log event
         if CoordinationEventLogger:
@@ -611,41 +563,41 @@ class SessionManager:
         Returns:
             Validation record
         """
-        session = self._load_session(session_id)
+        with self._locked_session_update(session_id) as session:
+            if not session:
+                return {"error": "Session not found"}
 
-        if not session:
-            return {"error": "Session not found"}
+            if self.agent_name not in session["participants"]:
+                return {"error": "Not a participant. Join session first."}
 
-        if self.agent_name not in session["participants"]:
-            return {"error": "Not a participant. Join session first."}
+            # Find the finding
+            finding = None
+            for f in session.get("findings", []):
+                if f["id"] == finding_id:
+                    finding = f
+                    break
 
-        # Find the finding
-        finding = None
-        for f in session.get("findings", []):
-            if f["id"] == finding_id:
-                finding = f
-                break
+            if not finding:
+                return {"error": "Finding not found"}
 
-        if not finding:
-            return {"error": "Finding not found"}
+            # Don't self-validate
+            if finding["agent"] == self.agent_name:
+                return {"error": "Cannot validate your own finding"}
 
-        # Don't self-validate
-        if finding["agent"] == self.agent_name:
-            return {"error": "Cannot validate your own finding"}
+            existing = finding.get("validations", [])
+            if any(v.get("validator") == self.agent_name for v in existing):
+                return {"error": "You have already validated this finding"}
 
-        # Record validation
-        validation = {
-            "validator": self.agent_name,
-            "status": validation_status,
-            "reasoning": reasoning,
-            "confidence": confidence,
-            "timestamp": datetime.utcnow().isoformat()
-        }
+            # Record validation
+            validation = {
+                "validator": self.agent_name,
+                "status": validation_status,
+                "reasoning": reasoning,
+                "confidence": confidence,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
 
-        finding["validations"].append(validation)
-
-        # Save
-        self._save_session(session_id, session)
+            finding["validations"].append(validation)
 
         # Log event
         if CoordinationEventLogger:
@@ -885,79 +837,17 @@ class SessionManager:
         Returns:
             Completion status
         """
-        session = self._load_session(session_id)
+        with self._locked_session_update(session_id) as session:
+            if not session:
+                return {"error": "Session not found"}
 
-        if not session:
-            return {"error": "Session not found"}
+            # Update status
+            session["status"] = "complete"
+            session["completed_at"] = datetime.now(timezone.utc).isoformat()
+            session["summary"] = summary
 
-        # Update status
-        session["status"] = "complete"
-        session["completed_at"] = datetime.utcnow().isoformat()
-        session["summary"] = summary
-
-        if post_id:
-            session["result_post_id"] = post_id
-
-        # Save initial completion status
-        self._save_session(session_id, session)
-
-        # Judge whether the session actually produced a complete answer, then
-        # generate the investigation paper regardless of verdict.
-        try:
-            import re as _re
-            from autonomous.investigation_conclusion import (
-                CompletionJudge,
-                InvestigationConclusion,
-                ArtifactCollector,
-            )
-
-            findings = session.get("findings", [])
-            topic = session.get("topic", session_id)
-            collector = ArtifactCollector()
-            inv_id = _re.sub(r"[^a-z0-9]+", "_", topic.lower()).strip("_")[:64]
-            index_entries = collector.collect_index_entries(inv_id)
-
-            verdict = CompletionJudge(self.agent_name).judge(topic, findings, index_entries)
-
-            if not verdict.complete:
-                session["status"] = "partial_complete"
-                session["completion_verdict"] = {
-                    "complete": False,
-                    "confidence": verdict.confidence,
-                    "reasoning": verdict.reasoning,
-                    "missing_evidence": verdict.missing_evidence,
-                    "collaboration_score": verdict.collaboration_score,
-                }
-                self._save_session(session_id, session)
-                logger.warning(
-                    f"[SessionManager] Judge: INCOMPLETE ({verdict.confidence}) — "
-                    f"{verdict.reasoning}"
-                )
-            else:
-                session["completion_verdict"] = {
-                    "complete": True,
-                    "confidence": verdict.confidence,
-                    "reasoning": verdict.reasoning,
-                    "missing_evidence": [],
-                    "collaboration_score": verdict.collaboration_score,
-                }
-                self._save_session(session_id, session)
-                logger.info(
-                    f"[SessionManager] Judge: COMPLETE ({verdict.confidence}) — "
-                    f"{verdict.reasoning}"
-                )
-
-            # Generate paper regardless (complete = full, partial_complete = partial)
-            paper = InvestigationConclusion(self.agent_name).conclude(
-                session_id=session_id, topic=topic
-            )
-            logger.info(
-                f"[SessionManager] Paper generated: "
-                f"convergence={paper.convergence['confidence']}, "
-                f"artifacts={paper.artifact_count}"
-            )
-        except Exception as _e:
-            logger.warning(f"[SessionManager] Paper generation skipped: {_e}")
+            if post_id:
+                session["result_post_id"] = post_id
 
         # Log completion (initialize logger if needed)
         if CoordinationEventLogger:
@@ -970,9 +860,37 @@ class SessionManager:
 
         return {"status": "complete", "session": session}
     
+    def _session_file(self, session_id: str) -> Path:
+        """Return canonical session file path."""
+        return self.sessions_dir / f"{session_id}.json"
+
+    def _lock_file(self, session_id: str) -> Path:
+        """Return lock file path for a session."""
+        session_file = self._session_file(session_id)
+        return session_file.with_suffix(f"{session_file.suffix}.lock")
+
+    @contextmanager
+    def _locked_session_update(self, session_id: str):
+        """
+        Acquire an exclusive lock, load a session for mutation, then save atomically.
+        """
+        lock_file = self._lock_file(session_id)
+        lock_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(lock_file, "a") as lock_handle:
+            if fcntl is not None:
+                fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+            try:
+                session = self._load_session(session_id)
+                yield session
+                if session is not None:
+                    self._save_session(session_id, session)
+            finally:
+                if fcntl is not None:
+                    fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+
     def _load_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Load session from file."""
-        session_file = self.sessions_dir / f"{session_id}.json"
+        session_file = self._session_file(session_id)
         
         if not session_file.exists():
             return None
@@ -986,10 +904,10 @@ class SessionManager:
     
     def _save_session(self, session_id: str, session: Dict[str, Any]):
         """Save session to file."""
-        session_file = self.sessions_dir / f"{session_id}.json"
+        session_file = self._session_file(session_id)
         
         # Atomic write using temp file
-        temp_file = session_file.with_suffix(".tmp")
+        temp_file = session_file.with_suffix(f".tmp.{uuid4().hex}")
         
         try:
             with open(temp_file, "w") as f:
