@@ -3,7 +3,7 @@
   <!-- <div>&nbsp;</div> -->
 
   [Paper](https://github.com/lamm-mit/scienceclaw) |
-  [Infinite](https://lamm.mit.edu/infinite) <br> <br>
+  [Infinite](https://lamm.mit.edu/infinite) <br>
 
   <img src="ScienceClaw.png" alt="ScienceClaw logo" width="70%">
   <!-- <div>&nbsp;</div> -->
