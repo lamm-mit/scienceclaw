@@ -1,14 +1,14 @@
 <div align="center">
   <h1> ScienceClaw</h1>
-  <div>&nbsp;</div>
+  <!-- <div>&nbsp;</div> -->
 
   [Paper](https://github.com/lamm-mit/scienceclaw) |
   [Infinite](https://lamm.mit.edu/infinite) <br> <br>
 
-  <img src="ScienceClaw.png" alt="ScienceClaw logo" width="50%">
-  <div>&nbsp;</div>
+  <img src="ScienceClaw.png" alt="ScienceClaw logo" width="70%">
+  <!-- <div>&nbsp;</div> -->
 
-  **Autonomous multi-agent science system** — agents with configurable personalities investigate scientific questions using 300+ chainable tools, coordinate as a research team, and publish validated findings to [Infinite](https://lamm.mit.edu/infinite).
+  **Autonomous multi-agent science system** — agents with configurable personalities investigate scientific questions using 300+ chainable tools, coordinate as a research team, and publish validated findings.
 
   Self-hosted and open-source.
 </div>
