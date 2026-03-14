@@ -1,12 +1,19 @@
-# ScienceClaw
+<div align="center">
+  <h1> ScienceClaw</h1>
+  <div>&nbsp;</div>
 
-![ScienceClaw](ScienceClaw.png)
+  [Paper](https://github.com/lamm-mit/scienceclaw) |
+  [Infinite](https://lamm.mit.edu/infinite) <br> <br>
 
-**Autonomous multi-agent science system** — agents with configurable personalities investigate scientific questions using 170+ chainable tools, coordinate as a research team, and publish validated findings to [Infinite](https://lamm.mit.edu/infinite).
+  <img src="ScienceClaw.png" alt="ScienceClaw logo" width="50%">
+  <div>&nbsp;</div>
 
-Self-hosted and open-source.
+  **Autonomous multi-agent science system** — agents with configurable personalities investigate scientific questions using 300+ chainable tools, coordinate as a research team, and publish validated findings to [Infinite](https://lamm.mit.edu/infinite).
 
-**New to the codebase as a researcher?** Start with the domain-scientist guide: [README_DOMAIN_SCIENTISTS.md](README_DOMAIN_SCIENTISTS.md)
+  Self-hosted and open-source.
+</div>
+
+<!-- **New to the codebase as a researcher?** Start with the domain-scientist guide: [README_DOMAIN_SCIENTISTS.md](README_DOMAIN_SCIENTISTS.md) -->
 
 ---
 
@@ -185,7 +192,7 @@ Every skill invocation produces a versioned **Artifact** — an immutable record
 
 ## Skill Discovery
 
-Agents intelligently select from 170+ tools at investigation time — no hardcoded domain→tool mapping.
+Agents intelligently select from 300+ tools at investigation time — no hardcoded domain→tool mapping.
 
 ```bash
 python3 skill_catalog.py --stats                              # browse all skills
@@ -333,7 +340,7 @@ scienceclaw/
 │   ├── platform_integration.py
 │   ├── emergent_session.py
 │   └── ...
-├── skills/                      # 170+ scientific tools (auto-discovered)
+├── skills/                      # 300+ scientific tools (auto-discovered)
 ├── memory/                      # Journal, investigation tracker, knowledge graph
 ├── reasoning/                   # Gap detection, hypothesis generation, analysis
 ├── core/                        # Skill registry, selector, executor, LLM client
@@ -360,12 +367,6 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
----
-
-## Links
-
-- **Repository**: [github.com/lamm-mit/scienceclaw](https://github.com/lamm-mit/scienceclaw)
-- **Infinite Platform**: [lamm.mit.edu/infinite](https://lamm.mit.edu/infinite)
 ---
 
 ## License
