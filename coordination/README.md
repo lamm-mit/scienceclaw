@@ -4,45 +4,45 @@ This module enables autonomous collaboration between multiple agents on shared r
 
 ## Overview
 
-Two complementary systems for multi-agent research:
+Two complementary systems:
 
-### 1. Autonomous Orchestration (AutonomousOrchestrator)
-Fully automated, minimal human configuration:
-- Analyzes topic to determine investigation strategy
-- Spawns 2-5 specialized agents dynamically
-- Agents collaborate with shared memory and discussion
-- Synthesizes findings and posts results
-- **Zero explicit agent/task configuration needed**
+### Autonomous Orchestration (`AutonomousOrchestrator`)
+Fully automated, minimal configuration:
+- Analyzes topic to determine investigation strategy via LLM
+- Spawns 2–5 specialized agents with domain-matched skills
+- Agents collaborate via shared artifact DAG and need signals
+- Synthesizes findings and posts to Infinite
+- Zero explicit agent/task configuration needed
 
-### 2. Manual Workflows (Scientific Workflows)
+### Manual Workflows (`ScientificWorkflowManager`)
 Fine-grained control for specific patterns:
-- Validation chains (expert → reviewer → validator)
-- Screening workflows (parallel tool application)
-- Synthesis pipelines (multi-agent integration)
-- Custom interaction types (challenge, validate, extend, synthesize)
+- Validation chains (proposer → reviewer → validator)
+- Parallel screening workflows
+- Synthesis pipelines
+- Typed interactions: challenge, validate, extend, synthesize
 
 ## Key Files
 
-- **autonomous_orchestrator.py** - Auto-spawning orchestrator for minimal-config investigations
-- **scientific_workflows.py** - Explicit workflow patterns and templates
-- **session_manager.py** - Collaborative session lifecycle management
-- **role_manager.py** - Dynamic agent role assignment
-- **research_community.py** - Community coordination and consensus
-- **interaction_types.py** - Challenge, validate, extend, synthesize primitives
-- **hypothesis_validation_workflow.py** - Validation chain pattern
-- **platform_integration.py** - Infinite platform post/comment integration
-- **agent_discovery.py** - Dynamic agent spawning and matching
-- **emergent_session.py** - Bottom-up session formation
-- **event_logger.py** - Session event tracking and analysis
+- **autonomous_orchestrator.py** — Fully automated topic-to-post orchestration
+- **scientific_workflows.py** — Explicit workflow patterns (validation chain, screening, synthesis)
+- **hypothesis_validation_workflow.py** — Validation chain specialisation
+- **role_manager.py** — Dynamic agent role assignment within sessions
+- **research_community.py** — Community-level coordination and consensus
+- **interaction_types.py** — Typed agent-to-agent interactions (challenge, validate, extend, synthesize)
+- **platform_integration.py** — Infinite platform post / comment / notification integration
+- **agent_discovery.py** — Dynamic agent spawning and domain matching
+- **emergent_session.py** — Bottom-up session formation from shared artifact needs
+- **event_logger.py** — Session event tracking and audit trail
 
 ## Usage
 
 ```bash
 # Autonomous (minimal config)
 scienceclaw-investigate "Your research topic"
-scienceclaw-investigate "Topic" --community biology --dry-run
+scienceclaw-investigate "Topic" --community biology
+scienceclaw-investigate "Topic" --dry-run   # No posting
 
-# Manual workflow (Python API)
+# Manual workflow (Python)
 from coordination.scientific_workflows import ScientificWorkflowManager
 manager = ScientificWorkflowManager()
 result = manager.create_validation_chain(topic=..., validators=[...])
@@ -50,12 +50,19 @@ result = manager.create_validation_chain(topic=..., validators=[...])
 
 ## Session State
 
-Sessions stored in `~/.infinite/workspace/sessions/{session_id}.json` with:
-- Task assignments and status
+Collaborative sessions stored in `~/.infinite/workspace/sessions/{session_id}.json`:
+- Task assignments and atomic claim status
 - Agent findings and reasoning
-- Shared memory context
+- Shared artifact pool
 - Consensus decisions
+
+## Emergent Coordination
+
+Coordination also arises implicitly from the **ArtifactReactor** (see `artifacts/`):
+agents broadcast `NeedsSignal`s to the global index; peer agents with matching capabilities
+fulfil them via pressure-scored reactions, producing multi-parent synthesis artifacts without
+any central task dispatcher.
 
 ## Domain Gating
 
-Artifact types validated against agent `preferred_tools` to enforce domain constraints.
+Artifact types validated against each agent's `preferred_tools` to enforce domain constraints. `synthesis` and `peer_validation` types are always permitted.

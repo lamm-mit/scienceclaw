@@ -1,25 +1,20 @@
 # Setup and Configuration
 
-This module provides initialization and configuration for new agents and their personalities.
+Agent initialisation: profile creation, SOUL document generation, and platform registration.
 
 ## Overview
 
-Setup tools for:
-- **Agent Creation** - Interactive wizard for new agent profiles
-- **SOUL Generation** - Creates agent personality document for Infinite
-- **Profile Configuration** - Sets interests, preferred tools, communication style
+A new agent is bootstrapped in three steps:
+1. Create `~/.scienceclaw/agent_profile.json` (scientific personality, preferred tool domains)
+2. Generate `~/.infinite/workspace/SOUL.md` — the context file that shapes how the agent reasons about every research question
+3. Register with the Infinite platform to obtain API credentials
+
+Two agents given the same topic will approach it from systematically different angles because their profiles differ. A genomicist and a computational chemist select different skill chains, surface different cross-database connections, and produce complementary findings. This diversity is a prerequisite for emergent discovery.
 
 ## Key Files
 
-- **soul_generator.py** - Generates `~/.infinite/workspace/SOUL.md` from agent profile
-- **__init__.py** - Package exports
-
-## Agent Creation Workflow
-
-1. Run `python3 setup.py` (interactive) or `python3 setup.py --quick --profile biology --name "BioAgent-7"`
-2. Creates `~/.scienceclaw/agent_profile.json` with personality config
-3. Generates `~/.infinite/workspace/SOUL.md` for platform
-4. Registers with Infinite platform
+- **soul_generator.py** — Generates `SOUL.md` from the agent profile; encodes scientific personality, curiosity style, and preferred tool domains
+- **__init__.py** — Package exports
 
 ## Agent Profile Structure
 
@@ -34,28 +29,33 @@ Setup tools for:
 }
 ```
 
+`preferred_tools` also determines domain gating in the ArtifactReactor (see `artifacts/`).
+
+## Preset Profiles
+
+Available via `python3 setup.py --quick --profile <name>`:
+
+| Profile | Domain |
+|---------|--------|
+| biology | Protein analysis, literature |
+| chemistry | Small molecules, ADMET |
+| materials-science | Materials Project, pymatgen |
+| genomics | GWAS, ClinVar, single-cell |
+| drug-discovery | Multi-domain screening |
+| mixed | Broad cross-domain coverage |
+
 ## SOUL Generation
 
 ```python
 from setup.soul_generator import SOULGenerator
 
-generator = SOULGenerator(agent_name="BioAgent-7")
-soul_md = generator.generate()
-# Returns personality document for ~/.infinite/workspace/SOUL.md
+soul_md = SOULGenerator(agent_name="BioAgent-7").generate()
+# Writes to ~/.infinite/workspace/SOUL.md
 ```
 
-## Preset Profiles
+## Full Setup
 
-Available profiles: biology, chemistry, materials-science, genomics, drug-discovery, mixed
-
-Each preset:
-- Selects domain-specific tools from 159+ available
-- Sets research interests
-- Configures communication style
-
-## Integration
-
-Created profiles used by:
-- **autonomous/** - Personality-driven decision making
-- **reasoning/** - Interest-based gap detection
-- **coordination/** - Agent matching for multi-agent sessions
+```bash
+python3 setup.py                                         # Interactive wizard
+python3 setup.py --quick --profile biology --name "BioAgent-7"  # Preset
+```

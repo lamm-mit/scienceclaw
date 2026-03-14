@@ -5,29 +5,32 @@ This module provides the foundational systems for skill execution, registry, and
 ## Overview
 
 Core implements:
-- **Skill execution** - Python subprocess runners for 159+ scientific tools
-- **Skill registry** - Metadata, dependencies, and expertise mapping
-- **LLM client** - Claude API integration for reasoning and analysis
-- **Skill selection** - Intelligent tool choice based on topic/hypothesis
-- **Topic analysis** - LLM-driven investigation strategy determination
+- **Skill registry** — metadata, dependencies, and domain mapping for 270+ scientific tools
+- **Skill execution** — Python subprocess runners with JSON output parsing
+- **LLM client** — Claude API integration for reasoning, skill selection, and synthesis
+- **Skill selection** — LLM-powered tool choice from the full registry, based on topic and agent profile
+- **Topic analysis** — LLM-driven investigation strategy determination
+- **DAG execution** — dependency-aware skill chain planning
 
 ## Key Files
 
-- **llm_client.py** - Claude API wrapper, caching, rate limits
-- **skill_executor.py** - Subprocess execution, JSON output parsing, error handling
-- **skill_registry.py** - Skill metadata, expertise domains, discovery API
-- **skill_selector.py** - LLM-powered skill selection from registry
-- **skill_dag.py** - Dependency graphs and execution planning
-- **topic_analyzer.py** - Determines investigation strategy from topic (LLM)
-- **skill_tree_searcher.py** - Hierarchical skill search and discovery
+- **llm_client.py** — Claude API wrapper with caching and rate-limit handling
+- **skill_registry.py** — Registry of 270+ skills organised into domain families: literature retrieval (`pubmed`, `arxiv`, `biorxiv-database`), protein analysis (`blast`, `uniprot`, `esm`, `alphafold-database`), small-molecule chemistry (`pubchem`, `chembl`, `rdkit`, `pytdc`), materials science (`materials`, `pymatgen`), single-cell / genomics (`scanpy`, `scvi-tools`, `clinvar-database`, `gwas-database`), and cross-domain utilities
+- **skill_executor.py** — Subprocess execution with JSON output capture, error handling, and artifact creation
+- **skill_selector.py** — LLM-powered skill selection: given a topic and agent profile, returns an ordered skill chain with parameters. No hardcoded routing — selection emerges from reasoning.
+- **skill_dag.py** — Dependency graphs and execution planning for multi-step chains
+- **topic_analyzer.py** — Determines investigation strategy from topic via LLM
+- **skill_tree_searcher.py** — Hierarchical skill search and discovery across domain families
 
 ## Skill Execution Flow
 
 ```
-topic → topic_analyzer (LLM) → investigation_strategy
-       → skill_selector (LLM) → [skill1, skill2, skill3]
-       → skill_executor (subprocess) → JSON results → artifact
+topic → topic_analyzer (LLM) → investigation strategy
+      → skill_selector (LLM)  → [skill₁, skill₂, skill₃, ...]
+      → skill_executor (subprocess) → JSON output → Artifact
 ```
+
+Each skill exposes a standard CLI and returns typed JSON, enabling chainable composition without string parsing.
 
 ## Registry API
 
@@ -39,16 +42,16 @@ skills = registry.find_by_domain("protein_characterization")
 metadata = registry.get_skill_metadata("pubmed")
 ```
 
-## LLM Integration
+## LLM Client
 
 ```python
 from core.llm_client import LLMClient
 
-client = LLMClient(cache_dir="~/.scienceclaw/llm_cache")
+client = LLMClient()
 response = client.analyze_topic("CRISPR delivery mechanisms")
-result = client.generate_insights(findings=[...])
+insights = client.generate_insights(findings=[...])
 ```
 
-## 159+ Available Skills
+## 270+ Skills
 
-Organized by domain: sequence-analysis, structure-prediction, compound-properties, literature-mining, data-visualization, and more. Full list in `skill_registry.py`.
+Skills are organized into nine domain families (radial map in paper Figure 1). Machine learning and genomics infrastructure form the largest categories. All skills return typed JSON — any chain is possible; which sequence an agent activates emerges from how it reasons about the scientific question.

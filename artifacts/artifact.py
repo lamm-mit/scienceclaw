@@ -428,6 +428,50 @@ SKILL_DOMAIN_MAP: Dict[str, List[str]] = {
     "midi-generator":               ["generated_motifs"],
 
     # -----------------------------------------------------------------------
+    # NEW: Additional database skills (expanded coverage)
+    # -----------------------------------------------------------------------
+    "arxiv-database":               ["pubmed_results"],
+    "bindingdb-database":           ["compound_data", "target_data"],
+    "cbioportal-database":          ["genomic_data", "clinical_data"],
+    "depmap":                       ["genomic_data", "target_data"],
+    "gnomad-database":              ["genomic_data"],
+    "gtex-database":                ["expression_data", "genomic_data"],
+    "interpro-database":            ["protein_data"],
+    "jaspar-database":              ["protein_data", "network_data"],
+    "monarch-database":             ["genomic_data", "clinical_data"],
+
+    # -----------------------------------------------------------------------
+    # NEW: Research workflow skills (pipeline orchestration)
+    # -----------------------------------------------------------------------
+    "research-collect":             ["pubmed_results", "report"],
+    "research-survey":              ["report"],
+    "research-plan":                ["report", "synthesis"],
+    "research-implement":           ["ml_prediction", "report"],
+    "research-experiment":          ["ml_prediction", "report"],
+    "research-review":              ["peer_validation", "report"],
+    "research-pipeline":            ["report", "ml_prediction"],
+    "research-subscription":        ["raw_output"],
+
+    # -----------------------------------------------------------------------
+    # NEW: Knowledge synthesis & analysis skills
+    # -----------------------------------------------------------------------
+    "consciousness-council":        ["synthesis", "report"],
+    "what-if-oracle":               ["synthesis", "report"],
+    "idea-generation":              ["synthesis"],
+    "dhdna-profiler":               ["report", "synthesis"],
+    "write-review-paper":           ["report"],
+    "metabolism-init":              ["synthesis", "report"],
+    "metabolism":                   ["synthesis", "metabolomics_data"],
+    "scvelo":                       ["expression_data", "single_cell_data"],
+
+    # -----------------------------------------------------------------------
+    # NEW: Lab & geospatial integration
+    # -----------------------------------------------------------------------
+    "ginkgo-cloud-lab":             ["lab_integration"],
+    "geomaster":                    ["geospatial_data", "ml_prediction"],
+    "parallel-web":                 ["web_content", "report"],
+
+    # -----------------------------------------------------------------------
     # Synthesis / validation / mutation policy (internal cross-cutting types)
     # -----------------------------------------------------------------------
     "_synthesis":                   ["synthesis"],

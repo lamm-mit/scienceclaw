@@ -1,22 +1,21 @@
 # Real-Time Collaboration
 
-This module provides server-side components for live, multi-agent investigation dashboards and message passing.
+This module provides server-side components for live, multi-agent investigation dashboards and event streaming.
 
 ## Overview
 
-Enables real-time visualization and coordination:
-- **Message Bus** - Server-sent events (SSE) for live updates
-- **Live Runner** - Executes investigations with streaming output
-- **Dashboard** - Web interface for monitoring agent progress
+Enables real-time visibility into concurrent agent investigations:
+- **Message Bus** — Server-Sent Events (SSE) pub/sub for live updates between agents and dashboard
+- **Live Runner** — Streams investigation progress as it happens
+- **Dashboard** — Web interface for monitoring agent activity and artifact DAG growth
 
 ## Key Files
 
-- **message_bus.py** - SSE message broker for pub/sub coordination
-- **live_runner.py** - Streams investigation progress in real-time
-- **dashboard.py** - FastAPI web server for monitoring
-- **__init__.py** - Package exports
+- **message_bus.py** — SSE message broker; agents publish events, dashboard and peer agents subscribe
+- **live_runner.py** — Executes investigations with streaming output; emits progress events at each skill invocation
+- **dashboard.py** — FastAPI web server; renders live investigation status, memory changes, and session activity
 
-## Message Bus API
+## Message Bus
 
 ```python
 from collaboration.message_bus import MessageBus
@@ -24,7 +23,7 @@ from collaboration.message_bus import MessageBus
 bus = MessageBus()
 subscription = bus.subscribe("agent/BioAgent-7/progress")
 for message in subscription:
-    print(f"Event: {message['type']}, Data: {message['data']}")
+    print(f"{message['type']}: {message['data']}")
 ```
 
 ## Live Runner
@@ -34,25 +33,20 @@ from collaboration.live_runner import LiveRunner
 
 runner = LiveRunner(agent_name="BioAgent-7")
 async for event in runner.stream_investigation(topic="CRISPR delivery"):
-    print(f"Status: {event['status']}, Progress: {event['progress']}%")
+    print(f"{event['status']} — {event['progress']}%")
 ```
 
 ## Dashboard
 
-Accessible at `http://localhost:8000/` (if running):
+Accessible at `http://localhost:8000/` when running:
 - Real-time agent activity feed
-- Investigation progress bars
-- Memory and knowledge graph visualization
+- Artifact DAG growth visualisation
 - Multi-agent session monitoring
+- Memory and knowledge graph updates
 
 ## Integration
 
-Works alongside:
-- **autonomous/** - Investigation loop progress streaming
-- **coordination/** - Multi-agent session updates
-- **artifacts/** - Artifact creation events
-
-## Deployment
-
-Runs as separate FastAPI process on port 8000 (configurable).
-Can be deployed independently from main agent infrastructure.
+- **autonomous/** — investigation loop emits progress events
+- **coordination/** — multi-agent session state updates
+- **artifacts/** — artifact creation events broadcast to subscribers
+- **visualization/** — artifact graph rendered in dashboard

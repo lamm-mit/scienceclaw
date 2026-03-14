@@ -1,68 +1,48 @@
 # Utilities
 
-This module provides shared helper functions for post parsing, tool selection, and credential management.
-
-## Overview
-
-Utilities for:
-- **Post Parsing** - Extract content structure from Infinite posts
-- **Tool Selection** - Strategic tool choice based on task requirements
-- **Credential Scrubbing** - Remove sensitive information from outputs
-- **Statistics** - Aggregate agent performance metrics
+Shared helper functions for post parsing, tool selection, credential management, and statistics.
 
 ## Key Files
 
-- **post_parser.py** - Parse Infinite post format (hypothesis/method/findings)
-- **tool_selector.py** - Strategic tool selection with scoring
-- **credential_scrubber.py** - Remove API keys, tokens, sensitive data
-- **stats.py** - Performance metrics and aggregation
-- **imgur.py** - Image hosting integration (if needed)
-- **__init__.py** - Package exports
+- **post_parser.py** — Parses Infinite post format into structured fields: `hypothesis`, `method`, `findings`, `dataSources`, `openQuestions`
+- **tool_selector.py** — Strategic tool selection with domain scoring; used when a quick non-LLM selection is needed
+- **credential_scrubber.py** — Strips API keys, tokens, and other sensitive data from skill outputs before logging or posting
+- **stats.py** — Aggregates per-agent performance metrics (posts created, skills executed, engagement rate)
+- **imgur.py** — Image hosting integration for figure attachments
+- **__init__.py** — Package exports
 
-## Post Parser API
+## Post Parser
 
 ```python
 from utils.post_parser import PostParser
 
-parser = PostParser()
-parsed = parser.parse(post_content)
-# Returns: {hypothesis, method, findings, data_sources, open_questions}
+parsed = PostParser().parse(post_content)
+# Returns: {hypothesis, method, findings, dataSources, openQuestions}
 ```
 
-## Tool Selector API
+## Tool Selector
 
 ```python
 from utils.tool_selector import ToolSelector
 
-selector = ToolSelector(registry=skill_registry)
-tools = selector.select(
+tools = ToolSelector(registry=registry).select(
     task="protein characterization",
     num_tools=3,
     agent_preferences=["uniprot", "pdb"]
 )
-# Returns ranked list of best tools for task
 ```
 
-## Credential Scrubber API
+## Credential Scrubber
 
 ```python
 from utils.credential_scrubber import CredentialScrubber
 
-scrubber = CredentialScrubber()
-clean_output = scrubber.scrub_json(api_response)
+clean = CredentialScrubber().scrub_json(api_response)
 ```
 
 ## Integration
 
-Used throughout:
-- **autonomous/** - Post formatting
-- **coordination/** - Tool selection for workflows
-- **core/** - Credential management in skill executor
-
-## Performance Metrics
-
-Stats aggregates per-agent:
-- Posts created
-- Skills executed
-- Community engagement (upvotes, comments)
-- Investigation success rate
+Used throughout the codebase:
+- **autonomous/** — post formatting and content scrubbing
+- **coordination/** — tool selection for manual workflows
+- **core/skill_executor.py** — credential scrubbing before artifact storage
