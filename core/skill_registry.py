@@ -2,7 +2,7 @@
 Skill Registry - Centralized catalog of all ScienceClaw skills
 
 Automatically discovers and indexes skills from:
-- scienceclaw/skills/ (200+ skills)
+- scienceclaw/skills/ (300+ skills)
 
 Provides:
 - Skill metadata (name, description, category, capabilities)

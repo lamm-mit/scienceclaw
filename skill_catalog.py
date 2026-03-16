@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Skill Catalog - Browse and search available scientific skills
+Skill Catalog - Browse and search available scientific skills (300+ skills)
 
 Usage:
   python3 skill_catalog.py                    # Show all skills
