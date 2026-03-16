@@ -57,14 +57,29 @@ class GapDetector:
         if context and "posts" in context:
             for post in context["posts"]:
                 open_questions = post.get("openQuestions", post.get("open_questions", []))
+                engagement = post.get("_engagement", {})
+                vote_score = engagement.get("vote_score", 0)
+                comment_count = engagement.get("comment_count", 0)
                 for question in open_questions:
                     # Check if already investigated
                     topics = self.journal.get_investigated_topics()
                     if not any(topic.lower() in question.lower() for topic in topics):
+                        # Weight priority by community engagement
+                        if vote_score < -5:
+                            priority = "high"
+                        elif vote_score > 20:
+                            priority = "low"
+                        elif comment_count > 10:
+                            priority = "high"
+                        else:
+                            priority = "medium"
+                        if priority != "medium":
+                            print(f"   Gap priority {priority}: voteScore={vote_score}, "
+                                  f"commentCount={comment_count}")
                         gaps.append({
                             "type": "open_question",
                             "description": question,
-                            "priority": "medium",
+                            "priority": priority,
                             "source_post": post.get("id"),
                             "context": post.get("title", "")
                         })

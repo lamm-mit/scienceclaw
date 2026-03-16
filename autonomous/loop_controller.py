@@ -56,6 +56,33 @@ from coordination import SessionManager, AgentDiscoveryService
 from utils.credential_scrubber import scrub
 
 
+def _save_post_index(agent_name: str, investigation_id: str, post_id: str) -> None:
+    """Persist investigation_id → post_id mapping for cross-agent comment threading."""
+    if not investigation_id or not post_id:
+        return
+    index_dir = Path.home() / ".scienceclaw" / "post_index" / agent_name
+    index_dir.mkdir(parents=True, exist_ok=True)
+    index_path = index_dir / "posts.json"
+    try:
+        data = json.loads(index_path.read_text()) if index_path.exists() else {}
+    except Exception:
+        data = {}
+    data[investigation_id] = post_id
+    index_path.write_text(json.dumps(data, indent=2))
+
+
+def _load_post_index(agent_name: str, investigation_id: str) -> Optional[str]:
+    """Return post_id for a given investigation_id, or None if not found."""
+    index_path = Path.home() / ".scienceclaw" / "post_index" / agent_name / "posts.json"
+    if not index_path.exists():
+        return None
+    try:
+        data = json.loads(index_path.read_text())
+        return data.get(investigation_id)
+    except Exception:
+        return None
+
+
 class AutonomousLoopController:
     """
     Main orchestrator for autonomous scientific investigation cycles.
@@ -320,6 +347,11 @@ class AutonomousLoopController:
                 knowledge_graph=self.knowledge_graph,
                 journal=self.journal
             )
+            for _p in all_posts:
+                _p["_engagement"] = {
+                    "vote_score": _p.get("voteScore", _p.get("vote_score", 0)),
+                    "comment_count": _p.get("commentCount", _p.get("comment_count", 0)),
+                }
             detected_gaps = gap_detector.detect_gaps(context={"posts": all_posts})
 
             # Bootstrap: if no gaps found yet and agent has research interests,
@@ -2088,9 +2120,21 @@ class AutonomousLoopController:
             + f"\n\n## Open Questions for Downstream Agents\n\n**What should be investigated next:**\n\n{hints}"
         )
 
+        artifact_metadata = {
+            "artifact_ids": [a[0] for a in artifact_refs],
+            "investigation_id": investigation_id,
+            "tools_used": [a[2] for a in artifact_refs],
+        }
         post_id = self._post_investigation_content(
-            {"title": topic, "content": body}, community
+            {"title": topic, "content": body}, community,
+            artifact_metadata=artifact_metadata,
         )
+
+        if post_id and investigation_id:
+            _save_post_index(self.agent_name, investigation_id, post_id)
+
+        if post_id and artifact_refs:
+            self._post_agent_comment(post_id, investigation_id, artifact_refs, hints)
 
         self.journal.log_observation(
             content=f"Ran {len(tool_sections)} tool(s) on: {topic}",
@@ -2382,7 +2426,8 @@ class AutonomousLoopController:
         profile = self.agent_profile.get("profile", "mixed")
         return "biology" if profile == "biology" else "chemistry"
 
-    def _post_investigation_content(self, content: dict, community: str) -> Optional[str]:
+    def _post_investigation_content(self, content: dict, community: str,
+                                     artifact_metadata: Optional[Dict] = None) -> Optional[str]:
         """Post deep-investigation content as a comment (seed mode) or new post."""
         if not self.platform:
             return None
@@ -2410,6 +2455,7 @@ class AutonomousLoopController:
                     hypothesis=content.get("hypothesis", ""),
                     method=content.get("method", ""),
                     findings=content.get("findings", ""),
+                    artifact_metadata=artifact_metadata,
                 )
                 return (
                     result.get("id")
@@ -2419,6 +2465,51 @@ class AutonomousLoopController:
         except Exception as e:
             print(f"   Warning: Failed to post findings: {scrub(str(e))}")
             return None
+
+    def _post_agent_comment(self, post_id: str, investigation_id: str,
+                             artifact_refs: list, open_questions_text: str) -> None:
+        """Post a bundled skill-artifact comment on the investigation post.
+
+        Format:
+          [AgentName] — tool1, tool2, tool3
+
+          **tool1** `#abc12345` ← none
+          <summary>
+
+          **tool2** `#def67890` ← `#abc12345`
+          <summary>
+
+          ---
+          **Open questions:**
+          1. ... *(needs: admet_prediction)*
+        """
+        if not self.platform or not post_id or not artifact_refs:
+            return
+        try:
+            tool_names = [a[2] for a in artifact_refs]
+            lines = [f"[{self.agent_name}] — {', '.join(tool_names)}", ""]
+            prev_id = None
+            for art_id, art_type, tool_name, summary in artifact_refs:
+                short_id = art_id[:8]
+                parent_ref = f" \u2190 `#{prev_id[:8]}`" if prev_id else ""
+                lines.append(f"**{tool_name}** `#{short_id}`{parent_ref}")
+                if summary:
+                    lines.append(summary[:300])
+                lines.append("")
+                prev_id = art_id
+            # Parse open questions to extract needs hints
+            if open_questions_text and open_questions_text.strip() != "- None identified":
+                lines.append("---")
+                lines.append("**Open questions:**")
+                import re as _re_oq
+                numbered = _re_oq.findall(r'\d+\.\s+(.+)', open_questions_text)
+                for i, q in enumerate(numbered[:3], 1):
+                    lines.append(f"{i}. {q.strip()}")
+            body = "\n".join(lines)
+            self.platform.create_comment(post_id=post_id, content=body)
+            print(f"   Bundled skill comment posted on {post_id[:12]}…")
+        except Exception as e:
+            print(f"   Warning: bundled comment failed: {scrub(str(e))}")
 
     def _post_reaction_findings(self, children: List) -> None:
         """Post a consolidated finding for a batch of reaction artifacts."""
@@ -2582,6 +2673,37 @@ class AutonomousLoopController:
                         break
             except Exception:
                 pass
+
+            if not parent_post_id:
+                # Try post_index lookup: scan parent artifact investigation IDs
+                try:
+                    from artifacts.artifact import ArtifactStore as _AS
+                    for _pid in parent_artifact_ids:
+                        if not _pid:
+                            continue
+                        for _agent_dir in (Path.home() / ".scienceclaw" / "artifacts").iterdir():
+                            if not _agent_dir.is_dir():
+                                continue
+                            _store_path = _agent_dir / "store.jsonl"
+                            if not _store_path.exists():
+                                continue
+                            for _line in _store_path.read_text().splitlines():
+                                try:
+                                    _entry = json.loads(_line)
+                                except Exception:
+                                    continue
+                                if _entry.get("artifact_id") == _pid:
+                                    _inv = _entry.get("investigation_id", "")
+                                    _producer = _agent_dir.name
+                                    if _inv:
+                                        parent_post_id = _load_post_index(_producer, _inv)
+                                    break
+                            if parent_post_id:
+                                break
+                        if parent_post_id:
+                            break
+                except Exception:
+                    pass
 
             if not parent_post_id:
                 # No original post found — skip comment

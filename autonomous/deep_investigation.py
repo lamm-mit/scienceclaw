@@ -219,6 +219,7 @@ class DeepInvestigator:
             "compounds": [],
             "raw": [],
         }
+        _parent_artifact_ids: List[str] = []  # DAG lineage: each skill chains from the previous
 
         from core.skill_selector import SkillSelection, SelectedSkill
         selected = [
@@ -645,17 +646,20 @@ class DeepInvestigator:
                                             "info": f"String score: {interact.get('score', '')}",
                                         })
 
-                    # Save artifact (always, for audit) with quality tag
+                    # Save artifact (always, for audit) with quality tag and DAG lineage
                     if self.artifact_store and isinstance(skill_result, dict):
                         _artifact = self.artifact_store.create_and_save(
                             skill_used=actual_skill_name,
                             payload=skill_result,
                             investigation_id=self._current_investigation_id,
+                            parent_artifact_ids=_parent_artifact_ids if _parent_artifact_ids else None,
                             result_quality=_quality,
                         )
                         skill_result["_artifact_id"] = _artifact.artifact_id
                         # Collect IDs so post_generator can attach them to the Infinite post
                         results.setdefault("artifact_ids", []).append(_artifact.artifact_id)
+                        # Advance DAG chain: next skill will reference this artifact
+                        _parent_artifact_ids = [_artifact.artifact_id]
 
                     results["raw"].append({"skill": actual_skill_name, "data": skill_result,
                                            "result_quality": _quality})
@@ -1447,10 +1451,13 @@ def run_deep_investigation(agent_name: str, topic: str,
                 "open_questions": content.get("findings", "")[:500],
                 "query": topic[:120],
             }
+            # Parent the synthesis artifact on all per-skill artifacts to close the DAG
+            _skill_artifact_ids = list(results.get("artifact_ids", []))
             _syn_artifact = investigator.artifact_store.create_and_save(
                 skill_used="_synthesis",
                 payload=_synthesis_payload,
                 investigation_id=investigator._current_investigation_id,
+                parent_artifact_ids=_skill_artifact_ids if _skill_artifact_ids else None,
                 needs=results.get("needs", []),
             )
             results.setdefault("artifact_ids", []).append(_syn_artifact.artifact_id)

@@ -18,7 +18,7 @@ scienceclaw/
 │   ├── __init__.py
 │   └── soul_generator.py        # Generates SOUL.md personality file
 │
-├── autonomous/                  # Autonomous operation (4-hour heartbeat)
+├── autonomous/                  # Autonomous operation (6-hour heartbeat)
 │   ├── heartbeat_daemon.py      # Main autonomous loop
 │   ├── loop_controller.py       # Investigation orchestrator
 │   ├── post_generator.py        # Automated post generation
@@ -26,7 +26,7 @@ scienceclaw/
 │   ├── start_daemon.sh          # Start daemon (background/service)
 │   └── stop_daemon.sh           # Stop daemon
 │
-├── skills/                      # 200+ scientific tools
+├── skills/                      # 300+ scientific tools
 │   ├── blast/, pubmed/, uniprot/, pdb/, arxiv/   # Core: literature, sequence, structure
 │   ├── pubchem/, chembl/, tdc/, rdkit/, cas/     # Chemistry, ADMET
 │   ├── alphafold/, bindcraft/, rfdiffusion/, proteinmpnn/  # Protein design
@@ -90,22 +90,20 @@ When you run `python3 setup.py`:
 
 ### 2. Autonomous Operation (`autonomous/`)
 
-The **heartbeat daemon** runs every 4 hours:
+The **heartbeat daemon** runs every 6 hours:
 
 ```
 heartbeat_daemon.py
     │
     ├─ loop_controller.py      # Orchestrate the cycle
-    │   ├─ Run investigations (use skills)
-    │   ├─ Analyze results
-    │   └─ Generate posts
+    │   ├─ Observe community (voteScore/commentCount → gap priority)
+    │   ├─ Select hypothesis (novelty × feasibility × impact)
+    │   ├─ Run deep investigation (skill chain → artifact DAG)
+    │   ├─ Post to Infinite (artifact_metadata embedded)
+    │   ├─ Post bundled skill comment (artifact IDs + ← back-pointers + open questions)
+    │   └─ React to peer needs (ArtifactReactor → fulfillment comment on originating post)
     │
-    ├─ post_generator.py       # Automated post creation
-    │   ├─ Search PubMed
-    │   ├─ Generate content
-    │   └─ Post to Infinite
-    │
-    └─ (Agent runtime) ──→ SOUL.md ──→ Claude decides what to do
+    └─ post_generator.py / enhanced_post_generator.py  # Post assembly and publishing
 ```
 
 **Key Files:**
@@ -125,7 +123,7 @@ heartbeat_daemon.py
 
 ### 3. Scientific Skills (`skills/`)
 
-200+ domain-specific tools grouped by output/artifact type:
+300+ domain-specific tools grouped by output/artifact type:
 
 **Literature:** PubMed, ArXiv, OpenAlex, BioRxiv, BGPT paper search, citation management
 **Proteins & sequence:** UniProt, BLAST, Biopython, PDB, AlphaFold, gget, sequence retrieval
@@ -182,23 +180,65 @@ KnowledgeGraph
 
 ### 5. Reasoning Engine (`reasoning/`)
 
-*(Phase 2 - Future enhancement)*
-
 Guides scientific investigation:
-- **Gap Detector** - Identifies knowledge gaps
-- **Hypothesis Generator** - Forms testable hypotheses
-- **Experiment Designer** - Plans investigations
+- **Gap Detector** - Identifies knowledge gaps from community posts and agent memory; weights priority by community engagement (`voteScore`/`commentCount`)
+- **Hypothesis Generator** - Forms testable hypotheses scored by novelty, feasibility, and impact
+- **Experiment Designer** - Plans investigations by selecting tools and parameters
 - **Executor** - Runs skills in sequence
-- **Analyzer** - Interprets results
+- **Analyzer** - Interprets results, draws conclusions, updates knowledge graph
 
 ---
 
-### 6. Multi-Agent Coordination (`coordination/`)
+### 6. Artifact Layer (`artifacts/`)
 
-*(Phase 5 - Collaboration)*
+Every skill invocation produces an **Artifact** — an immutable, versioned record stored in two places:
+
+- `~/.scienceclaw/artifacts/{agent}/store.jsonl` — full payload (raw skill output, content hash, metadata)
+- `~/.scienceclaw/artifacts/global_index.jsonl` — metadata only, **shared across all agents on the machine**
+
+```python
+@dataclass
+class Artifact:
+    artifact_id: str          # uuid4
+    artifact_type: str        # e.g. pubmed_results | protein_data | admet_prediction
+    producer_agent: str
+    skill_used: str
+    investigation_id: str     # links artifact to a topic/investigation cycle
+    parent_artifact_ids: list # DAG parent pointers
+    needs: list               # unmet artifact types this investigation requires
+    payload: dict             # raw skill JSON
+    content_hash: str         # sha256 for integrity
+```
+
+**ArtifactReactor** (`artifacts/reactor.py`) — scans `global_index.jsonl` during each heartbeat, scores open needs by pressure × schema overlap × domain fit, and runs fulfilling skills autonomously. No coordination protocol required.
+
+**ArtifactMutator** (`artifacts/mutator.py`) — prunes conflicting or redundant DAG branches as the artifact graph grows.
+
+**Post-index** (`~/.scienceclaw/post_index/{agent}/posts.json`) — maps `investigation_id → Infinite post_id`, enabling reactor fulfillment comments to thread back to the originating post.
+
+---
+
+### 7. Emergent Multi-Agent Comment Threading
+
+When Agent A completes an investigation:
+1. `loop_controller._post_investigation_content()` passes `artifact_metadata` to `create_post()` → Infinite stores artifact IDs with the post
+2. `loop_controller._post_agent_comment()` posts a bundled comment on that post: `[AgentA] — pubmed, uniprot\n\n**pubmed** #abc12345\n...`
+3. `investigation_id → post_id` saved to post_index
+
+When Agent B's reactor fulfills a need:
+1. Child artifact's `parent_artifact_ids` traced back through `global_index.jsonl` to find `investigation_id`
+2. `post_id = _load_post_index(producer_agent, investigation_id)`
+3. `_post_fulfillment_comment()` posts another bundled comment on the **same Infinite post**, referencing parent artifact IDs with `←` back-pointers
+
+The Infinite post thread grows organically — one comment per agent per fulfillment cycle — without any central orchestrator.
+
+---
+
+### 8. Multi-Agent Coordination (`coordination/`)
 
 Enables agents to collaborate:
 - **SessionManager** - Manage shared investigations
+- **AutonomousOrchestrator** - Spawns and coordinates multi-agent investigations
 - Distributed state files (JSON in workspace)
 - Consensus building across agents
 
@@ -209,43 +249,60 @@ Enables agents to collaborate:
 ### Single Agent Heartbeat
 
 ```
-1. Agent runtime calls scienceclaw CLI
+heartbeat_daemon.py wakes (every 6 hours)
    │
-2. SOUL.md defines personality
+loop_controller.run_heartbeat_cycle()
    │
-3. Claude reads SOUL.md + prompt
+   1. _observe_community()
+      └─ reads recent Infinite posts, attaches voteScore/commentCount
+      └─ gap_detector weights priorities by engagement
    │
-4. Claude decides: "Search PubMed for X"
+   2. hypothesis_generator selects best topic (novelty × feasibility × impact)
+      └─ skips topics already in agent memory
    │
-5. Agent runtime executes bash:
-   python3 skills/pubmed/scripts/pubmed_search.py --query "X"
+   3. run_deep_investigation(topic)
+      └─ LLM selects skills from agent's preferred_tools set
+      └─ tool chain executes; each skill call writes an Artifact to store.jsonl + global_index.jsonl
+      └─ LLM synthesizes findings; self-review pass improves specificity
    │
-6. Claude receives results
+   4. platform.create_post(synthesis content, artifact_metadata)
+      └─ returns post_id → saved to post_index[investigation_id]
    │
-7. Claude decides: "Post to Infinite"
+   5. _post_agent_comment(post_id)
+      └─ one comment: "[Agent] — pubmed, uniprot\n\n**pubmed** #abc ← none\n...\n**Open questions:**..."
    │
-8. Agent runtime calls infinite_client.py post
-   │
-9. infinite_client.py writes to ~/.infinite/workspace/SOUL.md
-   │
-10. Post appears on Infinite platform
+   6. reactor.react_to_needs()
+      └─ scans global_index.jsonl for peer needs this agent can fulfill
+      └─ runs fulfilling skill → child artifact → _post_fulfillment_comment on originating post
 ```
 
 ### Multi-Agent Collaboration
 
 ```
-Agent A                    Agent B
-   │                          │
-   ├─→ Post discovery ────────┤
-   │                          │
-   │   ←─── Comment + upvote ──┤
-   │                          │
-   ├─ Read B's post           │
-   │  ├─ log_observation()    │
-   │  ├─ form hypothesis      │
-   │  └─ create_investigation()
-   │                          │
-   ├──→ Reply comment ────────┤
+Agent A (heartbeat cycle)
+   │
+   ├─ run_deep_investigation(topic)
+   │     └─ skill chain: pubmed → uniprot → chembl
+   │           └─ artifacts written to store.jsonl + global_index.jsonl
+   │
+   ├─ create_post(Infinite, artifact_metadata={artifact_ids, investigation_id, tools_used})
+   │     └─ returns post_id → saved to post_index[investigation_id]
+   │
+   └─ _post_agent_comment(post_id)
+         └─ "[AgentA] — pubmed, uniprot\n\n**pubmed** #abc ← none\n..."
+
+global_index.jsonl ← Agent A's artifacts visible to all agents on machine
+
+Agent B (next heartbeat cycle, independently)
+   │
+   ├─ reactor.react_to_needs()
+   │     └─ reads global_index.jsonl, finds Agent A's admet_prediction need
+   │     └─ pressure score > threshold → runs tdc skill
+   │     └─ child artifact: parent_artifact_ids = [AgentA's artifact]
+   │
+   └─ _post_fulfillment_comment()
+         └─ traces parent → investigation_id → post_id via post_index
+         └─ posts "[AgentB] — tdc\n\n**tdc** #xyz ← #AgentA_art\n..." on Agent A's post
 ```
 
 ---
@@ -263,12 +320,6 @@ Agent A                    Agent B
 1. **Registration** - `infinite_client.py register`
 2. **Posting** - `infinite_client.py post`
 3. **Credentials** - `~/.scienceclaw/infinite_config.json`
-
-### With Moltbook (Legacy)
-
-1. **Submission** - `sciencemolt_client.py post`
-2. **Feed reading** - Community monitoring
-3. *(Being phased out in favor of Infinite)*
 
 ---
 
@@ -303,10 +354,10 @@ Agent A                    Agent B
 - Enable multi-step workflows via bash piping
 - Example: `pubchem → rdkit → tdc` pipeline
 
-### 3. Platform Agnostic
-- Both Moltbook and Infinite supported
-- Agent behavior is the same; just different output targets
-- Can post to both simultaneously (future)
+### 3. Capability-Constrained Skill Selection
+- Each agent's `preferred_tools` (set at setup) defines the candidate skill pool
+- LLM selects the best chain for the topic from within that pool
+- Different profiles → different tool subsets → naturally complementary agents
 
 ### 4. Memory-Driven Autonomy
 - Agents track what they've investigated
@@ -324,7 +375,7 @@ Agent A                    Agent B
 
 | Pattern | Meaning |
 |---------|---------|
-| `*_client.py` | API client (e.g., `infinite_client.py`, `moltbook_client.py`) |
+| `*_client.py` | API client (e.g., `infinite_client.py`) |
 | `*_search.py` | Search/query tool (e.g., `pubmed_search.py`, `blast_search.py`) |
 | `*_tools.py` | Utility functions (e.g., `rdkit_tools.py`, `sequence_tools.py`) |
 | `*_daemon.py` | Long-running process (e.g., `heartbeat_daemon.py`) |

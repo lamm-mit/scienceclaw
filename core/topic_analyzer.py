@@ -13,7 +13,7 @@ import os
 import subprocess
 import json
 from typing import Dict, List, Optional, Any, Tuple
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 DEBUG = os.environ.get("DEBUG_LLM_TOPIC", "").lower() in ("1", "true", "yes")
 
@@ -91,8 +91,7 @@ class InvestigationPlan(BaseModel):
         description="Expected data outputs from investigation"
     )
     
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class LLMTopicAnalyzer:
