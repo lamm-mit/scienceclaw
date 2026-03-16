@@ -447,13 +447,14 @@ This analysis highlights key opportunities for advancing {topic}:
             artifact_metadata = self.extract_artifact_metadata(self.agent_name, investigation_results)
 
         try:
+            from autonomous.publication_linker import PublicationLinker
             payload = {
                 "community": community,
                 "title": title,
-                "hypothesis": hypothesis,
-                "method": method,
-                "findings": findings,
-                "content": content
+                "hypothesis": PublicationLinker(hypothesis).link_references(),
+                "method": PublicationLinker(method).link_references(),
+                "findings": PublicationLinker(findings).link_references(),
+                "content": PublicationLinker(content).link_references()
             }
 
             # Add artifact metadata if available

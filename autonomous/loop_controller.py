@@ -25,6 +25,8 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
+from autonomous.comment_tracker import CommentTracker
+from autonomous.citation_aware_reasoner import CitationAwareLLMReasoner
 
 
 class EntityQuery(BaseModel):
@@ -100,6 +102,8 @@ class AutonomousLoopController:
         self.journal = AgentJournal(agent_name=self.agent_name)
         self.investigations = InvestigationTracker(agent_name=self.agent_name)
         self.knowledge_graph = KnowledgeGraph(agent_name=self.agent_name)
+        self.comment_tracker = CommentTracker(agent_name=self.agent_name)
+        self.citation_reasoner = CitationAwareLLMReasoner(agent_name=self.agent_name)
         
         # Initialize reasoning engine
         self.reasoning_engine = ScientificReasoningEngine(
@@ -585,6 +589,7 @@ class AutonomousLoopController:
                                         post_id=post["id"],
                                         content=comment_text
                                     )
+                                    self.comment_tracker.record_comment(post["id"])
                                     engagement["comments"] += 1
                                 except Exception as e:
                                     print(f"   Warning: Comment failed: {scrub(str(e))}")
@@ -1156,36 +1161,59 @@ class AutonomousLoopController:
         # - Post is in agent's area of expertise
         # - Post has open questions
         # - Post methodology could be improved
-        
+
         interests = [i.lower() for i in self.agent_profile.get("interests", [])]
         if not interests:
             return False
-        
+
         post_text = (
             post.get("title", "") + " " +
             post.get("content", "") + " " +
             post.get("hypothesis", "")
         ).lower()
-        
+
         # Check relevance
         relevant = any(interest in post_text for interest in interests)
-        
-        # Don't over-comment
+
+        # Don't over-comment (platform limit) and enforce 24h cooldown
         comment_count = post.get("commentCount", 0)
-        
-        return relevant and comment_count < 3
+        post_id = post.get("id", "")
+        already_commented = post_id and not self.comment_tracker.can_comment_on_post(post_id)
+
+        return relevant and comment_count < 3 and not already_commented
     
     def _generate_comment(self, post: Dict[str, Any]) -> Optional[str]:
-        """Generate a thoughtful comment for a post."""
-        # This is a simple implementation
-        # In production, this would use GPT to generate contextual comments
-        
-        # For now, just acknowledge interesting findings
+        """Generate a thoughtful comment for a post, citing real PMIDs when available."""
         findings = post.get("findings", "")
-        if findings:
-            return f"Interesting findings! This aligns with my research on {self.agent_profile.get('interests', ['science'])[0]}. Have you considered using additional validation tools?"
-        
-        return None
+        if not findings:
+            return None
+
+        # Try to use citation-aware reasoning with real PMIDs from recent investigations
+        try:
+            recent = self.journal.get_recent_entries(limit=5)
+            papers = []
+            for entry in recent:
+                if entry.get("type") == "experiment" and entry.get("results"):
+                    papers.extend(entry["results"].get("papers", []))
+
+            topic = post.get("title", "")
+            comment = self.citation_reasoner.generate_comment_with_citations(
+                agent_name=self.agent_name,
+                topic=topic,
+                investigation_context=findings,
+                papers=papers,
+            )
+            if comment:
+                return comment
+        except Exception:
+            pass
+
+        # Fallback to simple comment
+        interest = self.agent_profile.get("interests", ["science"])[0]
+        return (
+            f"Interesting findings! This aligns with my research on {interest}. "
+            "Have you considered using additional validation tools?"
+        )
 
 
 # Helper methods for collaborative sessions
@@ -1330,7 +1358,6 @@ class AutonomousLoopController:
         # has flagged something specific to investigate, prioritise that as our topic.
         peer_topic = None
         try:
-            from artifacts.artifact import ArtifactStore as _AS
             from pathlib import Path as _Path
             _base = _Path.home() / ".scienceclaw" / "artifacts"
             _global = _base / "global_index.jsonl"
