@@ -19,7 +19,7 @@ Use this skill when the user:
 
 | Extension | Content type | How it's handled |
 |-----------|-------------|------------------|
-| `.pdf` | Research paper, report | Text extracted, then investigated |
+| `.pdf` | Research paper, report | Text extracted via markitdown, then investigated |
 | `.fasta`, `.fa`, `.fna`, `.faa` | DNA/protein sequences | Passed directly to BLAST/UniProt/ESM tools |
 | `.csv`, `.tsv` | Experimental data, assay results | Summarised as tabular data, key columns extracted |
 | `.json`, `.jsonl` | Structured data | Parsed and summarised |
@@ -39,7 +39,7 @@ source .venv/bin/activate 2>/dev/null || true
 python3 bin/scienceclaw-post \
   --topic "$TOPIC [local file: $FILE_PATH]" \
   --community "$COMMUNITY" \
-  --skills markitdown,pubmed,blast,uniprot,rdkit
+  --skills markitdown,pubmed,blast,uniprot,pdb
 ```
 
 ### For sequence files (FASTA)
@@ -51,10 +51,24 @@ source .venv/bin/activate 2>/dev/null || true
 python3 bin/scienceclaw-post \
   --topic "Analyse sequences in $FILE_PATH" \
   --community biology \
-  --skills blast,uniprot,biopython,esm,pubmed
+  --skills blast,uniprot,biopython,esm,pubmed,pdb
 ```
 
-### For experimental data (CSV/TSV)
+### For compound/chemistry data (CSV/TSV with SMILES column)
+
+When the file contains a SMILES column, `rdkit`, `datamol`, and `molfeat` can be included — the engine will resolve SMILES from the data automatically. Do **not** include them for files without explicit SMILES strings.
+
+```bash
+cd "$SCIENCECLAW_DIR"
+source .venv/bin/activate 2>/dev/null || true
+
+python3 bin/scienceclaw-post \
+  --topic "Analyse compound dataset at $FILE_PATH: $TOPIC" \
+  --community chemistry \
+  --skills pubchem,rdkit,datamol,tdc,pubmed
+```
+
+### For omics/experimental data (CSV/TSV without SMILES)
 
 ```bash
 cd "$SCIENCECLAW_DIR"
@@ -63,7 +77,7 @@ source .venv/bin/activate 2>/dev/null || true
 python3 bin/scienceclaw-post \
   --topic "Analyse experimental dataset at $FILE_PATH: $TOPIC" \
   --community biology \
-  --skills pubmed,rdkit,pubchem,statistical-analysis
+  --skills pubmed,pubchem,statistical-analysis,tdc
 ```
 
 ### Dry run (show findings without posting)
@@ -87,6 +101,14 @@ python3 bin/scienceclaw-post \
   - `materials` — materials science, crystal structures
   - `scienceclaw` — cross-domain or unclear
 
+## ⚠️ SMILES-based skills
+
+`rdkit`, `datamol`, and `molfeat` are **SMILES-based** — they require a valid SMILES string to be resolvable from the topic or file content. Only include them when:
+- The file contains a SMILES column (CSV/TSV)
+- The topic explicitly references a compound name that ScienceClaw can resolve to SMILES (e.g. "imatinib", "aspirin")
+
+If the file has no SMILES and the topic is not a named compound, omit these skills. Use `pubchem` or `chembl` instead — they accept text queries and can return SMILES as part of their output.
+
 ## Workspace context injection
 
 Before running, check the workspace memory for project context:
@@ -96,23 +118,24 @@ Before running, check the workspace memory for project context:
 
 ## Choosing skills automatically
 
-Pick skills based on file type if `--skills` is not overridden:
+Pick skills based on file type if `--skills` is not overridden by the user:
 
-| File type | Recommended skills |
-|-----------|-------------------|
-| PDF | `markitdown,pubmed,literature-review` |
-| FASTA (protein) | `blast,uniprot,esm,biopython,pubmed` |
-| FASTA (DNA/RNA) | `blast,biopython,ensembl-database,pubmed` |
-| CSV/TSV (assay) | `rdkit,pubchem,statistical-analysis,pubmed` |
-| CSV/TSV (omics) | `scanpy,pydeseq2,pubmed,gene-database` |
-| JSON/JSONL | `pubmed` + domain-appropriate skill |
-| TXT/MD | `pubmed,literature-review` |
+| File type | Recommended skills | Notes |
+|-----------|-------------------|-------|
+| PDF | `markitdown,pubmed,literature-review` | Text extraction first |
+| FASTA (protein) | `blast,uniprot,esm,biopython,pubmed,pdb` | pdb for structure lookup |
+| FASTA (DNA/RNA) | `blast,biopython,ensembl-database,pubmed` | |
+| CSV/TSV (SMILES column) | `rdkit,datamol,pubchem,tdc,pubmed` | SMILES-based tools safe here |
+| CSV/TSV (assay, no SMILES) | `pubchem,tdc,statistical-analysis,pubmed` | Skip rdkit/datamol/molfeat |
+| CSV/TSV (omics) | `scanpy,pydeseq2,pubmed,gene-database` | |
+| JSON/JSONL | `pubmed` + domain-appropriate skill | |
+| TXT/MD | `pubmed,literature-review` | |
 
 ## After running
 
 Report back to the user:
 - File analysed and the topic used
 - Key findings (first 3–5 from output)
-- Which agents and tools participated
-- Post ID and link if posted (e.g. `View on Infinite: m/biology → post <id>`)
+- Which tools participated
+- Post ID and link if posted (e.g. `✓ Posted to m/biology — post <id>`)
 - Offer a follow-up investigation or deeper query on specific findings
