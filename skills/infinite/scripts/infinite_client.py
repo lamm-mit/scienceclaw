@@ -944,7 +944,7 @@ def main():
 
     # Post
     post_parser = subparsers.add_parser("post", help="Create a post")
-    post_parser.add_argument("--community", "-c", default="scienceclaw", help="Community name")
+    post_parser.add_argument("--community", "-c", default="science", help="Community name")
     post_parser.add_argument("--title", "-t", required=True, help="Post title")
     post_parser.add_argument("--content", required=True, help="Post content")
     post_parser.add_argument("--hypothesis", help="Research hypothesis")

@@ -43,7 +43,7 @@ def generate_soul_md(profile: Dict) -> str:
             - research: Dict with interests, organisms, proteins, compounds
             - personality: Dict with curiosity_style, communication_style
             - preferences: Dict with tools, exploration_mode
-            - submolt: Community name (default: scienceclaw)
+            - community: Community name (default: science)
             - expertise_preset: biology, chemistry, or mixed
     
     Returns:
@@ -67,8 +67,9 @@ def generate_soul_md(profile: Dict) -> str:
     tools = preferences.get("tools", ["pubmed", "uniprot", "blast"])
     exploration_mode = preferences.get("exploration_mode", "random")
     
-    submolt = profile.get("submolt", "scienceclaw")
-    
+    submolt = profile.get("community", "science")
+    install_dir = SCIENCECLAW_DIR
+
     # Build formatted lists
     interests_list = "\n".join(f"- {i}" for i in interests)
     organisms_list = "\n".join(f"- {o}" for o in organisms) if organisms else "- Various organisms"
@@ -83,22 +84,30 @@ def generate_soul_md(profile: Dict) -> str:
     
     # Curiosity style description
     curiosity_descriptions = {
-        "explorer": "You love discovering new connections and following rabbit holes. When you find something interesting, you dig deeper and explore related topics.",
-        "deep-diver": "You prefer thorough, systematic investigation. You document your methods carefully and explore topics exhaustively before moving on.",
-        "connector": "You excel at connecting disparate findings. You look for patterns across different areas and synthesize insights from multiple sources.",
-        "skeptic": "You maintain healthy skepticism. You ask clarifying questions, request evidence, and consider alternative explanations."
+        "explorer":      "You love discovering new connections and following rabbit holes. When you find something interesting, you dig deeper and explore related topics.",
+        "deep-diver":    "You prefer thorough, systematic investigation. You document your methods carefully and explore topics exhaustively before moving on.",
+        "connector":     "You excel at connecting disparate findings. You look for patterns across different areas and synthesize insights from multiple sources.",
+        "skeptic":       "You maintain healthy skepticism. You ask clarifying questions, request evidence, and consider alternative explanations.",
+        "contrarian":    "You actively seek out the minority view. When consensus exists, you probe its weakest assumptions and champion underexplored alternatives.",
+        "synthesizer":   "You are driven to unify. You read broadly across disciplines and build integrative frameworks that reconcile seemingly contradictory findings.",
+        "pragmatist":    "You focus on what is actionable. Every investigation ends with a concrete next step — a testable prediction, a tool to run, a gap to fill.",
+        "storyteller":   "You frame every discovery as a narrative. You explain the 'why it matters' before the 'what was found', making science compelling to any audience.",
+        "minimalist":    "You strip findings to their essential core. You resist adding complexity and ask 'what is the simplest explanation consistent with the data?'",
+        "provocateur":   "You ask the uncomfortable questions. You challenge assumptions, surface hidden biases in published work, and push peers to defend their claims rigorously.",
     }
     curiosity_desc = curiosity_descriptions.get(curiosity_style, curiosity_descriptions["explorer"])
-    
+
     # Communication style description
     communication_descriptions = {
-        "enthusiastic": "Express genuine excitement about discoveries! Use enthusiasm to share your findings.",
-        "formal": "Maintain professional, academic tone. Be precise and measured in your communications.",
-        "casual": "Keep it friendly and approachable. Science should be accessible and fun.",
-        "concise": "Be brief and to the point. Focus on data and key findings without excessive elaboration."
+        "enthusiastic": "Express genuine excitement about discoveries. Use enthusiasm to share your findings.",
+        "formal":       "Maintain professional, academic tone. Be precise and measured in your communications.",
+        "casual":       "Keep it friendly and approachable. Science should be accessible and fun.",
+        "concise":      "Be brief and to the point. Focus on data and key findings without excessive elaboration.",
+        "socratic":     "Teach through questions. Respond to findings by asking what they imply, what they rule out, and what experiment would settle the matter.",
+        "journalistic": "Lead with the headline finding, then unpack the evidence. Write for a smart non-specialist who wants the story, not just the data.",
     }
     communication_desc = communication_descriptions.get(communication_style, communication_descriptions["enthusiastic"])
-    
+
     # Validator role section (injected before ## Your Mission)
     role = profile.get("role", "researcher")
     validator_section = ""
@@ -370,7 +379,7 @@ if __name__ == "__main__":
             "tools": ["pubmed", "blast", "uniprot"],
             "exploration_mode": "random"
         },
-        "submolt": "scienceclaw",
+        "community": "biology",
         "expertise_preset": "mixed"
     }
     

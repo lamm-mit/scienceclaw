@@ -23,6 +23,7 @@ import random
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 # Add skills to path
 sys.path.insert(0, str(Path(__file__).parent / "skills" / "infinite" / "scripts"))
@@ -44,8 +45,13 @@ CONFIG_DIR = Path.home() / ".scienceclaw"
 PROFILE_FILE = CONFIG_DIR / "agent_profile.json"
 LLM_CONFIG_FILE = CONFIG_DIR / "llm_config.json"
 
-# Default submolt for science agents
-SCIENCE_SUBMOLT = "scienceclaw"
+# Preset → community mapping for --quick mode
+PRESET_COMMUNITY = {
+    "biology":   "biology",
+    "chemistry": "chemistry",
+    "materials": "materials",
+    "mixed":     "science",
+}
 
 # Expertise presets
 EXPERTISE_PRESETS = {
@@ -97,8 +103,8 @@ EXPERTISE_PRESETS = {
 
 # Quick defaults
 QUICK_DEFAULTS = {
-    "curiosity_styles": ["explorer", "deep-diver", "connector"],
-    "communication_styles": ["enthusiastic", "formal", "casual"],
+    "curiosity_styles": ["explorer", "deep-diver", "connector", "skeptic", "contrarian", "synthesizer", "pragmatist", "storyteller", "minimalist", "provocateur"],
+    "communication_styles": ["enthusiastic", "formal", "casual", "concise", "socratic", "journalistic"],
     "exploration_modes": ["random", "systematic", "question-driven"],
 }
 
@@ -340,7 +346,7 @@ def create_quick_profile(name: str = None, profile_preset: str = "mixed") -> dic
             "tools": tools,
             "exploration_mode": random.choice(QUICK_DEFAULTS["exploration_modes"]),
         },
-        "submolt": SCIENCE_SUBMOLT,
+        "community": PRESET_COMMUNITY.get(profile_preset, "science"),
         "expertise_preset": profile_preset,
     }
     
@@ -706,15 +712,17 @@ Files created:
     organisms = [o.strip() for o in raw_orgs.split(",") if o.strip()] if raw_orgs else []
 
     # ── Step 4: Preferred tools (interactive skill picker) ──────────────────
-    print("\n── Step 4/5: Preferred Tools ──")
+    print("\n── Step 4/6: Preferred Tools ──")
     print("  Select the skills your agent will use. Start with an empty selection.")
     tools = pick_skills_interactively(default_skills=[])
 
     # ── Step 5: Personality ─────────────────────────────────────────────────
-    print("\n── Step 5/5: Personality ──")
+    print("\n── Step 5/6: Personality ──")
     curiosity_options = QUICK_DEFAULTS["curiosity_styles"]
     comm_options = QUICK_DEFAULTS["communication_styles"]
-    print(f"  Curiosity styles: {', '.join(curiosity_options)}")
+    print(f"  Curiosity styles:")
+    for cs in curiosity_options:
+        print(f"    {cs}")
     raw_curiosity = input(f"  Curiosity style [explorer]: ").strip().lower()
     curiosity_style = raw_curiosity if raw_curiosity in curiosity_options else "explorer"
 
@@ -729,6 +737,13 @@ Files created:
     print(f"\n  Auto-generated bio: \"{default_bio}\"")
     raw_bio = input("  Biography (Enter to accept): ").strip()
     bio = raw_bio if raw_bio else default_bio
+
+    # ── Step 6: Community ────────────────────────────────────────────────────
+    print("\n── Step 6/6: Primary Community ──")
+    print("  Which community will this agent primarily post to?")
+    print("  Examples: biology, chemistry, materials, science")
+    raw_community = input("  Community [science]: ").strip()
+    community = raw_community if raw_community else "science"
 
     # ── Build profile ────────────────────────────────────────────────────────
     profile = {
@@ -748,7 +763,7 @@ Files created:
             "tools": tools,
             "exploration_mode": random.choice(QUICK_DEFAULTS["exploration_modes"]),
         },
-        "submolt": SCIENCE_SUBMOLT,
+        "community": community,
     }
 
     print(f"\n── Summary ──")
@@ -758,6 +773,7 @@ Files created:
         print(f"  Organisms:  {', '.join(organisms)}")
     print(f"  Tools ({len(tools)}): {', '.join(tools)}")
     print(f"  Style:      {curiosity_style}, {communication_style}")
+    print(f"  Community:  {community}")
     print()
     confirm = input("Create this agent? (y/n) [y]: ").strip().lower()
     if confirm == "n":
