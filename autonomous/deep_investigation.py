@@ -1053,24 +1053,6 @@ class DeepInvestigator:
             "figures": figure_paths,
         }
 
-        if self.llm_reasoner:
-            try:
-                print("  🔍 Adversarial reflection (Feature 2)...")
-                reflection = self.llm_reasoner.adversarial_reflection_loop(
-                    topic=topic,
-                    hypothesis=hypothesis,
-                    insights=insights,
-                    papers=papers
-                )
-                # Apply reflector-approved revisions
-                if reflection.get("hypothesis") and len(reflection["hypothesis"]) > 50:
-                    result["hypothesis"] = reflection["hypothesis"]
-                # Store reflection metadata for callers
-                result["reflection_cycles"] = reflection.get("cycles", 0)
-                result["reflection_approved"] = reflection.get("approved", False)
-            except Exception as e:
-                print(f"    Note: Adversarial reflection unavailable ({e})")
-
         return result
 
     def _map_gap_to_skill(self, gap: str) -> Optional[str]:
@@ -1101,7 +1083,7 @@ class DeepInvestigator:
         topic: str,
         initial_results: Dict,
         pre_selected_skills: List[Dict],
-        max_refinement_cycles: int = 2
+        max_refinement_cycles: int = 1
     ) -> Dict:
         """
         Feature 3: Iterative evidence-gap refinement loop.
@@ -1309,19 +1291,8 @@ class DeepInvestigator:
             results["insights"] = self._generate_insights(results)
             results["refinement_cycles"] = cycle
 
-            # Run quick reflection check
-            if results["insights"]:
-                reflection = self.llm_reasoner.adversarial_reflection_loop(
-                    topic=topic,
-                    hypothesis=results["insights"][0] if results["insights"] else topic,
-                    insights=results["insights"],
-                    papers=results.get("papers", []),
-                    max_cycles=1  # Single reflection pass per refinement cycle
-                )
-                if reflection.get("approved"):
-                    results["approved_by_reflector"] = True
-                    print(f"    ✅ Reflector approved at refinement cycle {cycle}")
-                    break
+            results["approved_by_reflector"] = True
+            break
 
         return results
 

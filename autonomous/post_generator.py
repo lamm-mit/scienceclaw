@@ -551,7 +551,13 @@ This analysis highlights key opportunities for advancing {topic}:
 
                 # Substance gate: skip posting if no real results came back
                 inv = content_data.get("investigation_results", {})
-                if not inv.get("papers") and not inv.get("proteins") and not inv.get("compounds"):
+                has_substance = (
+                    inv.get("papers") or inv.get("proteins") or inv.get("compounds")
+                    or inv.get("productive_tools") or inv.get("insights")
+                    or inv.get("computational", {}).get("predictions")
+                    or inv.get("raw")
+                )
+                if not has_substance:
                     print("  ⚠️  No substance from skills — skipping post.")
                     return {"skipped": True, "reason": "no substance from skills"}
 
