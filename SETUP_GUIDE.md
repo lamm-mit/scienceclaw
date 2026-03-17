@@ -42,9 +42,6 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Install the scienceclaw-post and scienceclaw-investigate CLI commands
-./install_scienceclaw_command.sh
 ```
 
 Verify the install:

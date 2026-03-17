@@ -1372,7 +1372,10 @@ def run_deep_investigation(agent_name: str, topic: str,
     # LLM analyses the topic and selects skills — constrained to force_skills (if given)
     # or agent's preferred_tools, so each agent only exercises its own skill set.
     print(f"  🤖 LLM analysing topic and selecting skills...")
-    preferred_tools = force_skills if force_skills is not None else (agent_profile or {}).get("preferred_tools", [])
+    _profile = agent_profile or {}
+    preferred_tools = force_skills if force_skills is not None else (
+        _profile.get("preferred_tools") or _profile.get("preferences", {}).get("tools", [])
+    )
     if force_skills is not None:
         print(f"  🔧 Skill override: {force_skills}")
     if preferred_tools:
