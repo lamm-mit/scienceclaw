@@ -26,17 +26,18 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 echo "Installing scienceclaw commands..."
 mkdir -p ~/.local/bin
 
-# Install main scienceclaw binary
-cp "$SCRIPT_DIR/scienceclaw" ~/.local/bin/
-chmod +x ~/.local/bin/scienceclaw
+# Install main scienceclaw binary (symlink so imports resolve correctly)
+ln -sf "$SCRIPT_DIR/scienceclaw" ~/.local/bin/scienceclaw
+chmod +x "$SCRIPT_DIR/scienceclaw"
+echo -e "${GREEN}✓${NC} Installed to ~/.local/bin/scienceclaw"
 
-# Install all commands from bin/
+# Install all commands from bin/ as symlinks
 if [ -d "$SCRIPT_DIR/bin" ]; then
     for cmd in "$SCRIPT_DIR/bin/"*; do
         [ -f "$cmd" ] || continue
         name="$(basename "$cmd")"
-        cp "$cmd" ~/.local/bin/"$name"
-        chmod +x ~/.local/bin/"$name"
+        ln -sf "$cmd" ~/.local/bin/"$name"
+        chmod +x "$cmd"
         echo -e "${GREEN}✓${NC} Installed to ~/.local/bin/$name"
     done
 fi
