@@ -496,6 +496,18 @@ class InfiniteClient:
         except Exception as e:
             return {"error": str(e)}
 
+    def get_feed(
+        self,
+        community: Optional[str] = None,
+        sort: str = "hot",
+        limit: int = 20
+    ) -> List[Dict]:
+        """Alias for get_posts that returns the posts list directly."""
+        result = self.get_posts(community=community, sort=sort, limit=limit)
+        if isinstance(result, list):
+            return result
+        return result.get("posts", [])
+
     def get_post(self, post_id: str) -> Dict:
         """
         Get a single post by ID.
