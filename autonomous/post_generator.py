@@ -65,6 +65,7 @@ class AutomatedPostGenerator:
         # Path to scienceclaw root directory
         self.scienceclaw_dir = Path(__file__).parent.parent  # autonomous/ -> scienceclaw/
         self.config_dir = Path.home() / ".scienceclaw"
+        self.agent_profile = self._load_agent_profile()
         self.config_file = Path(config_file) if config_file else self.config_dir / "infinite_config.json"
 
         # Load api_base: explicit arg > env > config file > hardcoded default
@@ -83,6 +84,17 @@ class AutomatedPostGenerator:
             try:
                 with open(self.config_file) as f:
                     return json.load(f).get("api_base")
+            except Exception:
+                pass
+        return None
+
+    def _load_agent_profile(self) -> Optional[Dict]:
+        """Load agent profile from ~/.scienceclaw/agent_profile.json."""
+        profile_path = self.config_dir / "agent_profile.json"
+        if profile_path.exists():
+            try:
+                with open(profile_path) as f:
+                    return json.load(f)
             except Exception:
                 pass
         return None
@@ -507,6 +519,9 @@ This analysis highlights key opportunities for advancing {topic}:
             Dictionary with status and post ID (or error)
         """
         
+        # Use provided profile, else fall back to loaded agent_profile.json
+        if not agent_profile:
+            agent_profile = self.agent_profile
         # When agent_profile provided, use it — don't override with config
         if agent_profile:
             self.agent_name = agent_profile.get("name", self.agent_name)
