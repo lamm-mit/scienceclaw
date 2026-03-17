@@ -323,7 +323,7 @@ class DeepInvestigator:
                     # every pubmed call to execute the identical query.
 
                 # Skills that require --smiles instead of a query string
-                _SMILES_SKILLS = {'askcos', 'rdkit', 'datamol'}
+                _SMILES_SKILLS = {'askcos', 'rdkit', 'datamol', 'molfeat'}
 
                 if _skill_base in _SMILES_SKILLS:
                     if 'smiles' not in params:
@@ -936,7 +936,7 @@ class DeepInvestigator:
 
         return generated
 
-    def generate_sophisticated_content(self, topic: str, investigation_results: Dict) -> Dict:
+    def generate_sophisticated_content(self, topic: str, investigation_results: Dict, use_plot_agent: bool = False) -> Dict:
         papers = investigation_results.get("papers", [])
         insights = investigation_results.get("insights", [])
         tools_used = investigation_results.get("tools_used", [])
@@ -1026,22 +1026,23 @@ class DeepInvestigator:
         figure_paths = self.generate_figures(topic, investigation_results)
 
         # PlotAgent: LLM-driven, publication-quality figure suite (Sparks-style)
-        try:
-            from autonomous.plot_agent import run_plot_agent
-            print("  🎨 Running PlotAgent for advanced figures...")
-            advanced_paths = run_plot_agent(
-                agent_name=self.agent_name,
-                topic=topic,
-                investigation_results=investigation_results,
-            )
-            # Merge; advanced figures take priority, basic ones fill the rest
-            existing_names = {Path(p).name for p in advanced_paths}
-            for bp in figure_paths:
-                if Path(bp).name not in existing_names:
-                    advanced_paths.append(bp)
-            figure_paths = advanced_paths
-        except Exception as e:
-            print(f"    Note: PlotAgent unavailable ({e}), using basic figures")
+        if use_plot_agent:
+            try:
+                from autonomous.plot_agent import run_plot_agent
+                print("  🎨 Running PlotAgent for advanced figures...")
+                advanced_paths = run_plot_agent(
+                    agent_name=self.agent_name,
+                    topic=topic,
+                    investigation_results=investigation_results,
+                )
+                # Merge; advanced figures take priority, basic ones fill the rest
+                existing_names = {Path(p).name for p in advanced_paths}
+                for bp in figure_paths:
+                    if Path(bp).name not in existing_names:
+                        advanced_paths.append(bp)
+                figure_paths = advanced_paths
+            except Exception as e:
+                print(f"    Note: PlotAgent unavailable ({e}), using basic figures")
 
         if figure_paths:
             content += "\n\n**Figures:**\n"
@@ -1059,27 +1060,39 @@ class DeepInvestigator:
 
         return result
 
-    def _map_gap_to_skill(self, gap: str) -> Optional[str]:
+    def _map_gap_to_skill(self, gap: str, preferred_tools: Optional[List[str]] = None) -> Optional[str]:
         """Map a gap description to a skill name using keyword matching.
 
-        Note: 'rdkit' is intentionally excluded — RDKit descriptors are already
-        computed in run_computational_validation() on every cycle via direct subprocess.
+        Only returns skills that are in preferred_tools (if specified).
         Gap-fill routing only returns skills compatible with the generic skill_executor
         (--query interface).
         """
+        allowed = set(t.lower() for t in preferred_tools) if preferred_tools else None
+
+        def _allowed(name: str) -> bool:
+            return allowed is None or name.lower() in allowed
+
         gap_lower = gap.lower()
+        candidates = []
         if any(k in gap_lower for k in ("homolog", "sequence", "blast", "evolutionary", "similarity")):
-            return "blast"
+            candidates.append("blast")
         if any(k in gap_lower for k in ("protein", "uniprot", "function", "domain", "annotation")):
-            return "uniprot"
+            candidates.append("uniprot")
         if any(k in gap_lower for k in ("compound", "chemical", "pubchem", "smiles", "structure")):
-            return "pubchem"
+            candidates.append("pubchem")
         if any(k in gap_lower for k in ("literature", "paper", "pubmed", "publication", "study")):
-            return "pubmed"
+            candidates.append("pubmed")
         if any(k in gap_lower for k in ("bioactivity", "ic50", "chembl", "assay", "ki", "inhibition")):
-            return "chembl"
+            candidates.append("chembl")
         if any(k in gap_lower for k in ("preprint", "arxiv", "recent", "machine learning")):
-            return "arxiv"
+            candidates.append("arxiv")
+        if any(k in gap_lower for k in ("admet", "bbb", "toxicity", "solubility", "absorption")):
+            candidates.append("tdc")
+        if any(k in gap_lower for k in ("structure", "pdb", "3d", "binding site", "fold")):
+            candidates.append("pdb")
+        for c in candidates:
+            if _allowed(c):
+                return c
         return None
 
     def run_refinement_loop(
@@ -1087,7 +1100,8 @@ class DeepInvestigator:
         topic: str,
         initial_results: Dict,
         pre_selected_skills: List[Dict],
-        max_refinement_cycles: int = 1
+        max_refinement_cycles: int = 1,
+        preferred_tools: Optional[List[str]] = None
     ) -> Dict:
         """
         Feature 3: Iterative evidence-gap refinement loop.
@@ -1126,7 +1140,8 @@ class DeepInvestigator:
             # Identify evidence gaps
             gaps = self.llm_reasoner.identify_evidence_gaps(
                 hypothesis=current_hypothesis,
-                insights=current_insights
+                insights=current_insights,
+                preferred_tools=preferred_tools
             )
 
             if not gaps:
@@ -1139,7 +1154,7 @@ class DeepInvestigator:
             # Map gaps to skills
             skills_to_run = []
             for gap in gaps:
-                skill_name = self._map_gap_to_skill(gap)
+                skill_name = self._map_gap_to_skill(gap, preferred_tools=preferred_tools)
                 if skill_name and skill_name not in used_skills:
                     skill_meta = self.skill_registry.get_skill(skill_name)
                     if skill_meta:
@@ -1322,7 +1337,8 @@ def run_deep_investigation(agent_name: str, topic: str,
                            community: Optional[str] = None,
                            agent_profile: Optional[Dict] = None,
                            skill_query_overrides: Optional[Dict[str, str]] = None,
-                           force_skills: Optional[List[str]] = None) -> Dict:
+                           force_skills: Optional[List[str]] = None,
+                           use_plot_agent: bool = False) -> Dict:
     """
     Main entry point. LLM selects skills, agent self-assembles, no fallbacks.
 
@@ -1399,7 +1415,8 @@ def run_deep_investigation(agent_name: str, topic: str,
         topic=topic,
         initial_results=results,
         pre_selected_skills=pre_selected_skills,
-        max_refinement_cycles=1
+        max_refinement_cycles=1,
+        preferred_tools=preferred_tools if preferred_tools else None
     )
 
     tools_used = results.get('tools_used', [])
@@ -1420,7 +1437,7 @@ def run_deep_investigation(agent_name: str, topic: str,
     print(f"  ✅ Approved by reflector: {results.get('approved_by_reflector', False)}")
     print(f"  💡 Insights: {len(results['insights'])}\n")
 
-    content = investigator.generate_sophisticated_content(topic, results)
+    content = investigator.generate_sophisticated_content(topic, results, use_plot_agent=use_plot_agent)
     investigator.log_investigation(topic, results)
 
     # Emit a synthesis artifact so peer agents can discover needs signals

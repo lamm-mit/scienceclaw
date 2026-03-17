@@ -62,12 +62,36 @@ class LLMScientificReasoner:
     def __init__(self, agent_name: str):
         """
         Initialize LLM reasoner.
-        
+
         Args:
             agent_name: Name of the agent (for context)
         """
         self.agent_name = agent_name
         self.scienceclaw_dir = Path(__file__).parent.parent
+        self.personality = self._load_personality()
+
+    def _load_personality(self) -> str:
+        """Load agent personality from agent_profile.json (same style as topic_analyzer role_context)."""
+        profile_path = Path.home() / ".scienceclaw" / "agent_profile.json"
+        if profile_path.exists():
+            try:
+                import json
+                profile = json.loads(profile_path.read_text())
+                parts = []
+                if profile.get("role"):
+                    parts.append(f"Role: {profile['role']}")
+                if profile.get("bio"):
+                    parts.append(f"Bio: {profile['bio']}")
+                interests = profile.get("research", {}).get("interests", [])
+                if interests:
+                    parts.append(f"Interests: {', '.join(interests[:5])}")
+                style = profile.get("communication_style", "")
+                if style:
+                    parts.append(f"Communication style: {style}")
+                return "\n".join(parts)
+            except Exception:
+                pass
+        return ""
         
     def _call_llm(self, prompt: str, max_tokens: int = 1000) -> str:
         """
@@ -277,28 +301,47 @@ Now generate the hypothesis:"""
         proteins = investigation_results.get("proteins", [])
         compounds = investigation_results.get("compounds", [])
         tools_used = investigation_results.get("tools_used", [])
-        
+        raw = investigation_results.get("raw", {})
+
         # Build comprehensive context
         context = f"""OBSERVATION - Multi-Tool Investigation Results for: {topic}
 
 Tools Used: {', '.join(tools_used)}
-
-Literature Evidence ({len(papers)} papers):
-{chr(10).join([f"- {p.get('title', 'Unknown')}" for p in papers[:5]])}
 """
-        
+        if papers:
+            context += f"\nLiterature Evidence ({len(papers)} papers):\n"
+            context += chr(10).join([f"- {p.get('title', 'Unknown')}" for p in papers[:5]])
+
         if proteins:
             context += f"\n\nProtein Characterization ({len(proteins)} entities):"
             for p in proteins[:3]:
                 context += f"\n- {p.get('name')}: {p.get('info', 'Characterized')[:100]}"
-        
+
         if compounds:
             context += f"\n\nChemical Analysis ({len(compounds)} compounds):"
             for c in compounds[:3]:
                 context += f"\n- {c.get('name')}: {c.get('info', 'Characterized')[:100]}"
-        
-        prompt = f"""{context}
 
+        # For chemistry/computation topics without papers/proteins, include raw tool outputs
+        if raw and not papers and not proteins:
+            context += "\n\nComputational Tool Outputs:"
+            for skill_name, skill_data in list(raw.items())[:4]:
+                if isinstance(skill_data, dict):
+                    # Extract a few key fields as a summary
+                    summary_parts = []
+                    for k, v in skill_data.items():
+                        if k in ('error', 'status', 'artifact_id'):
+                            continue
+                        val_str = str(v)[:150] if not isinstance(v, (list, dict)) else str(v)[:200]
+                        summary_parts.append(f"{k}: {val_str}")
+                    if summary_parts:
+                        context += f"\n- {skill_name}: " + "; ".join(summary_parts[:4])
+                elif isinstance(skill_data, str):
+                    context += f"\n- {skill_name}: {skill_data[:200]}"
+        
+        personality_block = f"\nYour personality:\n{self.personality}\n" if self.personality else ""
+        prompt = f"""{context}
+{personality_block}
 You are {self.agent_name}. Analyze this investigation and generate deep scientific insights.
 
 **Insight Requirements:**
@@ -553,7 +596,8 @@ REVISED_INSIGHTS:
         self,
         hypothesis: str,
         insights: List[str],
-        challenges: Optional[List[str]] = None
+        challenges: Optional[List[str]] = None,
+        preferred_tools: Optional[List[str]] = None
     ) -> List[str]:
         """
         Identify evidence gaps from current hypothesis and insights.
@@ -563,6 +607,7 @@ REVISED_INSIGHTS:
         if challenges:
             challenges_text = f"\nPeer reviewer challenges:\n" + "\n".join([f"- {c}" for c in challenges[:5]])
 
+        tools_hint = ", ".join(preferred_tools) if preferred_tools else "pubmed, uniprot, pubchem, chembl, tdc, rdkit, blast, pdb"
         prompt = f"""Given this hypothesis and insights, identify the most critical missing evidence:
 
 HYPOTHESIS: {hypothesis}
@@ -572,12 +617,12 @@ INSIGHTS:
 {challenges_text}
 
 List 2-4 specific evidence gaps that could be filled by computational tools.
-For each gap, focus on what DATABASE or COMPUTATIONAL tool could provide the data.
+For each gap, describe only the missing data type — do NOT include tool names or database names in parentheses.
 
 Format:
-GAP: [specific missing data type, e.g. "ADMET predictions for identified SMILES", "protein structure for binding site analysis", "sequence homology for evolutionary context"]
+GAP: [specific missing data type, e.g. "ADMET predictions for the identified compounds", "protein structure for binding site analysis", "sequence homology for evolutionary context"]
 
-Only list gaps addressable by: pubmed, uniprot, pubchem, chembl, tdc, rdkit, blast, pdb"""
+Only list gaps addressable by: {tools_hint}"""
 
         response = self._call_llm(prompt, max_tokens=400)
 
@@ -696,8 +741,9 @@ Only list gaps addressable by: pubmed, uniprot, pubchem, chembl, tdc, rdkit, bla
         Returns:
             Conclusion text with forward-looking perspective
         """
+        personality_block = f"\nYour personality:\n{self.personality}\n" if self.personality else ""
         prompt = f"""Based on this investigation of {topic}:
-
+{personality_block}
 HYPOTHESIS: {hypothesis}
 
 KEY INSIGHTS:
@@ -708,13 +754,14 @@ DATA INTEGRATED:
 - {'Protein characterization: Yes' if has_proteins else 'No protein data'}
 - {'Chemical analysis: Yes' if has_compounds else 'No chemical data'}
 
-Generate a scientifically rigorous conclusion that:
-1. Summarizes mechanistic understanding gained
-2. Discusses therapeutic/translational potential
-3. Identifies specific next experimental steps
-4. Acknowledges limitations and future research directions
+Write a conclusion that feels like a real scientist excited about their findings. It should:
+1. Name the specific mechanisms or results uncovered (no vague generalities)
+2. Say what's surprising, interesting, or worth following up — and why
+3. Propose 1-2 concrete next computational steps tied to what was actually found
+4. Be direct and enthusiastic, not stiff or bureaucratic
 
-Use professional scientific language. Be specific about proposed experiments.
+Avoid: "further research is needed", "has been shown to", "multiple lines of evidence".
+Write as {self.agent_name} — curious, specific, forward-looking.
 
 CONCLUSION:"""
         
