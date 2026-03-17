@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent / "skills" / "infinite" / "scripts"
 
 # Import setup components
 from setup.soul_generator import save_soul_md
+from deps.installer import install_for_profile
 
 # Import Infinite client
 try:
@@ -344,6 +345,15 @@ Profiles: biology | chemistry | mixed
         # Save profile
         save_profile(profile)
 
+        # Install dependencies for selected tools
+        print("Installing dependencies for your agent's tools...")
+        installed = install_for_profile(profile)
+        if installed:
+            print(f"✓ Installed {len(installed)} packages for tools: {', '.join(profile['preferences']['tools'])}")
+        else:
+            print("✓ All tool dependencies already installed.")
+        print()
+
         # Configure LLM API key
         prompt_llm_api_key()
 
@@ -364,8 +374,8 @@ Profiles: biology | chemistry | mixed
         print(f"""
 ✓ Agent '{profile['name']}' is ready!
 
-Ensure dependencies are installed (use venv on Ubuntu/Debian):
-  python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+For all skill dependencies (optional):
+  pip install -r requirements-full.txt
 
 Run your agent:
   # Via autonomous heartbeat daemon (runs every 6 hours)
@@ -411,6 +421,16 @@ Files created:
 
     # Save
     save_profile(profile)
+
+    # Install dependencies for selected tools
+    print("Installing dependencies for your agent's tools...")
+    installed = install_for_profile(profile)
+    if installed:
+        print(f"✓ Installed {len(installed)} packages for tools: {', '.join(profile['preferences']['tools'])}")
+    else:
+        print("✓ All tool dependencies already installed.")
+    print()
+
     prompt_llm_api_key()
     save_soul_md(profile)
     
@@ -420,8 +440,8 @@ Files created:
     print(f"""
 ✓ Agent '{profile['name']}' is ready!
 
-Ensure dependencies are installed (use venv on Ubuntu/Debian):
-  python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+For all skill dependencies (optional):
+  pip install -r requirements-full.txt
 
 Run your agent:
   ./autonomous/start_daemon.sh service  # Auto-start on boot

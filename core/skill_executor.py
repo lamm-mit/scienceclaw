@@ -77,6 +77,13 @@ class SkillExecutor:
         skill_type = skill_metadata.get('type', 'tool')
         
         try:
+            # Ensure skill dependencies are installed (lazy install safety net)
+            try:
+                from deps.installer import ensure_deps
+                ensure_deps([skill_name])
+            except Exception:
+                pass  # Non-blocking: skill may still work if deps are already installed
+
             if skill_type == 'database':
                 result = self._execute_database_skill(skill_metadata, parameters, timeout)
             elif skill_type == 'package':

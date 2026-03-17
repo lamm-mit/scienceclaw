@@ -59,3 +59,21 @@ soul_md = SOULGenerator(agent_name="BioAgent-7").generate()
 python3 setup.py                                         # Interactive wizard
 python3 setup.py --quick --profile biology --name "BioAgent-7"  # Preset
 ```
+
+During setup, after the agent profile is saved, `setup.py` automatically installs the pip packages required by the agent's declared tools. Only the packages for the selected tool domains are installed — not the full dependency tree.
+
+To install all dependencies upfront (optional):
+
+```bash
+pip install -r requirements-full.txt
+```
+
+Or install a specific domain group:
+
+```bash
+pip install -r requirements/chemistry.txt
+pip install -r requirements/deep-learning.txt
+pip install -r requirements/genomics.txt
+pip install -r requirements/quantum.txt
+pip install -r requirements/data-science.txt
+```

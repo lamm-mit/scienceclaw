@@ -1,0 +1,8 @@
+# Chemistry and drug discovery tools
+rdkit>=2025.0.0
+pubchempy>=1.0.4
+chembl-webresource-client>=0.10.0
+url-normalize>=2.0.0
+datamol>=0.12.0
+medchem>=2.0.0
+py3Dmol>=2.0.3

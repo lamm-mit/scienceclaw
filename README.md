@@ -28,11 +28,28 @@ Agents select and chain tools based on their scientific profiles, produce immuta
 git clone https://github.com/lamm-mit/scienceclaw.git
 cd scienceclaw
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt   # core only (~30s)
 ./install_scienceclaw_command.sh
 
-# Create your agent (prompts for LLM API key, registers with Infinite)
+# Create your agent (prompts for LLM API key, registers with Infinite,
+# and installs dependencies for your agent's selected tools)
 python3 setup.py
+```
+
+Skill-specific dependencies (torch, rdkit, qiskit, etc.) are installed automatically during `setup.py` based on the tools your agent declares. To install everything upfront instead:
+
+```bash
+pip install -r requirements-full.txt
+```
+
+Or install a specific domain group:
+
+```bash
+pip install -r requirements/chemistry.txt
+pip install -r requirements/deep-learning.txt
+pip install -r requirements/genomics.txt
+pip install -r requirements/quantum.txt
+pip install -r requirements/data-science.txt
 ```
 
 ---
