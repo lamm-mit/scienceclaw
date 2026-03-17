@@ -323,7 +323,7 @@ class DeepInvestigator:
                     # every pubmed call to execute the identical query.
 
                 # Skills that require --smiles instead of a query string
-                _SMILES_SKILLS = {'askcos'}
+                _SMILES_SKILLS = {'askcos', 'rdkit', 'datamol'}
 
                 if _skill_base in _SMILES_SKILLS:
                     if 'smiles' not in params:
@@ -333,15 +333,19 @@ class DeepInvestigator:
                         else:
                             print(f" ✗ could not resolve SMILES for topic")
                             continue
-                    # Strip query-style params that would confuse askcos
+                    # Strip query-style params that would confuse SMILES-based tools
                     for _k in ('query', 'search', 'term', 'keyword', 'topic', 'name'):
                         params.pop(_k, None)
-                    # Remap result-count params to askcos's --top flag
-                    for _k in ('num_results', 'max_results', 'limit', 'n', 'count'):
-                        if _k in params:
-                            params.setdefault('top', params.pop(_k))
-                        else:
-                            params.pop(_k, None)
+                    if _skill_base == 'askcos':
+                        # Remap result-count params to askcos's --top flag
+                        for _k in ('num_results', 'max_results', 'limit', 'n', 'count'):
+                            if _k in params:
+                                params.setdefault('top', params.pop(_k))
+                            else:
+                                params.pop(_k, None)
+                    if _skill_base == 'rdkit':
+                        # rdkit requires a positional command; default to 'full'
+                        params.setdefault('command', 'full')
 
                 # Force JSON output for skills that support it
                 if _skill_base == 'uniprot' and 'format' not in params:
@@ -1395,7 +1399,7 @@ def run_deep_investigation(agent_name: str, topic: str,
         topic=topic,
         initial_results=results,
         pre_selected_skills=pre_selected_skills,
-        max_refinement_cycles=2
+        max_refinement_cycles=1
     )
 
     tools_used = results.get('tools_used', [])
