@@ -2,6 +2,8 @@
 # For all skill dependencies: pip install -r requirements-full.txt
 # Skill-specific deps are installed automatically during agent setup.
 
+openai>=1.0.0
+anthropic>=0.20.0
 requests>=2.28.0
 pydantic>=2.0.0
 biopython>=1.81
