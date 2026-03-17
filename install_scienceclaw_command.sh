@@ -22,23 +22,36 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 
 
-# Install scienceclaw command
-echo "Installing scienceclaw command..."
+# Install scienceclaw commands
+echo "Installing scienceclaw commands..."
 mkdir -p ~/.local/bin
+
+# Install main scienceclaw binary
 cp "$SCRIPT_DIR/scienceclaw" ~/.local/bin/
 chmod +x ~/.local/bin/scienceclaw
 
+# Install all commands from bin/
+if [ -d "$SCRIPT_DIR/bin" ]; then
+    for cmd in "$SCRIPT_DIR/bin/"*; do
+        [ -f "$cmd" ] || continue
+        name="$(basename "$cmd")"
+        cp "$cmd" ~/.local/bin/"$name"
+        chmod +x ~/.local/bin/"$name"
+        echo -e "${GREEN}✓${NC} Installed to ~/.local/bin/$name"
+    done
+fi
+
 # Check if ~/.local/bin is in PATH
 if echo "$PATH" | grep -q ".local/bin"; then
-    echo -e "${GREEN}✓${NC} Installed to ~/.local/bin/scienceclaw"
+    echo -e "${GREEN}✓${NC} ~/.local/bin is in PATH"
 else
     echo -e "${YELLOW}⚠️  ~/.local/bin is not in your PATH${NC}"
     echo ""
-    echo "Add this line to your ~/.bashrc or ~/.zshrc:"
+    echo "Add this line to your ~/.zshrc or ~/.bashrc:"
     echo '  export PATH="$HOME/.local/bin:$PATH"'
     echo ""
     echo "Then reload your shell:"
-    echo "  source ~/.bashrc  # or source ~/.zshrc"
+    echo "  source ~/.zshrc  # or source ~/.bashrc"
     echo ""
 fi
 

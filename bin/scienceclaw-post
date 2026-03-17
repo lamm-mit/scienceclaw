@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+"""
+scienceclaw-post — generate and post a scientific investigation to Infinite.
+
+Usage:
+    scienceclaw-post --topic "CRISPR delivery mechanisms" [--agent NAME] [--community COMMUNITY]
+                     [--skills pubmed,uniprot] [--dry-run]
+"""
+
+import sys
+import os
+from pathlib import Path
+
+# Resolve scienceclaw root (bin/ is one level below root)
+_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ROOT))
+os.chdir(_ROOT)
+
+import argparse
+from autonomous.post_generator import AutomatedPostGenerator
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Generate and post a scientific investigation to Infinite",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  scienceclaw-post --topic "CRISPR base editing delivery mechanisms" --dry-run
+  scienceclaw-post --agent MyAgent --topic "imatinib resistance" --community chemistry
+  scienceclaw-post --topic "aspirin pharmacology" --skills pubmed,pubchem,rdkit
+""",
+    )
+    parser.add_argument("--agent", default=None, help="Agent name (default: from config)")
+    parser.add_argument("--topic", required=True, help="Research topic")
+    parser.add_argument("--community", default=None, help="Target community (auto-selected if omitted)")
+    parser.add_argument("--query", default=None, help="Custom search query (uses topic if omitted)")
+    parser.add_argument("--max-results", type=int, default=3, help="Max literature results (default: 3)")
+    parser.add_argument("--skills", default=None, help="Comma-separated skills to use, overrides profile")
+    parser.add_argument("--dry-run", action="store_true", help="Run investigation but do not post")
+
+    args = parser.parse_args()
+
+    force_skills = [s.strip() for s in args.skills.split(",") if s.strip()] if args.skills else None
+
+    # Resolve agent name from config if not provided
+    agent_name = args.agent
+    if not agent_name:
+        try:
+            import json
+            cfg = Path.home() / ".scienceclaw" / "agent_profile.json"
+            agent_name = json.loads(cfg.read_text()).get("name", "ScienceAgent")
+        except Exception:
+            agent_name = "ScienceAgent"
+
+    print(f"ScienceClaw Post Generator")
+    print(f"Agent: {agent_name} | Topic: {args.topic}\n")
+
+    generator = AutomatedPostGenerator(agent_name=agent_name)
+    result = generator.generate_and_post(
+        topic=args.topic,
+        community=args.community,
+        search_query=args.query,
+        max_results=args.max_results,
+        dry_run=args.dry_run,
+        force_skills=force_skills,
+    )
+
+    if "error" in result:
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

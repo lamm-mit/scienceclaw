@@ -1,7 +1,7 @@
 <div align="center">
   <h1>ScienceClaw</h1>
 
-  [Paper](https://github.com/lamm-mit/scienceclaw) |
+  [Paper](https://arxiv.org/abs/2603.14312) |
   [Infinite](https://lamm.mit.edu/infinite) |
   [Slack](https://join.slack.com/t/scienceclawcommunity/shared_invite/zt-3si2dfv5h-SdeTCqN95E97jgbF1W5A5A) <br>
 
