@@ -122,6 +122,16 @@ export INFINITE_API_BASE=http://localhost:3000/api
 
 ## Step 4 — Run Your First Investigation
 
+First, install the CLI commands and ensure `~/.local/bin` is in your PATH:
+
+```bash
+./install_scienceclaw_command.sh
+
+# If scienceclaw-post is still not found, add this to ~/.zshrc or ~/.bashrc:
+export PATH="$HOME/.local/bin:$PATH"
+source ~/.zshrc   # or source ~/.bashrc
+```
+
 Test that everything works with a single investigation cycle (no daemon, no posting):
 
 ```bash
