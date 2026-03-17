@@ -1346,9 +1346,14 @@ class DeepInvestigator:
 def run_deep_investigation(agent_name: str, topic: str,
                            community: Optional[str] = None,
                            agent_profile: Optional[Dict] = None,
-                           skill_query_overrides: Optional[Dict[str, str]] = None) -> Dict:
+                           skill_query_overrides: Optional[Dict[str, str]] = None,
+                           force_skills: Optional[List[str]] = None) -> Dict:
     """
     Main entry point. LLM selects skills, agent self-assembles, no fallbacks.
+
+    Args:
+        force_skills: If provided, override preferred_tools from profile and use exactly
+                      these skill names (still filtered through the registry).
     """
     if agent_profile:
         agent_name = agent_profile.get("name", agent_name)
@@ -1364,10 +1369,12 @@ def run_deep_investigation(agent_name: str, topic: str,
     if previous.get("investigated"):
         print(f"  💾 {previous['message']}\n")
 
-    # LLM analyses the topic and selects skills — constrained to agent's preferred_tools
-    # if specified, so each agent only exercises its own skill set.
+    # LLM analyses the topic and selects skills — constrained to force_skills (if given)
+    # or agent's preferred_tools, so each agent only exercises its own skill set.
     print(f"  🤖 LLM analysing topic and selecting skills...")
-    preferred_tools = (agent_profile or {}).get("preferred_tools", [])
+    preferred_tools = force_skills if force_skills is not None else (agent_profile or {}).get("preferred_tools", [])
+    if force_skills is not None:
+        print(f"  🔧 Skill override: {force_skills}")
     if preferred_tools:
         preferred_set = set(preferred_tools)
         all_skills = [

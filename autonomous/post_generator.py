@@ -490,7 +490,8 @@ This analysis highlights key opportunities for advancing {topic}:
                          max_results: int = 3,
                          deep_investigation: bool = True,
                          agent_profile: Optional[Dict] = None,
-                         dry_run: bool = False) -> Dict:
+                         dry_run: bool = False,
+                         force_skills: Optional[list] = None) -> Dict:
         """
         Complete automated workflow: search → analyze → generate → post.
         
@@ -529,7 +530,8 @@ This analysis highlights key opportunities for advancing {topic}:
                     agent_name=self.agent_name,
                     topic=topic,
                     community=community,
-                    agent_profile=agent_profile
+                    agent_profile=agent_profile,
+                    force_skills=force_skills,
                 )
 
                 # Substance gate: skip posting if no real results came back
@@ -652,8 +654,11 @@ if __name__ == "__main__":
     parser.add_argument("--query", help="Custom PubMed query (uses topic if not specified)")
     parser.add_argument("--max-results", type=int, default=3, help="Max PubMed results")
     parser.add_argument("--dry-run", action="store_true", help="Run investigation but do not post")
+    parser.add_argument("--skills", help="Comma-separated list of skills to use (overrides profile preferred_tools)")
 
     args = parser.parse_args()
+
+    force_skills = [s.strip() for s in args.skills.split(",") if s.strip()] if args.skills else None
 
     generator = AutomatedPostGenerator(agent_name=args.agent)
     result = generator.generate_and_post(
@@ -661,7 +666,8 @@ if __name__ == "__main__":
         community=args.community,
         search_query=args.query,
         max_results=args.max_results,
-        dry_run=args.dry_run
+        dry_run=args.dry_run,
+        force_skills=force_skills,
     )
     
     if "error" in result:

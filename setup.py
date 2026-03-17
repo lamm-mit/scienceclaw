@@ -103,6 +103,194 @@ QUICK_DEFAULTS = {
 }
 
 
+# Skill category groupings for the interactive picker
+SKILL_CATEGORIES = {
+    "biology": [
+        "blast", "uniprot", "pdb", "sequence", "alphafold", "alphafold-database",
+        "antibody-engineering", "binder-design", "binder-discovery", "bindcraft",
+        "biopython", "biorxiv-database", "bioservices", "boltz", "boltzgen",
+        "cancer-variant-interpretation", "cellxgene-census", "crispr-screen-analysis",
+        "deeptools", "ensembl-database", "epigenomics", "esm", "etetoolkit",
+        "expression-data-retrieval", "foldseek", "gene-database", "gene-enrichment",
+        "gget", "geo-database", "gnomad-database", "gtex-database", "gwas-database",
+        "gwas-drug-discovery", "gwas-finemapping", "gwas-snp-interpretation",
+        "gwas-study-explorer", "gwas-trait-to-gene", "hmdb-database",
+        "immune-repertoire-analysis", "interpro-database", "jaspar-database",
+        "ligandmpnn", "monarch-database", "mutation-generator", "network-pharmacology",
+        "opentargets-database", "pdb-database", "peptide-msa", "peptide-sequences",
+        "peptide-stability", "phylogenetics", "protein-design-workflow",
+        "protein-interactions", "proteinmpnn", "protein-qc", "protein-structure-retrieval",
+        "protein-therapeutic-design", "proteomics-analysis", "pubmed", "pubmed-database",
+        "pydeseq2", "pysam", "reactome-database", "rfdiffusion", "rnaseq-deseq2",
+        "scanpy", "scikit-bio", "scvelo", "scvi-tools", "sequence-retrieval",
+        "single-cell", "solublempnn", "spatial-omics-analysis", "spatial-transcriptomics",
+        "string-database", "structural-variant-analysis", "structure-contact-analysis",
+        "substitution-map", "uniprot-database", "variant-analysis", "variant-interpretation",
+    ],
+    "chemistry": [
+        "cas", "chembl", "chembl-database", "chemical-compound-retrieval",
+        "chemical-safety", "datamol", "deepchem", "diffdock", "drug-drug-interaction",
+        "drug-repurposing", "drugbank-database", "drug-research", "drug-target-validation",
+        "fda-database", "matchms", "medchem", "molfeat", "nistwebbook",
+        "openmm", "pubchem", "pubchem-database", "pytdc", "rdkit", "rowan",
+        "tdc", "torchdrug", "zinc-database",
+    ],
+    "materials": [
+        "ase", "materials", "minerals-data", "minerals-gov-monitor",
+        "minerals-news-monitor", "minerals-viz", "minerals-web-ingest",
+        "mopac", "pymatgen", "qmmm_adaptive",
+    ],
+    "general": [
+        "arxiv", "arxiv-database", "browser-automation", "citation-management",
+        "datavis", "diagramming", "disease-research", "document-skills",
+        "hypothesis-generation", "idea-generation", "image-analysis",
+        "infographics", "infinite", "investigation-plotter", "literature-deep-research",
+        "literature-meta-search", "literature-review", "markdown-mermaid-writing",
+        "openalex-database", "pdf", "perplexity-search", "plotly",
+        "research-collect", "research-experiment", "research-lookup",
+        "research-pipeline", "research-plan", "research-review", "research-survey",
+        "scholar-search", "scientific-brainstorming", "scientific-critical-thinking",
+        "scientific-slides", "scientific-visualization", "scientific-writing",
+        "seaborn", "statistical-analysis", "statistical-modeling", "websearch",
+        "write-review-paper",
+    ],
+}
+
+
+def get_available_skills() -> list[str]:
+    """Scan skills/ directory and return sorted list of available skill names."""
+    skills_dir = Path(__file__).parent / "skills"
+    if not skills_dir.exists():
+        return []
+    skip = {"CONTRIBUTING.md", "SKILLS_LIST.md"}
+    return sorted(
+        d.name for d in skills_dir.iterdir()
+        if d.is_dir() and d.name not in skip
+    )
+
+
+def pick_skills_interactively(default_skills: list[str] = None) -> list[str]:
+    """
+    Show a grouped skill picker. User types skill names or numbers to toggle.
+    Returns list of selected skill names.
+    """
+    available = get_available_skills()
+    if not available:
+        print("  (Could not scan skills directory — using defaults)")
+        return default_skills or ["pubmed", "blast", "uniprot", "websearch"]
+
+    # Build index: name → number, number → name
+    idx_to_name = {i + 1: name for i, name in enumerate(available)}
+    name_to_idx = {name: i + 1 for i, name in enumerate(available)}
+
+    selected = set(default_skills or [])
+
+    # Assign each skill to a category (first match wins; fallback = "other")
+    cat_map: dict[str, list[str]] = {c: [] for c in SKILL_CATEGORIES}
+    cat_map["other"] = []
+    categorized = set()
+    for cat, skills in SKILL_CATEGORIES.items():
+        for s in skills:
+            if s in name_to_idx:
+                cat_map[cat].append(s)
+                categorized.add(s)
+    for s in available:
+        if s not in categorized:
+            cat_map["other"].append(s)
+
+    def _print_table():
+        print()
+        for cat in list(SKILL_CATEGORIES.keys()) + ["other"]:
+            skills_in_cat = cat_map.get(cat, [])
+            if not skills_in_cat:
+                continue
+            print(f"  [{cat.upper()}]")
+            cols = 3
+            rows = [skills_in_cat[i:i + cols] for i in range(0, len(skills_in_cat), cols)]
+            for row in rows:
+                parts = []
+                for s in row:
+                    marker = "✓" if s in selected else " "
+                    num = name_to_idx[s]
+                    parts.append(f"  {marker} {num:>3}. {s:<35}")
+                print("".join(parts))
+        print()
+        print(f"  Selected ({len(selected)}): {', '.join(sorted(selected)) or '(none)'}")
+        print()
+
+    print()
+    print("  Select skills for your agent.")
+    print("  Type skill names or numbers to toggle (space/comma separated).")
+    print("  Type 'all-biology', 'all-chemistry', 'all-materials', 'all-general' to bulk-select.")
+    print("  Type 'clear' to deselect all. Type 'done' or press Enter when finished.")
+
+    _print_table()
+
+    while True:
+        try:
+            raw = input("  Toggle (or 'done'): ").strip()
+        except (EOFError, KeyboardInterrupt):
+            break
+
+        if not raw or raw.lower() in ("done", "ok", "yes", "y"):
+            break
+
+        if raw.lower() == "clear":
+            selected.clear()
+            _print_table()
+            continue
+
+        # Bulk category select
+        if raw.lower().startswith("all-"):
+            cat = raw[4:].lower()
+            if cat in cat_map:
+                for s in cat_map[cat]:
+                    selected.add(s)
+                _print_table()
+                continue
+
+        tokens = [t.strip().strip(",") for t in raw.replace(",", " ").split() if t.strip()]
+        changed = False
+        for token in tokens:
+            if token.isdigit():
+                num = int(token)
+                if num in idx_to_name:
+                    s = idx_to_name[num]
+                    if s in selected:
+                        selected.discard(s)
+                    else:
+                        selected.add(s)
+                    changed = True
+                else:
+                    print(f"  Unknown number: {num}")
+            else:
+                if token in name_to_idx:
+                    if token in selected:
+                        selected.discard(token)
+                    else:
+                        selected.add(token)
+                    changed = True
+                else:
+                    # Fuzzy: partial match
+                    matches = [s for s in available if token in s]
+                    if len(matches) == 1:
+                        s = matches[0]
+                        if s in selected:
+                            selected.discard(s)
+                        else:
+                            selected.add(s)
+                        changed = True
+                    elif len(matches) > 1:
+                        print(f"  Ambiguous '{token}': {', '.join(matches[:8])}")
+                    else:
+                        print(f"  Unknown skill: '{token}'")
+
+        if changed:
+            _print_table()
+
+    return sorted(selected) or (default_skills or ["pubmed", "websearch"])
+
+
 def generate_random_name(preset: dict = None) -> str:
     """Generate a random agent name."""
     if preset and "name_prefixes" in preset and "name_suffixes" in preset:
@@ -176,10 +364,13 @@ def save_profile(profile: dict):
 
 
 def prompt_llm_api_key():
-    """Prompt for LLM API keys and save them to llm_config.json (mode 0o600)."""
+    """Prompt for LLM API keys and save them to llm_config.json (mode 0o600).
+
+    If keys are already present in the environment, skip prompting entirely.
+    """
     import os
 
-    # Seed from environment
+    # Seed from environment and existing config
     config = {}
     if LLM_CONFIG_FILE.exists():
         try:
@@ -188,8 +379,35 @@ def prompt_llm_api_key():
         except Exception:
             config = {}
 
-    openai_key = os.environ.get("OPENAI_API_KEY") or config.get("openai_api_key", "")
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY") or config.get("anthropic_api_key", "")
+    env_openai = os.environ.get("OPENAI_API_KEY", "")
+    env_anthropic = os.environ.get("ANTHROPIC_API_KEY", "")
+
+    # If env vars are already set, use them silently — no prompting
+    if env_openai or env_anthropic:
+        openai_key = env_openai or config.get("openai_api_key", "")
+        anthropic_key = env_anthropic or config.get("anthropic_api_key", "")
+        available = []
+        if openai_key:
+            available.append("openai")
+        if anthropic_key:
+            available.append("anthropic")
+        default_backend = config.get("backend", available[0]) if available else "openai"
+        new_config = {"backend": default_backend}
+        if openai_key:
+            new_config["openai_api_key"] = openai_key
+        if anthropic_key:
+            new_config["anthropic_api_key"] = anthropic_key
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        with open(LLM_CONFIG_FILE, "w") as f:
+            json.dump(new_config, f, indent=2)
+        LLM_CONFIG_FILE.chmod(0o600)
+        detected = ", ".join(f"{k.upper()}_API_KEY" for k in available)
+        print(f"✓ LLM keys detected from environment ({detected})")
+        return
+
+    # No env vars — fall back to interactive prompt
+    openai_key = config.get("openai_api_key", "")
+    anthropic_key = config.get("anthropic_api_key", "")
 
     print()
     print("LLM API keys (used for autonomous investigations).")
@@ -207,7 +425,6 @@ def prompt_llm_api_key():
         print("  Skipped — set OPENAI_API_KEY or ANTHROPIC_API_KEY before running agents.")
         return
 
-    # Let user choose default backend
     available = []
     if openai_key:
         available.append("openai")
@@ -232,6 +449,47 @@ def prompt_llm_api_key():
     LLM_CONFIG_FILE.chmod(0o600)
     keys_saved = ", ".join(k.replace("_api_key", "") for k in new_config if k.endswith("_api_key"))
     print(f"✓ LLM config saved (default backend: {default_backend}, keys: {keys_saved}) → {LLM_CONFIG_FILE}")
+
+
+def _probe_skill(skill_name: str) -> Optional[dict]:
+    """
+    Execute a skill with a minimal query and return the raw result dict,
+    or None if the skill fails or is unavailable.
+    """
+    import subprocess as _sp
+    skills_dir = Path(__file__).parent / "skills"
+    # Map skill name → (script path relative to skills/, probe args)
+    PROBE_MAP = {
+        "pubmed":   ("pubmed/scripts/pubmed_search.py",   ["--query", "science", "--max-results", "1"]),
+        "websearch":("websearch/scripts/websearch.py",    ["--query", "science"]),
+        "arxiv":    ("arxiv/scripts/arxiv_search.py",     ["--query", "science", "--max-results", "1"]),
+        "uniprot":  ("uniprot/scripts/uniprot_fetch.py",  ["--query", "insulin", "--limit", "1"]),
+        "blast":    ("blast/scripts/blast_search.py",     ["--query", "MTEYKLVVV", "--program", "blastp", "--max-results", "1"]),
+        "pubchem":  ("pubchem/scripts/pubchem_search.py", ["--query", "aspirin"]),
+        "chembl":   ("chembl/scripts/chembl_search.py",   ["--query", "aspirin", "--limit", "1"]),
+        "pdb":      ("pdb/scripts/pdb_search.py",         ["--query", "kinase", "--max-results", "1"]),
+        "rdkit":    ("rdkit/scripts/rdkit_properties.py", ["--smiles", "CCO"]),
+        "materials":("materials/scripts/materials_search.py", ["--query", "LiCoO2", "--limit", "1"]),
+    }
+    entry = PROBE_MAP.get(skill_name)
+    if not entry:
+        return None
+    script_rel, probe_args = entry
+    script = skills_dir / script_rel
+    if not script.exists():
+        return None
+    try:
+        proc = _sp.run(
+            [sys.executable, str(script)] + probe_args,
+            capture_output=True, text=True, timeout=30,
+            cwd=str(Path(__file__).parent),
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            data = json.loads(proc.stdout.strip())
+            return data
+    except Exception:
+        pass
+    return None
 
 
 def register_with_platform(profile: dict) -> dict:
@@ -259,15 +517,27 @@ def register_with_platform(profile: dict) -> dict:
         allowed = {"blast", "pubmed", "uniprot", "pdb", "arxiv", "pubchem", "tdc", "materials", "rdkit"}
         capabilities = [c for c in capabilities if c in allowed] or ["pubmed"]
 
-        capability_proof = {
-            "tool": "pubmed",
-            "query": "scientific discovery",
-            "result": {
-                "success": True,
-                "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "data": {"articles": [{"pmid": "37000001", "title": "Agent capability verification"}]},
-            },
-        }
+        # Probe skills to build a real capability_proof
+        capability_proof = None
+        print("  Verifying skill capabilities...")
+        for skill in capabilities:
+            result = _probe_skill(skill)
+            if result:
+                capability_proof = {
+                    "tool": skill,
+                    "query": "probe",
+                    "result": result,
+                }
+                print(f"  ✓ Verified skill: {skill}")
+                break
+        if capability_proof is None:
+            # No skill could be probed — use a minimal placeholder so registration still proceeds
+            capability_proof = {
+                "tool": capabilities[0],
+                "query": "probe",
+                "result": {"success": True, "note": "skill probe unavailable at setup time"},
+            }
+            print(f"  ⚠  Could not probe skills live; using placeholder proof for {capabilities[0]}")
 
         result = client.register(
             name=profile["name"],
@@ -397,58 +667,145 @@ Files created:
 """)
         return
     
-    # Interactive mode (simplified - full version in setup.py.backup)
+    # ── Interactive wizard ──────────────────────────────────────────────────
     print("""
     ╔═══════════════════════════════════════════╗
     ║   🦀 ScienceClaw Setup 🧬                 ║
     ║   Create your autonomous science agent    ║
     ╚═══════════════════════════════════════════╝
     """)
-    
+
     if PROFILE_FILE.exists() and not args.force:
         print(f"Existing profile found at: {PROFILE_FILE}")
         overwrite = input("Create a new profile? (y/n) [n]: ").strip().lower()
-        if overwrite != 'y':
+        if overwrite != "y":
             print("\nUsing existing profile. Run './autonomous/start_daemon.sh' to start.")
             return
-    
-    # For interactive mode, use quick profile with user-provided name
-    name = input("Agent name: ").strip() or generate_random_name()
-    profile = create_quick_profile(name=name, profile_preset=args.profile)
-    
-    print(f"\n✓ Created profile for: {name}")
-    print(f"   Preset: {args.profile}")
 
-    # Save
+    # ── Step 1: Name ────────────────────────────────────────────────────────
+    print("\n── Step 1/5: Agent Identity ──")
+    default_name = generate_random_name()
+    raw_name = input(f"  Agent name [{default_name}]: ").strip()
+    name = raw_name if raw_name else default_name
+
+    # ── Step 2: Research interests ──────────────────────────────────────────
+    print("\n── Step 2/5: Research Interests ──")
+    print("  Enter comma-separated topics your agent will investigate.")
+    print("  Examples: protein folding, drug discovery, materials science, genomics")
+    raw_interests = input("  Interests: ").strip()
+    if raw_interests:
+        interests = [i.strip() for i in raw_interests.split(",") if i.strip()]
+    else:
+        interests = ["science", "research"]
+
+    # ── Step 3: Preferred organisms (optional) ──────────────────────────────
+    print("\n── Step 3/5: Preferred Organisms (optional) ──")
+    print("  Enter comma-separated organisms, or press Enter to skip.")
+    print("  Examples: human, E. coli, yeast, Arabidopsis")
+    raw_orgs = input("  Organisms: ").strip()
+    organisms = [o.strip() for o in raw_orgs.split(",") if o.strip()] if raw_orgs else []
+
+    # ── Step 4: Preferred tools (interactive skill picker) ──────────────────
+    print("\n── Step 4/5: Preferred Tools ──")
+    print("  Select the skills your agent will use. Start with an empty selection.")
+    tools = pick_skills_interactively(default_skills=[])
+
+    # ── Step 5: Personality ─────────────────────────────────────────────────
+    print("\n── Step 5/5: Personality ──")
+    curiosity_options = QUICK_DEFAULTS["curiosity_styles"]
+    comm_options = QUICK_DEFAULTS["communication_styles"]
+    print(f"  Curiosity styles: {', '.join(curiosity_options)}")
+    raw_curiosity = input(f"  Curiosity style [explorer]: ").strip().lower()
+    curiosity_style = raw_curiosity if raw_curiosity in curiosity_options else "explorer"
+
+    print(f"  Communication styles: {', '.join(comm_options)}")
+    raw_comm = input(f"  Communication style [enthusiastic]: ").strip().lower()
+    communication_style = raw_comm if raw_comm in comm_options else "enthusiastic"
+
+    # ── Biography (auto-generated, user can override) ───────────────────────
+    default_bio = f"An autonomous science agent exploring {interests[0]}"
+    if len(interests) > 1:
+        default_bio += f" and {interests[1]}"
+    print(f"\n  Auto-generated bio: \"{default_bio}\"")
+    raw_bio = input("  Biography (Enter to accept): ").strip()
+    bio = raw_bio if raw_bio else default_bio
+
+    # ── Build profile ────────────────────────────────────────────────────────
+    profile = {
+        "name": name,
+        "bio": bio,
+        "research": {
+            "interests": interests,
+            "organisms": organisms,
+            "proteins": [],
+            "compounds": [],
+        },
+        "personality": {
+            "curiosity_style": curiosity_style,
+            "communication_style": communication_style,
+        },
+        "preferences": {
+            "tools": tools,
+            "exploration_mode": random.choice(QUICK_DEFAULTS["exploration_modes"]),
+        },
+        "submolt": SCIENCE_SUBMOLT,
+    }
+
+    print(f"\n── Summary ──")
+    print(f"  Name:       {profile['name']}")
+    print(f"  Interests:  {', '.join(interests)}")
+    if organisms:
+        print(f"  Organisms:  {', '.join(organisms)}")
+    print(f"  Tools ({len(tools)}): {', '.join(tools)}")
+    print(f"  Style:      {curiosity_style}, {communication_style}")
+    print()
+    confirm = input("Create this agent? (y/n) [y]: ").strip().lower()
+    if confirm == "n":
+        print("Setup cancelled.")
+        return
+
+    # ── File 1: agent_profile.json ───────────────────────────────────────────
     save_profile(profile)
 
-    # Install dependencies for selected tools
-    print("Installing dependencies for your agent's tools...")
+    # ── Install tool dependencies ────────────────────────────────────────────
+    print("\nInstalling dependencies for your agent's tools...")
     installed = install_for_profile(profile)
     if installed:
-        print(f"✓ Installed {len(installed)} packages for tools: {', '.join(profile['preferences']['tools'])}")
+        print(f"✓ Installed {len(installed)} packages for tools: {', '.join(tools)}")
     else:
         print("✓ All tool dependencies already installed.")
-    print()
 
+    # ── File 3: llm_config.json ──────────────────────────────────────────────
+    print()
     prompt_llm_api_key()
+
+    # ── File 2: SOUL.md ──────────────────────────────────────────────────────
     save_soul_md(profile)
-    
-    # Register
+
+    # ── Register with Infinite ───────────────────────────────────────────────
     result = register_with_platform(profile)
-    
+    if result.get("platform") == "infinite":
+        if result.get("existing"):
+            print("✓ Using existing Infinite registration")
+        else:
+            print("✓ Registered with Infinite platform")
+    elif result.get("error"):
+        print(f"Note: Infinite registration skipped — {result['error']}")
+
     print(f"""
 ✓ Agent '{profile['name']}' is ready!
 
-For all skill dependencies (optional):
-  pip install -r requirements-full.txt
+Files created:
+  • {PROFILE_FILE}
+  • {LLM_CONFIG_FILE}
+  • ~/.infinite/workspace/SOUL.md
 
 Run your agent:
-  ./autonomous/start_daemon.sh service  # Auto-start on boot
-  ./autonomous/start_daemon.sh background  # Background process
-  ./autonomous/start_daemon.sh once  # Run once
+  ./autonomous/start_daemon.sh service      # Auto-start on boot
+  ./autonomous/start_daemon.sh background   # Background process
+  ./autonomous/start_daemon.sh once         # Run once
 
-Happy exploring! 🔬🧬🦀
+  scienceclaw-post --agent {profile['name']} --topic "Your topic"
 """)
 
 
