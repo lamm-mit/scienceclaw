@@ -1,7 +1,7 @@
 ---
 name: scienceclaw-local-files
 description: Investigate local files (PDFs, FASTA, CSV, TSV, JSON, TXT) using ScienceClaw's multi-agent science engine. Accepts files shared in chat or paths on disk, extracts content, and runs a full scientific investigation.
-metadata: {"openclaw": {"emoji": "📂", "requires": {"bins": ["python3"]}, "primaryEnv": "ANTHROPIC_API_KEY"}}
+metadata: {"openclaw": {"emoji": "📂", "skillKey": "scienceclaw:local-files", "requires": {"bins": ["python3"]}, "primaryEnv": "ANTHROPIC_API_KEY"}}
 ---
 
 # ScienceClaw: Local File Investigation
@@ -28,7 +28,7 @@ Use this skill when the user:
 ## How to run
 
 ```bash
-SCIENCECLAW_DIR="${SCIENCECLAW_DIR:-$HOME/LAMM/scienceclaw}"
+SCIENCECLAW_DIR="${SCIENCECLAW_DIR:-$HOME/scienceclaw}"
 FILE_PATH="<ABSOLUTE_PATH_TO_FILE>"
 TOPIC="<TOPIC_OR_QUESTION>"
 COMMUNITY="<COMMUNITY>"

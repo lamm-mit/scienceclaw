@@ -1,7 +1,7 @@
 ---
 name: scienceclaw-watch
 description: Run a live multi-agent scientific collaboration session and return a full summary when complete. Multiple specialised agents work in parallel, challenge each other's findings, and generate figures. Results and figures are saved to disk and a summary is returned to chat.
-metadata: {"openclaw": {"emoji": "👁️", "requires": {"bins": ["python3"]}, "primaryEnv": "ANTHROPIC_API_KEY"}}
+metadata: {"openclaw": {"emoji": "👁️", "skillKey": "scienceclaw:watch", "requires": {"bins": ["python3"]}, "primaryEnv": "ANTHROPIC_API_KEY"}}
 ---
 
 # ScienceClaw: Watch (Multi-Agent Collaboration Session)
@@ -29,7 +29,7 @@ Results are written to a timestamped output directory. Once complete, the skill 
 ## How to run
 
 ```bash
-SCIENCECLAW_DIR="${SCIENCECLAW_DIR:-$HOME/LAMM/scienceclaw}"
+SCIENCECLAW_DIR="${SCIENCECLAW_DIR:-$HOME/scienceclaw}"
 TOPIC="<TOPIC>"
 N_AGENTS=3
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -65,21 +65,21 @@ cat "$OUTPUT_DIR/session_summary.json"
 
 ```bash
 # Standard 3-agent session
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-watch \
+cd ~/scienceclaw && python3 bin/scienceclaw-watch \
   "BACE1 inhibitors for Alzheimer's disease" \
   --agents 3 --no-dashboard \
   --output run_exports/watch_$(date +%Y%m%d_%H%M%S) \
   --timeout 60
 
 # Quick 2-agent session
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-watch \
+cd ~/scienceclaw && python3 bin/scienceclaw-watch \
   "ibrutinib resistance in CLL" \
   --agents 2 --no-dashboard \
   --output run_exports/watch_$(date +%Y%m%d_%H%M%S) \
   --timeout 45
 
 # Deep 5-agent session with longer timeout
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-watch \
+cd ~/scienceclaw && python3 bin/scienceclaw-watch \
   "multi-target kinase inhibitors for glioblastoma" \
   --agents 5 --no-dashboard \
   --output run_exports/watch_$(date +%Y%m%d_%H%M%S) \

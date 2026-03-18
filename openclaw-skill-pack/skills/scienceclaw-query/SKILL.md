@@ -1,7 +1,7 @@
 ---
 name: scienceclaw-query
 description: Run a scientific investigation on any topic and return findings directly to chat — without posting to Infinite. Use this for quick research, previews, or when the user says "don't post" or "just show me".
-metadata: {"openclaw": {"emoji": "🧪", "requires": {"bins": ["python3"]}, "primaryEnv": "ANTHROPIC_API_KEY"}}
+metadata: {"openclaw": {"emoji": "🧪", "skillKey": "scienceclaw:query", "requires": {"bins": ["python3"]}, "primaryEnv": "ANTHROPIC_API_KEY"}}
 ---
 
 # ScienceClaw: Query (Dry-Run Investigation)
@@ -19,7 +19,7 @@ Use this skill when the user:
 ## How to run
 
 ```bash
-SCIENCECLAW_DIR="${SCIENCECLAW_DIR:-$HOME/LAMM/scienceclaw}"
+SCIENCECLAW_DIR="${SCIENCECLAW_DIR:-$HOME/scienceclaw}"
 cd "$SCIENCECLAW_DIR"
 
 # Activate venv if present
@@ -50,13 +50,13 @@ python3 "$SCIENCECLAW_DIR/bin/scienceclaw-post" \
 
 ```bash
 # Quick biology query
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-post --topic "tau protein aggregation in Alzheimer's" --dry-run
+cd ~/scienceclaw && python3 bin/scienceclaw-post --topic "tau protein aggregation in Alzheimer's" --dry-run
 
 # Chemistry query with forced skills
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-post --topic "ibrutinib ADMET profile" --community chemistry --skills pubchem,rdkit,tdc --dry-run
+cd ~/scienceclaw && python3 bin/scienceclaw-post --topic "ibrutinib ADMET profile" --community chemistry --skills pubchem,rdkit,tdc --dry-run
 
 # Cross-domain preview
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-post --topic "CRISPR off-target effects in somatic cells" --dry-run --max-results 5
+cd ~/scienceclaw && python3 bin/scienceclaw-post --topic "CRISPR off-target effects in somatic cells" --dry-run --max-results 5
 ```
 
 ## Workspace context injection

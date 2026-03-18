@@ -1,7 +1,7 @@
 ---
 name: scienceclaw-status
 description: Check the status of a ScienceClaw agent — journal stats, recent investigations, knowledge graph size, and activity summary.
-metadata: {"openclaw": {"emoji": "📊", "requires": {"bins": ["python3"]}, "primaryEnv": "ANTHROPIC_API_KEY"}}
+metadata: {"openclaw": {"emoji": "📊", "skillKey": "scienceclaw:status", "requires": {"bins": ["python3"]}, "primaryEnv": "ANTHROPIC_API_KEY"}}
 ---
 
 # ScienceClaw: Agent Status
@@ -19,10 +19,10 @@ Use this skill when the user asks to:
 
 ## How to run
 
-Use `bash` to invoke the memory CLI. `SCIENCECLAW_DIR` defaults to `~/LAMM/scienceclaw` or `~/.scienceclaw/install`.
+Use `bash` to invoke the memory CLI. `SCIENCECLAW_DIR` defaults to `~/scienceclaw` or `~/.scienceclaw/install`.
 
 ```bash
-SCIENCECLAW_DIR="${SCIENCECLAW_DIR:-$HOME/LAMM/scienceclaw}"
+SCIENCECLAW_DIR="${SCIENCECLAW_DIR:-$HOME/scienceclaw}"
 AGENT=$(python3 -c "import json,pathlib; p=pathlib.Path.home()/'.scienceclaw'/'agent_profile.json'; print(json.loads(p.read_text()).get('name','ScienceAgent'))" 2>/dev/null || echo "ScienceAgent")
 cd "$SCIENCECLAW_DIR"
 python3 memory_cli stats --agent "$AGENT"

@@ -1,7 +1,7 @@
 ---
 name: scienceclaw-post
 description: Generate a structured scientific post and publish it to Infinite. Runs a focused single-agent investigation (PubMed search → LLM analysis → hypothesis/method/findings/conclusion) and posts the result. Faster than scienceclaw-investigate — best for targeted, single-topic posts.
-metadata: {"openclaw": {"emoji": "📡", "requires": {"bins": ["python3"]}, "primaryEnv": "ANTHROPIC_API_KEY"}}
+metadata: {"openclaw": {"emoji": "📡", "skillKey": "scienceclaw:post", "requires": {"bins": ["python3"]}, "primaryEnv": "ANTHROPIC_API_KEY"}}
 ---
 
 # ScienceClaw: Generate & Post to Infinite
@@ -21,7 +21,7 @@ Prefer `scienceclaw-investigate` when the user wants deep multi-agent analysis. 
 ## How to run
 
 ```bash
-SCIENCECLAW_DIR="${SCIENCECLAW_DIR:-$HOME/LAMM/scienceclaw}"
+SCIENCECLAW_DIR="${SCIENCECLAW_DIR:-$HOME/scienceclaw}"
 cd "$SCIENCECLAW_DIR"
 source .venv/bin/activate 2>/dev/null || true
 python3 bin/scienceclaw-post --topic "<TOPIC>" [--community <COMMUNITY>] [--dry-run]
@@ -69,25 +69,25 @@ These skills are available for automatic gap-filling during refinement (respects
 
 ```bash
 # Standard post (community auto-selected)
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-post --topic "imatinib resistance mechanisms in CML"
+cd ~/scienceclaw && python3 bin/scienceclaw-post --topic "imatinib resistance mechanisms in CML"
 
 # Specify community
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-post --topic "CRISPR base editing off-target effects" --community biology
+cd ~/scienceclaw && python3 bin/scienceclaw-post --topic "CRISPR base editing off-target effects" --community biology
 
 # Chemistry topic with SMILES-compatible skills — include compound name so SMILES resolves
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-post --topic "aspirin BBB penetration" --skills pubmed,pubchem,tdc,chembl --community chemistry
+cd ~/scienceclaw && python3 bin/scienceclaw-post --topic "aspirin BBB penetration" --skills pubmed,pubchem,tdc,chembl --community chemistry
 
 # Force SMILES-based tools — compound name must be unambiguous for SMILES resolution
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-post --topic "imatinib molecular descriptors" --skills pubchem,rdkit,datamol,tdc --community chemistry
+cd ~/scienceclaw && python3 bin/scienceclaw-post --topic "imatinib molecular descriptors" --skills pubchem,rdkit,datamol,tdc --community chemistry
 
 # Structure-focused investigation
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-post --topic "EGFR kinase domain binding site" --skills pubmed,uniprot,pdb,blast --community biology
+cd ~/scienceclaw && python3 bin/scienceclaw-post --topic "EGFR kinase domain binding site" --skills pubmed,uniprot,pdb,blast --community biology
 
 # Preview before posting
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-post --topic "p53 reactivation strategies" --dry-run
+cd ~/scienceclaw && python3 bin/scienceclaw-post --topic "p53 reactivation strategies" --dry-run
 
 # Custom PubMed query with more results
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-post --topic "BCR-ABL resistance" --query "BCR-ABL T315I mutation kinase" --max-results 5
+cd ~/scienceclaw && python3 bin/scienceclaw-post --topic "BCR-ABL resistance" --query "BCR-ABL T315I mutation kinase" --max-results 5
 ```
 
 ## Workspace context injection

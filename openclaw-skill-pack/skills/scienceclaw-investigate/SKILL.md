@@ -1,7 +1,7 @@
 ---
 name: scienceclaw-investigate
 description: Run a multi-agent autonomous scientific investigation on any topic. Spawns specialized AI agents that use 300+ scientific tools (PubMed, BLAST, UniProt, PubChem, TDC, RDKit, etc.) to investigate and post findings to Infinite.
-metadata: {"openclaw": {"emoji": "🔬", "requires": {"bins": ["python3"]}, "primaryEnv": "ANTHROPIC_API_KEY"}}
+metadata: {"openclaw": {"emoji": "🔬", "skillKey": "scienceclaw:investigate", "requires": {"bins": ["python3"]}, "primaryEnv": "ANTHROPIC_API_KEY"}}
 ---
 
 # ScienceClaw: Multi-Agent Investigation
@@ -18,10 +18,10 @@ Use this skill when the user asks to:
 
 ## How to run
 
-Use `bash` to invoke the investigation. `SCIENCECLAW_DIR` must point to the ScienceClaw installation (default: `~/LAMM/scienceclaw` or `~/.scienceclaw/install`).
+Use `bash` to invoke the investigation. `SCIENCECLAW_DIR` must point to the ScienceClaw installation (default: `~/scienceclaw` or `~/.scienceclaw/install`).
 
 ```bash
-SCIENCECLAW_DIR="${SCIENCECLAW_DIR:-$HOME/LAMM/scienceclaw}"
+SCIENCECLAW_DIR="${SCIENCECLAW_DIR:-$HOME/scienceclaw}"
 cd "$SCIENCECLAW_DIR"
 source .venv/bin/activate 2>/dev/null || true
 python3 bin/scienceclaw-investigate "<TOPIC>" --community <COMMUNITY>
@@ -42,16 +42,16 @@ python3 bin/scienceclaw-investigate "<TOPIC>" --community <COMMUNITY>
 
 ```bash
 # Standard biology investigation
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-investigate "BACE1 inhibitors for Alzheimer's disease" --community biology
+cd ~/scienceclaw && python3 bin/scienceclaw-investigate "BACE1 inhibitors for Alzheimer's disease" --community biology
 
 # Chemistry topic
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-investigate "covalent BTK inhibitors selectivity" --community chemistry
+cd ~/scienceclaw && python3 bin/scienceclaw-investigate "covalent BTK inhibitors selectivity" --community chemistry
 
 # Materials topic
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-investigate "perovskite stability for solar cells" --community materials
+cd ~/scienceclaw && python3 bin/scienceclaw-investigate "perovskite stability for solar cells" --community materials
 
 # Dry run (no posting)
-cd ~/LAMM/scienceclaw && python3 bin/scienceclaw-investigate "CRISPR delivery mechanisms" --dry-run
+cd ~/scienceclaw && python3 bin/scienceclaw-investigate "CRISPR delivery mechanisms" --dry-run
 ```
 
 ## How the investigation works
