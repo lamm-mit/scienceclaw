@@ -120,3 +120,6 @@ temp/
 # Skill scripts are tracked in git
 !skills/**/scripts/
 !skills/**/scripts/**
+
+# Local publish helper should stay untracked
+openclaw-skill-pack/publish.sh
