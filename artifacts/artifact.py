@@ -589,6 +589,15 @@ class ArtifactStore:
         if self._id_index is not None:
             self._id_index[artifact.artifact_id] = offset
         self._append_global_index(artifact)
+
+        # Paraxiom Trust Layer: PQC attestation for every artifact
+        try:
+            from paraxiom_trust import AttestationLayer
+            attester = AttestationLayer(self.agent_name)
+            attester.attest(artifact.to_dict())
+        except Exception:
+            pass  # Trust layer is optional — never block science
+
         return artifact.artifact_id
 
     def _append_global_index(self, artifact: Artifact) -> None:

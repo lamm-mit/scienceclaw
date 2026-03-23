@@ -141,26 +141,37 @@ class LLMClient:
         except ImportError:
             raise ImportError("huggingface_hub package not installed. Run: pip install huggingface_hub")
     
-    def call(self, 
-             prompt: str, 
+    def call(self,
+             prompt: str,
              max_tokens: int = 1000,
              temperature: float = 1.0,
              timeout: Optional[int] = None,
              session_id: Optional[str] = None) -> str:
         """
         Call the LLM with a prompt.
-        
+
+        If Coherence Shield is enabled, routes through the Shield proxy
+        for hallucination filtering and PQC attestation of responses.
+
         Args:
             prompt: The prompt to send
             max_tokens: Maximum tokens in response
             temperature: Sampling temperature
             timeout: Timeout in seconds
             session_id: Optional session ID for tracking
-            
+
         Returns:
             LLM response text
         """
         t = timeout if timeout is not None else self.timeout
+
+        # Coherence Shield: route through Paraxiom's trust proxy if enabled
+        if self._coherence_shield_enabled():
+            result = self._call_coherence_shield(prompt, max_tokens, temperature)
+            if result is not None:
+                return result
+            # Fall through to direct call if Shield is unavailable
+
         if self.backend == "anthropic":
             return self._call_anthropic(prompt, max_tokens, temperature)
         elif self.backend == "openai":
@@ -169,6 +180,54 @@ class LLMClient:
             return self._call_huggingface(prompt, max_tokens, temperature)
         else:
             raise ValueError(f"Unknown backend: {self.backend}")
+
+    def _coherence_shield_enabled(self) -> bool:
+        """Check if Coherence Shield proxy is configured."""
+        try:
+            from paraxiom_trust.config import ParaxiomTrustConfig
+            config = ParaxiomTrustConfig.load()
+            return config.coherence_shield_enabled
+        except Exception:
+            return False
+
+    def _call_coherence_shield(self, prompt: str, max_tokens: int, temperature: float) -> Optional[str]:
+        """
+        Route LLM call through Paraxiom Coherence Shield.
+
+        The Shield is an OpenAI-compatible proxy that:
+        1. Applies toroidal logit bias to reduce hallucination
+        2. Attests every response with PQC signatures
+        3. Logs the interaction for audit
+
+        Falls back to None if Shield is unavailable.
+        """
+        try:
+            from paraxiom_trust.config import ParaxiomTrustConfig
+            config = ParaxiomTrustConfig.load()
+            shield_url = config.coherence_shield_url
+
+            import openai
+            shield_client = openai.OpenAI(
+                api_key=self.openai_key or self.anthropic_key or "shield-local",
+                base_url=f"{shield_url}/shield/v1",
+            )
+
+            response = shield_client.chat.completions.create(
+                model=self.openai_model if self.backend == "openai" else "coherence-shield",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+
+            text = response.choices[0].message.content or ""
+            if text:
+                return text
+            return None
+        except Exception as e:
+            # Shield unavailable — fall through to direct call
+            if os.environ.get("DEBUG_LLM_TOPIC"):
+                print(f"    [DEBUG] Coherence Shield unavailable: {e}")
+            return None
     
     def _call_anthropic(self, prompt: str, max_tokens: int, temperature: float) -> str:
         """Call Anthropic Claude API."""
