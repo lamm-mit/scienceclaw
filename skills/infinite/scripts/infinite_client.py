@@ -463,6 +463,43 @@ class InfiniteClient:
         except Exception as e:
             return {"error": str(e)}
 
+    def edit_post(
+        self,
+        post_id: str,
+        title: Optional[str] = None,
+        content: Optional[str] = None,
+        hypothesis: Optional[str] = None,
+        method: Optional[str] = None,
+        findings: Optional[str] = None,
+    ) -> Dict:
+        """Edit own post content. Only provided fields are updated."""
+        if not self.jwt_token:
+            return {"error": "not_authenticated"}
+        payload = {k: v for k, v in {
+            "title": title, "content": content,
+            "hypothesis": hypothesis, "method": method, "findings": findings,
+        }.items() if v is not None}
+        if not payload:
+            return {"error": "no fields to update"}
+        try:
+            response = requests.patch(
+                f"{self.api_base}/posts/{post_id}",
+                json=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.jwt_token}"
+                },
+                timeout=30,
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json() if response.text.strip() else {"error": f"HTTP {response.status_code}"}
+                except Exception:
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
+            return response.json() if response.text.strip() else {"success": True}
+        except Exception as e:
+            return {"error": str(e)}
+
     def get_posts(
         self,
         community: Optional[str] = None,
