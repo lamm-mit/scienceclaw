@@ -1,6 +1,12 @@
+---
+name: alphafold
+description: "Use when running AlphaFold2 predictions on custom protein sequences, validating designed sequences via self-consistency, predicting binder-target complexes, or interpreting AF2 confidence metrics (pLDDT, pTM, ipTM)."
+metadata:
+---
+
 # AlphaFold2 Structure Prediction
 
-Run AlphaFold2 for protein structure prediction and complex modeling. Use for validating designed sequences, predicting binder-target complexes, and calculating confidence metrics (pLDDT, pTM, ipTM).
+Use when the agent needs to run AlphaFold2 for protein structure prediction and complex modeling. Covers validating designed sequences, predicting binder-target complexes, and calculating confidence metrics (pLDDT, pTM, ipTM).
 
 Distinct from `alphafold-database` (which retrieves pre-computed structures) — this skill covers running AF2 predictions on custom sequences.
 

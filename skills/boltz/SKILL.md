@@ -1,6 +1,12 @@
+---
+name: boltz
+description: "Use when predicting biomolecular structures (proteins, RNA, DNA, ligands) with the open-source Boltz diffusion model as an alternative to AlphaFold3."
+metadata:
+---
+
 # Boltz Structure Prediction
 
-Open-source biomolecular structure prediction using diffusion models. MSA-optional, handles proteins, RNA, DNA, small molecules, ions, and covalent modifications in a single model. Strong alternative to AlphaFold3.
+Predict biomolecular structures using Boltz, an open-source diffusion model. Boltz handles proteins, RNA, DNA, small molecules, ions, and covalent modifications in a single model without requiring multiple sequence alignments (MSA-optional). It serves as a strong open-source alternative to AlphaFold3.
 
 ## Requirements
 
