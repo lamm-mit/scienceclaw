@@ -472,6 +472,17 @@ SKILL_DOMAIN_MAP: Dict[str, List[str]] = {
     "parallel-web":                 ["web_content", "report"],
 
     # -----------------------------------------------------------------------
+    # DFT / HPC / Materials simulation
+    # -----------------------------------------------------------------------
+    "dft":                          ["dft_results", "relaxed_structure"],
+    "uma":                          ["relaxed_structure", "ml_potential_energy"],
+    "code-execution":               ["computational_results"],
+    "structure-enumeration":        ["crystal_structure", "enumerated_structures"],
+    "phonon":                       ["phonon_properties", "dynamic_stability"],
+    "job-results":                  ["screening_results"],
+    "hpc":                          ["hpc_job_status"],
+
+    # -----------------------------------------------------------------------
     # Synthesis / validation / mutation policy (internal cross-cutting types)
     # -----------------------------------------------------------------------
     "_synthesis":                   ["synthesis"],

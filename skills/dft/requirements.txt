@@ -1,0 +1,7 @@
+# DFT skill dependencies
+# pymatgen is used for structure I/O (CIF/POSCAR parsing)
+pymatgen>=2024.1.1
+# ASE as alternative structure handler
+ase>=3.22.0
+# mp-api for fetching structures by Materials Project ID
+mp-api>=0.41.0

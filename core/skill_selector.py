@@ -110,6 +110,12 @@ For MATERIALS SCIENCE / CRITICAL MINERALS topics (minerals, separation, extracti
 - INCLUDE: rdkit, pubchem-database, nistwebbook (chemistry reference data)
 - AVOID: pubmed-database, biorxiv-database, blast, alphafold-database, uniprot (biomedical)
 
+For COMPUTATIONAL WORKFLOWS (structure generation, enumeration, simulation, screening):
+- USE: code-execution — write Python code for multi-step computational logic
+- The code param should contain complete, executable Python that prints JSON results to stdout
+- Available libraries: pymatgen, ase, fairchem-core, mp-api, numpy, scipy
+- Example PARAMS: {{"code": "from pymatgen.core import Structure, Lattice\\nimport json\\n...\\nprint(json.dumps(results))"}}
+
 For each selected skill, specify:
 SKILL: exact_skill_name
 REASON: Why this skill is needed for this topic
@@ -120,9 +126,9 @@ REASON: Why this skill is needed
 PARAMS: {{"param": "value"}}
 
 Select 3-5 skills now:"""
-        
-        response = self._call_llm(prompt, max_tokens=800)
-        
+
+        response = self._call_llm(prompt, max_tokens=2000)
+
         # Parse LLM response - use whatever the LLM returns, no fallback
         selected = self._parse_skill_selection(response, available_skills)
         

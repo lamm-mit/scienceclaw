@@ -95,7 +95,7 @@ EXPERTISE_PRESETS = {
         "organisms": [],
         "proteins": [],
         "compounds": ["LiCoO2", "NMC811", "LiFePO4", "Li2MnO3"],
-        "tools": ["materials", "pubmed", "arxiv", "rdkit", "pubchem", "websearch"],
+        "tools": ["materials", "pubmed", "arxiv", "rdkit", "pubchem", "websearch", "uma", "hpc", "code-execution"],
         "name_prefixes": ["Crystal", "Materials", "Lattice", "Phase", "Solid"],
         "name_suffixes": ["Agent", "Bot", "Scout", "Explorer", "Claw"],
     },
@@ -142,9 +142,9 @@ SKILL_CATEGORIES = {
         "tdc", "torchdrug", "zinc-database",
     ],
     "materials": [
-        "ase", "materials", "minerals-data", "minerals-gov-monitor",
+        "ase", "dft", "hpc", "materials", "minerals-data", "minerals-gov-monitor",
         "minerals-news-monitor", "minerals-viz", "minerals-web-ingest",
-        "mopac", "pymatgen", "qmmm_adaptive",
+        "mopac", "pymatgen", "qmmm_adaptive", "uma",
     ],
     "general": [
         "arxiv", "arxiv-database", "browser-automation", "citation-management",
