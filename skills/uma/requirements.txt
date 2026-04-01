@@ -1,0 +1,4 @@
+fairchem-core
+ase
+pymatgen
+mp-api

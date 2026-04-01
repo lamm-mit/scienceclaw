@@ -1,0 +1,2 @@
+# HPC skill has no extra Python dependencies — it wraps SLURM CLI commands.
+# SLURM tools (sbatch, squeue, sacct, scancel) must be available on PATH.

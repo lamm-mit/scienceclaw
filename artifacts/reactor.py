@@ -129,6 +129,14 @@ SKILL_INPUT_MAP: Dict[str, Dict[str, str]] = {
     "scikit-learn":            {"param": "data",         "entity": "data file path",                        "hint": "path/to/features.csv"},
     "transformers":            {"param": "text",         "entity": "text or model name",                    "hint": "bert-base-uncased or text to classify"},
     "statistical-analysis":    {"param": "data-file",    "entity": "data file path",                        "hint": "path/to/experimental_data.csv"},
+    # ── DFT / HPC ────────────────────────────────────────────────────────────
+    "dft":                     {"param": "structure",    "entity": "structure file path or MP ID",           "hint": "mp-149 or path/to/LaH10.cif"},
+    "uma":                     {"param": "structure",    "entity": "structure file path or MP ID",           "hint": "mp-149 or path/to/LaH10.cif"},
+    "code-execution":          {"param": "code",         "entity": "Python code to execute",                "hint": "from pymatgen.core import Structure; ..."},
+    "structure-enumeration":   {"param": "prototypes",   "entity": "prototype formulas or MP IDs",          "hint": "LaH10,CaH6"},
+    "phonon":                  {"param": "structures-dir","entity": "directory of CIF files",               "hint": "./relaxed_structures"},
+    "job-results":             {"param": "output-dir",   "entity": "SLURM output directory",               "hint": "./uma_screen_output"},
+    "hpc":                     {"param": "job-id",       "entity": "SLURM job ID",                          "hint": "12345"},
     # ── Peer Review / Synthesis ───────────────────────────────────────────────
     "hypothesis-generation":   {"param": "topic",        "entity": "research topic",                        "hint": "p53 reactivation small molecules TP53-mutant"},
     "scientific-brainstorming":{"param": "prompt",       "entity": "scientific prompt",                     "hint": "novel approaches to restore TP53 function"},

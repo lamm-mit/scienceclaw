@@ -134,8 +134,17 @@ class SkillExecutor:
 
         for key, value in parameters.items():
             # Convert parameter names to CLI flags
-            flag = f"--{key.replace('_', '-')}"
-            if isinstance(value, list):
+            # Strip leading dashes if LLM included them in the key name
+            clean_key = key.lstrip('-').replace('_', '-')
+            flag = f"--{clean_key}"
+            if value is None:
+                # Skip None values
+                continue
+            elif isinstance(value, bool):
+                # Boolean flags: pass flag only if True, skip if False
+                if value:
+                    cmd.append(flag)
+            elif isinstance(value, list):
                 # Pass each list item as a separate argument (supports nargs="+")
                 if value:
                     cmd.extend([flag] + [str(v) for v in value])
