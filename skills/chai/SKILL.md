@@ -1,6 +1,12 @@
+---
+name: chai
+description: "Use when predicting molecular structures (proteins, nucleic acids, small molecules, and complexes) with the Chai-1 foundation model via local inference or the Chai Discovery API."
+metadata:
+---
+
 # Chai-1 Structure Prediction
 
-Foundation model for molecular structure prediction. Handles proteins, nucleic acids, small molecules, and complexes. Fast inference, strong multimer performance, available via API and local install.
+Use when the user needs to predict molecular structures — proteins, nucleic acids, small molecules, or multi-chain complexes — using the Chai-1 foundation model. Supports both local GPU inference and the Chai Discovery API for remote execution.
 
 ## Requirements
 
@@ -143,7 +149,7 @@ print(f"Interface PAE: {interface_pae:.2f} Å (< 10 = good)")
 
 ## Use Cases
 
-- **Fast validation**: Quickly predict binder-target complexes before expensive MD
-- **Ligand complexes**: Predict protein-small molecule binding poses
-- **Ensemble scoring**: Generate 5 models, rank by ipTM for design selection
-- **Nucleic acid interactions**: Protein-DNA/RNA complex prediction
+- **Fast validation**: Predicts binder-target complexes quickly before committing to expensive MD simulations.
+- **Ligand complexes**: Predicts protein-small molecule binding poses from SMILES input.
+- **Ensemble scoring**: Generates multiple models and ranks them by ipTM for design selection.
+- **Nucleic acid interactions**: Predicts protein-DNA/RNA complex structures.
