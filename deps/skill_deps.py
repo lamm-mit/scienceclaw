@@ -67,6 +67,11 @@ SKILL_DEPS = {
     "qutip": ["qutip"],
     "opentrons": ["opentrons", "pyserial", "pydantic-settings", "opentrons-shared-data"],
 
+    # DFT / HPC / MLIP
+    "dft": ["pymatgen", "ase"],
+    "hpc": [],
+    "uma": ["fairchem-core", "ase", "pymatgen", "mp-api"],
+
     # tdc requires conda env - no pip install
     "tdc": [],
 }

@@ -235,6 +235,9 @@ class DeepInvestigator:
         skill_selection = SkillSelection(topic=topic, selected_skills=selected)
         print(f"  🛠️  Executing {len(selected)} skills: {[s.name for s in selected]}")
 
+        # Collect prior skill outputs for context passing between skills
+        _prior_skill_outputs = []
+
         for i, skill in enumerate(skill_selection.selected_skills, 1):
             skill_name = skill.name
             actual_skill_name = skill_name
@@ -322,6 +325,10 @@ class DeepInvestigator:
                     # calls; overriding them all with the same topic string is what caused
                     # every pubmed call to execute the identical query.
 
+                # No skill-specific parameter handling. If the LLM selector
+                # provides wrong params, the generic retry-with-SKILL.md
+                # mechanism (after execution) will correct them.
+
                 # Skills that require --smiles instead of a query string
                 _SMILES_SKILLS = {'askcos', 'rdkit', 'datamol', 'molfeat'}
 
@@ -351,16 +358,139 @@ class DeepInvestigator:
                 if _skill_base == 'uniprot' and 'format' not in params:
                     params['format'] = 'json'
 
+                # Timeout: check SKILL.md for hints, default 60s, cap at 600s
+                _skill_dir = self.scienceclaw_dir / 'skills' / _skill_base
+                _skill_md_path = _skill_dir / 'SKILL.md'
+                _skill_md = ''
+                if _skill_md_path.exists():
+                    try:
+                        _skill_md = _skill_md_path.read_text()
+                    except Exception:
+                        pass
+                # Use longer timeout if SKILL.md mentions GPU, SLURM, or relaxation
+                _timeout = 60
+                if any(kw in _skill_md.lower() for kw in ('gpu', 'slurm', 'relaxation', 'cuda', 'timeout')):
+                    _timeout = 300
+
                 result = self.skill_executor.execute_skill(
                     skill_name=actual_skill_name,
                     skill_metadata=skill_meta,
                     parameters=params,
-                    timeout=60
+                    timeout=_timeout
                 )
+
+                # ── Generic retry: if skill failed, read SKILL.md and ask
+                # the LLM to generate correct parameters, then retry once. ──
+                if result.get('status') == 'error':
+                    _err_msg = result.get('error', '')
+                    _is_param_error = ('unrecognized arguments' in _err_msg
+                                       or 'required' in _err_msg
+                                       or 'error: the following' in _err_msg
+                                       or 'provide --' in _err_msg)
+                    if _is_param_error and _skill_md:
+                        print(f" ✗ (retrying with SKILL.md guidance)",
+                              end="", flush=True, file=sys.stderr)
+                        from core.llm_client import get_llm_client
+                        _retry_client = get_llm_client(agent_name=self.agent_name)
+                        # Identify which script was executed
+                        _executables = skill_meta.get('executables', [])
+                        _script_name = Path(_executables[0]).name if _executables else 'unknown'
+
+                        # Build context from prior skill outputs
+                        _prior_context = ""
+                        if _prior_skill_outputs:
+                            _prior_lines = []
+                            for _po in _prior_skill_outputs[-3:]:  # last 3
+                                _po_str = json.dumps(_po["output"], default=str)
+                                _prior_lines.append(
+                                    f'- {_po["skill"]}: {_po_str[:500]}')
+                            _prior_context = (
+                                "\n\nPrior skill outputs (use these for "
+                                "file paths, directories, etc.):\n"
+                                + "\n".join(_prior_lines))
+
+                        _retry_resp = _retry_client.call(
+                            prompt=f'''A skill script "{_script_name}" failed with this error:
+{_err_msg[:500]}
+
+The task is: "{topic}"
+The skill's reason: {skill.reason}
+The parameters that were tried: {json.dumps(params)}
+{_prior_context}
+
+Here is the skill's documentation (SKILL.md):
+{_skill_md[:3000]}
+
+INSTRUCTIONS:
+1. Find the section in SKILL.md that documents "{_script_name}" specifically
+2. Identify the EXACT parameter names from the Parameters table for that script
+3. Map the task requirements to those exact parameter names
+4. Include all REQUIRED parameters
+5. If prior skills produced output directories or file paths, use those as input paths for this skill
+
+Return ONLY a JSON object like {{"param1": "value1", "param2": "value2"}}.
+No explanation, no markdown, just the JSON object.''',
+                            max_tokens=500,
+                            session_id=f"retry_params_{self.agent_name}"
+                        )
+                        if _retry_resp:
+                            # Strip markdown fences if present
+                            _clean = _retry_resp.strip()
+                            if _clean.startswith('```'):
+                                _clean = '\n'.join(
+                                    l for l in _clean.split('\n')
+                                    if not l.strip().startswith('```'))
+                            # Try to parse the full response as JSON first
+                            _new_params = None
+                            for _attempt in [_clean, _clean.strip()]:
+                                try:
+                                    _new_params = json.loads(_attempt)
+                                    break
+                                except json.JSONDecodeError:
+                                    pass
+                            # Fallback: extract outermost { ... } allowing nesting
+                            if _new_params is None:
+                                _depth = 0
+                                _start = -1
+                                for _ci, _ch in enumerate(_clean):
+                                    if _ch == '{':
+                                        if _depth == 0:
+                                            _start = _ci
+                                        _depth += 1
+                                    elif _ch == '}':
+                                        _depth -= 1
+                                        if _depth == 0 and _start >= 0:
+                                            try:
+                                                _new_params = json.loads(
+                                                    _clean[_start:_ci + 1])
+                                            except json.JSONDecodeError:
+                                                pass
+                                            break
+                            try:
+                                if _new_params is None:
+                                    raise json.JSONDecodeError("no JSON found", "", 0)
+                                _new_params.setdefault('format', 'json')
+                                print(f" params={_new_params}",
+                                      end="", flush=True, file=sys.stderr)
+                                result = self.skill_executor.execute_skill(
+                                    skill_name=actual_skill_name,
+                                    skill_metadata=skill_meta,
+                                    parameters=_new_params,
+                                    timeout=_timeout
+                                )
+                            except (json.JSONDecodeError, Exception) as _parse_err:
+                                print(f" (retry parse failed: {_parse_err})",
+                                      end="", flush=True, file=sys.stderr)
 
                 if result.get('status') == 'success':
                     results["tools_used"].append(actual_skill_name)
                     skill_result = result.get('result', {})
+
+                    # Collect output for context passing to subsequent skills
+                    _prior_skill_outputs.append({
+                        "skill": actual_skill_name,
+                        "output": skill_result,
+                    })
 
                     # Normalise wrapped output (skill_executor wraps unparseable text as {"output": ...})
                     if isinstance(skill_result, dict) and 'output' in skill_result:
