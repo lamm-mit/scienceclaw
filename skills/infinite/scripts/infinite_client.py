@@ -118,19 +118,28 @@ class InfiniteClient:
         return None
 
     def _save_config(self, api_key: str, agent_id: str, agent_name: str):
-        """Save configuration to file."""
+        """Save configuration to file, merging into any existing config."""
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
-        config = {
+        # Load existing config to preserve custom fields (e.g. token)
+        existing: dict = {}
+        if self.config_file.exists():
+            try:
+                with open(self.config_file) as f:
+                    existing = json.load(f)
+            except Exception:
+                existing = {}
+
+        existing.update({
             "api_key": api_key,
             "agent_id": agent_id,
             "agent_name": agent_name,
             "api_base": self.api_base,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
+            "created_at": existing.get("created_at", datetime.now(timezone.utc).isoformat()),
+        })
 
         with open(self.config_file, "w") as f:
-            json.dump(config, f, indent=2)
+            json.dump(existing, f, indent=2)
 
         # Secure the config file
         self.config_file.chmod(0o600)
@@ -151,6 +160,17 @@ class InfiniteClient:
             if response.status_code == 200:
                 result = response.json()
                 self.jwt_token = result.get("token")
+                # Persist token so subsequent InfiniteClient() instantiations skip re-login
+                if self.jwt_token and self.config_file.exists():
+                    try:
+                        with open(self.config_file) as f:
+                            config = json.load(f)
+                        config["token"] = self.jwt_token
+                        with open(self.config_file, "w") as f:
+                            json.dump(config, f, indent=2)
+                        self.config_file.chmod(0o600)
+                    except Exception:
+                        pass
                 return True
 
         except Exception:
@@ -955,6 +975,211 @@ class InfiniteClient:
                 except Exception:
                     return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
             return response.json() if response.text.strip() else {"success": True} if response.text else {"success": True}
+        except Exception as e:
+            return {"error": str(e)}
+
+    # ============================================================================
+    # PHASE 5: DISTRIBUTED ARTIFACT INDEX APIs
+    # ============================================================================
+
+    def publish_artifact(self, artifact: dict) -> dict:
+        """
+        Publish a local artifact to the Infinite global index.
+
+        Args:
+            artifact: Artifact dict (must include artifact_id, artifact_type,
+                      producer_agent, skill_used, payload, etc.)
+
+        Returns:
+            Created artifact object or error dict
+        """
+        if not self.jwt_token:
+            return {"error": "not_authenticated"}
+
+        try:
+            response = requests.post(
+                f"{self.api_base}/artifacts",
+                json=artifact,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.jwt_token}",
+                },
+                timeout=30,
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json() if response.text.strip() else {"success": True}
+                except Exception:
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
+            return response.json() if response.text.strip() else {"success": True}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def get_artifact(self, artifact_id: str) -> dict:
+        """
+        Retrieve a single artifact by its artifact_id.
+
+        Args:
+            artifact_id: The artifact_id field (UUID) of the artifact
+
+        Returns:
+            Artifact object or error dict
+        """
+        try:
+            response = requests.get(
+                f"{self.api_base}/artifacts/{artifact_id}",
+                timeout=30,
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json() if response.text.strip() else {"success": True}
+                except Exception:
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
+            return response.json() if response.text.strip() else {"success": True}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def search_artifacts(
+        self,
+        type: Optional[str] = None,
+        agent: Optional[str] = None,
+        skill: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 50,
+    ) -> list:
+        """
+        Search the global artifact index with optional filters.
+
+        Args:
+            type: Filter by artifact_type (e.g. "pubmed_results")
+            agent: Filter by producer_agent name
+            skill: Filter by skill_used
+            skip: Number of records to skip (pagination)
+            limit: Maximum number of records to return
+
+        Returns:
+            List of artifact objects
+        """
+        params: Dict = {"skip": skip, "limit": limit}
+        if type is not None:
+            params["type"] = type
+        if agent is not None:
+            params["agent"] = agent
+        if skill is not None:
+            params["skill"] = skill
+
+        try:
+            response = requests.get(
+                f"{self.api_base}/artifacts",
+                params=params,
+                timeout=30,
+            )
+            if response.status_code >= 400:
+                return []
+            data = response.json() if response.text.strip() else {}
+            if isinstance(data, list):
+                return data
+            return data.get("artifacts", [])
+        except Exception:
+            return []
+
+    def broadcast_need(self, need_item: dict, artifact_id: str) -> dict:
+        """
+        Broadcast a NeedsSignal to the global index so peer agents can fulfill it.
+
+        Args:
+            need_item: NeedsSignal dict (must include fields like need_type,
+                       description, required_skill, etc.)
+            artifact_id: artifact_id of the artifact that raised the need
+
+        Returns:
+            Created NeedsSignal object or error dict
+        """
+        if not self.jwt_token:
+            return {"error": "not_authenticated"}
+
+        payload = dict(need_item)
+        payload["artifactId"] = artifact_id
+
+        try:
+            response = requests.post(
+                f"{self.api_base}/needs-signals",
+                json=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.jwt_token}",
+                },
+                timeout=30,
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json() if response.text.strip() else {"success": True}
+                except Exception:
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
+            return response.json() if response.text.strip() else {"success": True}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def get_open_needs(self, limit: int = 100) -> list:
+        """
+        Fetch all open NeedsSignals from the global index.
+
+        Args:
+            limit: Maximum number of open signals to return
+
+        Returns:
+            List of open NeedsSignal objects
+        """
+        try:
+            response = requests.get(
+                f"{self.api_base}/needs-signals",
+                params={"status": "open", "limit": limit},
+                timeout=30,
+            )
+            if response.status_code >= 400:
+                return []
+            data = response.json() if response.text.strip() else {}
+            if isinstance(data, list):
+                return data
+            return data.get("needsSignals", [])
+        except Exception:
+            return []
+
+    def fulfill_need(self, need_signal_id: str, artifact_id: str) -> dict:
+        """
+        Mark a NeedsSignal as fulfilled by the given artifact.
+
+        Args:
+            need_signal_id: Database ID of the NeedsSignal to fulfill
+            artifact_id: artifact_id of the artifact that fulfills the need
+
+        Returns:
+            Updated NeedsSignal object or error dict
+        """
+        if not self.jwt_token:
+            return {"error": "not_authenticated"}
+
+        payload = {
+            "status": "fulfilled",
+            "fulfilledByArtifactId": artifact_id,
+        }
+
+        try:
+            response = requests.patch(
+                f"{self.api_base}/needs-signals/{need_signal_id}",
+                json=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.jwt_token}",
+                },
+                timeout=30,
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json() if response.text.strip() else {"success": True}
+                except Exception:
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
+            return response.json() if response.text.strip() else {"success": True}
         except Exception as e:
             return {"error": str(e)}
 

@@ -15,6 +15,9 @@ Address scheme: artifact://{agent_name}/{artifact_id}
 """
 
 import hashlib
+import logging
+import urllib.request
+import urllib.error
 import json
 import os
 from dataclasses import dataclass, field, asdict
@@ -490,6 +493,12 @@ SKILL_DOMAIN_MAP: Dict[str, List[str]] = {
     "candidate_evaluator":          ["candidate_evaluation"],
     "candidate_ranker":             ["candidate_ranking"],
     "_mutation_policy":             ["mutation_policy"],
+    # -----------------------------------------------------------------------
+    # Benchmark / tabular data tasks
+    # -----------------------------------------------------------------------
+    "python-exec":                  ["analysis_result"],
+    "csv-read":                     ["tabular_data"],
+    "_tabular_data":                ["tabular_data"],
 }
 
 
@@ -516,6 +525,7 @@ class Artifact:
     parent_artifact_ids: List[str] = field(default_factory=list)  # DAG lineage
     result_quality: str = "ok"  # "ok" | "empty" | "irrelevant"
     needs: List[dict] = field(default_factory=list)  # LLM-generated need signals
+    summary: str = ""  # 1-sentence human-readable summary of payload
 
     @staticmethod
     def _hash_payload(payload: dict) -> str:
@@ -533,6 +543,7 @@ class Artifact:
         parent_artifact_ids: Optional[List[str]] = None,
         result_quality: str = "ok",
         needs: Optional[List[dict]] = None,
+        summary: str = "",
     ) -> "Artifact":
         """Factory: generates id, timestamp, and hash automatically."""
         return cls(
@@ -548,6 +559,7 @@ class Artifact:
             parent_artifact_ids=parent_artifact_ids or [],
             result_quality=result_quality,
             needs=needs or [],
+            summary=summary,
         )
 
     def address(self) -> str:
@@ -563,6 +575,7 @@ class Artifact:
         d.setdefault("parent_artifact_ids", [])
         d.setdefault("result_quality", "ok")
         d.setdefault("needs", [])
+        d.setdefault("summary", "")
         return cls(**d)
 
 
@@ -600,6 +613,7 @@ class ArtifactStore:
         if self._id_index is not None:
             self._id_index[artifact.artifact_id] = offset
         self._append_global_index(artifact)
+        self._sync_to_infinite(artifact)
 
         # Paraxiom Trust Layer: PQC attestation for every artifact
         try:
@@ -646,6 +660,31 @@ class ArtifactStore:
         with open(self._global_index_path, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
+    @staticmethod
+    def _generate_summary(skill_used: str, artifact_type: str, payload: dict) -> str:
+        """
+        Produce a 1-sentence human-readable summary of the artifact payload.
+        Purely heuristic — no LLM call. Safe to call on any payload shape.
+        """
+        if not isinstance(payload, dict):
+            return f"{skill_used} result ({artifact_type})"
+        # Try common result-count keys first
+        for count_key in ("total", "count", "num_results", "hits", "results"):
+            val = payload.get(count_key)
+            if isinstance(val, int):
+                return f"{skill_used}: {val} {artifact_type} result(s)"
+        # Try a descriptive title/query key
+        for title_key in ("query", "title", "name", "term", "search_term"):
+            val = payload.get(title_key)
+            if isinstance(val, str) and val.strip():
+                return f"{skill_used} results for '{val.strip()[:80]}'"
+        # Fall back to item count if payload has a list
+        for list_key in ("papers", "results", "hits", "items", "sequences", "compounds"):
+            val = payload.get(list_key)
+            if isinstance(val, list):
+                return f"{skill_used}: {len(val)} {list_key}"
+        return f"{skill_used} result ({artifact_type})"
+
     def create_and_save(
         self,
         skill_used: str,
@@ -668,6 +707,7 @@ class ArtifactStore:
             if isinstance(artifact_type, str) and artifact_type.strip()
             else SKILL_DOMAIN_MAP.get(skill_used, ["raw_output"])[0]
         )
+        summary = self._generate_summary(skill_used, resolved_type, payload)
         artifact = Artifact.create(
             artifact_type=resolved_type,
             producer_agent=self.agent_name,
@@ -677,9 +717,127 @@ class ArtifactStore:
             parent_artifact_ids=parent_artifact_ids or [],
             result_quality=result_quality,
             needs=needs or [],
+            summary=summary,
         )
         self.save(artifact)
         return artifact
+
+    def _get_infinite_client(self):
+        """Return a logged-in InfiniteClient, or None if config is missing/broken."""
+        try:
+            import sys as _sys
+            _here = Path(__file__).resolve().parent.parent  # scienceclaw/
+            if str(_here) not in _sys.path:
+                _sys.path.insert(0, str(_here))
+            from skills.infinite.scripts.infinite_client import InfiniteClient
+            client = InfiniteClient()
+            if not client.jwt_token:
+                return None
+            return client
+        except Exception as exc:
+            logging.debug("ArtifactStore: could not create InfiniteClient: %s", exc)
+            return None
+
+    @staticmethod
+    def _to_camel_dict(d: dict) -> dict:
+        """Convert a snake_case artifact dict to the camelCase shape the API expects."""
+        return {
+            "artifactId":        d.get("artifact_id", ""),
+            "artifactType":      d.get("artifact_type", ""),
+            "skillUsed":         d.get("skill_used", ""),
+            "schemaVersion":     d.get("schema_version", "1.0"),
+            "payload":           d.get("payload"),
+            "investigationId":   d.get("investigation_id") or None,
+            "timestamp":         d.get("timestamp", ""),
+            "contentHash":       d.get("content_hash", ""),
+            "parentArtifactIds": d.get("parent_artifact_ids", []),
+            "summary":           d.get("summary", "") or None,
+        }
+
+    def _sync_to_infinite(self, artifact: Artifact) -> None:
+        """Best-effort POST artifact to Infinite /api/artifacts. Never raises."""
+        try:
+            client = self._get_infinite_client()
+            if client is None:
+                return
+            camel = self._to_camel_dict(artifact.to_dict())
+            client.publish_artifact(camel)
+        except Exception as exc:
+            logging.warning("ArtifactStore: failed to sync artifact to Infinite: %s", exc)
+
+    def sync_all(self, limit: int = 200) -> dict:
+        """
+        Convenience: pull remote artifacts into local index.
+        Returns a summary dict with counts. Best-effort — never raises.
+        Note: remote needs are fetched by ArtifactReactor independently.
+        """
+        remote_artifacts = self.pull_remote_index(limit=limit)
+        return {
+            "remote_artifacts": len(remote_artifacts),
+        }
+
+    def pull_remote_index(self, limit: int = 200) -> List[dict]:
+        """
+        Fetch artifacts from Infinite global index and append new ones to
+        local global_index.jsonl for cross-machine discovery.
+        Best-effort — returns [] on failure.
+        """
+        try:
+            client = self._get_infinite_client()
+            if client is None:
+                return []
+            remote_artifacts = client.search_artifacts(skip=0, limit=limit)
+            if not remote_artifacts:
+                return []
+
+            # Collect artifact_ids already in local global index to avoid duplicates
+            existing_ids: set = set()
+            if self._global_index_path.exists():
+                for line in self._global_index_path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        entry = json.loads(line)
+                        aid = entry.get("artifact_id", "")
+                        if aid:
+                            existing_ids.add(aid)
+                    except json.JSONDecodeError:
+                        pass
+
+            # Append remote artifacts not already present locally
+            new_entries = []
+            for ra in remote_artifacts:
+                if not isinstance(ra, dict):
+                    continue
+                # API returns camelCase — normalise to snake_case for global index
+                artifact_id = ra.get("artifactId", ra.get("artifact_id", ""))
+                if not artifact_id or artifact_id in existing_ids:
+                    continue
+                entry = {
+                    "artifact_id":        artifact_id,
+                    "artifact_type":      ra.get("artifactType", ra.get("artifact_type", "")),
+                    "producer_agent":     ra.get("producerAgent", ra.get("producer_agent", "")),
+                    "skill_used":         ra.get("skillUsed", ra.get("skill_used", "")),
+                    "investigation_id":   ra.get("investigationId", ra.get("investigation_id", "")),
+                    "timestamp":          ra.get("timestamp", ra.get("createdAt", "")),
+                    "content_hash":       ra.get("contentHash", ra.get("content_hash", "")),
+                    "parent_artifact_ids": ra.get("parentArtifactIds", ra.get("parent_artifact_ids", [])),
+                    "summary":            ra.get("summary", ""),
+                    "_remote": True,
+                }
+                new_entries.append(entry)
+
+            if new_entries:
+                with open(self._global_index_path, "a", encoding="utf-8") as fh:
+                    for entry in new_entries:
+                        fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+                logging.info("ArtifactStore: pulled %d new remote artifacts into global index", len(new_entries))
+
+            return remote_artifacts
+        except Exception as exc:
+            logging.warning("ArtifactStore: failed to pull remote index: %s", exc)
+            return []
 
     # ------------------------------------------------------------------
     # Read
@@ -799,6 +957,10 @@ class ArtifactStore:
         except OSError:
             pass
         return []
+
+    def get_parent_ids(self, artifact_id: str) -> List[str]:
+        """Public alias for _get_parent_ids_from_index."""
+        return self._get_parent_ids_from_index(artifact_id)
 
     # ------------------------------------------------------------------
     # Domain gating helpers

@@ -68,7 +68,7 @@ class LLMClient:
         self.hf_endpoint = os.environ.get("HF_ENDPOINT")  # For self-hosted models
         
         # Model names for each backend
-        self.anthropic_model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+        self.anthropic_model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
         self.openai_model = os.environ.get("OPENAI_MODEL", "gpt-5.2")
         # Optional base URL override for local/compatible servers (e.g. vLLM)
         self.openai_base_url = os.environ.get("OPENAI_BASE_URL")

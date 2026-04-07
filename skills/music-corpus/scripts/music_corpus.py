@@ -49,28 +49,27 @@ SCHEMA = {
 
 def _genre_from_query(query: str) -> str:
     q = query.lower()
+    if any(x in q for x in ["josquin", "monteverdi", "renaissance"]):
+        return "renaissance"
     if any(x in q for x in ["bach", "handel", "vivaldi", "baroque"]):
         return "baroque"
-    if any(x in q for x in ["beethoven", "mozart", "haydn", "classical"]):
-        return "classical"
-    if any(x in q for x in ["chopin", "liszt", "brahms", "romantic"]):
+    if any(x in q for x in ["beethoven", "schubert", "romantic"]):
         return "romantic"
+    if any(x in q for x in ["mozart", "haydn", "classical"]):
+        return "classical"
     if any(x in q for x in ["folk", "traditional"]):
         return "folk"
-    return "classical"
+    return "baroque"
 
 
 def _composer_from_query(query: str) -> str:
     q = query.lower()
-    if "bach" in q:
-        return "J.S. Bach"
-    if "beethoven" in q:
-        return "Beethoven"
-    if "mozart" in q:
-        return "Mozart"
-    if "haydn" in q:
-        return "Haydn"
-    return "Various"
+    COMPOSER_LABELS = {
+        "bach": "J.S. Bach", "beethoven": "Beethoven", "mozart": "Mozart",
+        "haydn": "Haydn", "monteverdi": "Monteverdi", "josquin": "Josquin des Prez",
+        "handel": "Handel", "schubert": "Schubert",
+    }
+    return next((v for k, v in COMPOSER_LABELS.items() if k in q), "Various")
 
 
 def _get_corpus_paths(query: str, max_pieces: int):
@@ -83,22 +82,19 @@ def _get_corpus_paths(query: str, max_pieces: int):
     q = query.lower().strip()
 
     # Map query to music21 corpus search
-    if "bach" in q:
-        paths = corpus.getComposer("bach")
-    elif "beethoven" in q:
-        paths = corpus.getComposer("beethoven")
-    elif "mozart" in q:
-        paths = corpus.getComposer("mozart")
-    elif "haydn" in q:
-        paths = corpus.getComposer("haydn")
-    elif "folk" in q or "essenfolk" in q:
+    COMPOSER_MAP = {
+        "bach": "bach", "beethoven": "beethoven", "mozart": "mozart",
+        "haydn": "haydn", "monteverdi": "monteverdi", "josquin": "josquin",
+        "handel": "handel", "schubert": "schubert",
+    }
+    if "folk" in q or "essenfolk" in q:
         try:
             paths = corpus.search("essen")
         except Exception:
             paths = corpus.getComposer("bach")
     else:
-        # Default to bach chorales which are reliably present
-        paths = corpus.getComposer("bach")
+        matched = next((v for k, v in COMPOSER_MAP.items() if k in q), "bach")
+        paths = corpus.getComposer(matched)
 
     return list(paths)[:max_pieces]
 

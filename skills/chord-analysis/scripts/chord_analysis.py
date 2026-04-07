@@ -51,14 +51,13 @@ def _roman_from_music21(query: str, max_pieces: int):
         return [], 0
 
     q = query.lower()
-    if "bach" in q:
-        paths = corpus.getComposer("bach")
-    elif "beethoven" in q:
-        paths = corpus.getComposer("beethoven")
-    elif "mozart" in q:
-        paths = corpus.getComposer("mozart")
-    else:
-        paths = corpus.getComposer("bach")
+    COMPOSER_MAP = {
+        "bach": "bach", "beethoven": "beethoven", "mozart": "mozart",
+        "haydn": "haydn", "monteverdi": "monteverdi", "josquin": "josquin",
+        "handel": "handel", "schubert": "schubert",
+    }
+    matched = next((v for k, v in COMPOSER_MAP.items() if k in q), "bach")
+    paths = corpus.getComposer(matched)
 
     all_romans = []
     n_pieces = 0

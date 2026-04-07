@@ -42,14 +42,13 @@ def _get_note_sequences(query: str, max_pieces: int):
         return []
 
     q = query.lower()
-    if "bach" in q:
-        paths = corpus.getComposer("bach")
-    elif "beethoven" in q:
-        paths = corpus.getComposer("beethoven")
-    elif "mozart" in q:
-        paths = corpus.getComposer("mozart")
-    else:
-        paths = corpus.getComposer("bach")
+    COMPOSER_MAP = {
+        "bach": "bach", "beethoven": "beethoven", "mozart": "mozart",
+        "haydn": "haydn", "monteverdi": "monteverdi", "josquin": "josquin",
+        "handel": "handel", "schubert": "schubert",
+    }
+    matched = next((v for k, v in COMPOSER_MAP.items() if k in q), "bach")
+    paths = corpus.getComposer(matched)
 
     sequences = []
     for path in list(paths)[:max_pieces]:

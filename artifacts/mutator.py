@@ -353,7 +353,7 @@ class ArtifactMutator:
         self._store.save(child)
         return child
 
-    def _graft(self, artifact: Artifact, new_parent: Artifact) -> Artifact:
+    def _graft(self, artifact: Artifact, new_parent: Artifact) -> Optional[Artifact]:
         """
         Rewire artifact to have new_parent as its parent (replaces old parents).
 
@@ -468,7 +468,7 @@ class ArtifactMutator:
             if current in visited:
                 continue
             visited.add(current)
-            parents = self._store._get_parent_ids_from_index(current)
+            parents = self._store.get_parent_ids(current)
             queue.extend(p for p in parents if p not in visited)
         return False
 
@@ -498,30 +498,51 @@ class ArtifactMutator:
                 entries.append(entry)
         return entries
 
+    # Minimum age before a leaf artifact is considered stagnant (24 hours)
+    _STAGNATION_AGE_SECONDS: float = 86_400.0
+
     def _detect_stagnation(
         self, index: List[dict], investigation_id: str, *, policy: Optional[MutationPolicy] = None
     ) -> List[MutationTrigger]:
         """
-        Find artifacts with 0 children in the index.
+        Find leaf artifacts (0 children) that are older than _STAGNATION_AGE_SECONDS.
 
-        We can't know the reactor cycle count from the index alone, so we use
-        a proxy: an artifact is "stagnant" if it appears as a parent of no
-        other artifact in the same investigation.
+        Only leaf artifacts that have been waiting long enough without producing
+        children are considered stagnant — this avoids flagging freshly created
+        artifacts that simply haven't been reacted to yet.
         """
         if policy is None:
             policy = self._load_policy(investigation_id)
+        import datetime as _dt
+
+        now = _dt.datetime.utcnow()
+
         # Collect all artifact IDs that appear as parents
         has_children: Set[str] = set()
-        all_ids: List[str] = []
+        entries_by_id: Dict[str, dict] = {}
 
         for entry in index:
             aid = entry.get("artifact_id", "")
             if aid:
-                all_ids.append(aid)
+                entries_by_id[aid] = entry
             for pid in entry.get("parent_artifact_ids", []):
                 has_children.add(pid)
 
-        stagnant = [aid for aid in all_ids if aid not in has_children]
+        stagnant = []
+        for aid, entry in entries_by_id.items():
+            if aid in has_children:
+                continue
+            # Age check: skip if timestamp is recent or unparseable
+            ts_raw = entry.get("timestamp", "")
+            try:
+                ts = _dt.datetime.fromisoformat(ts_raw.replace("Z", "+00:00")).replace(tzinfo=None)
+                age_seconds = (now - ts).total_seconds()
+            except (ValueError, AttributeError):
+                # If we can't parse the timestamp, skip rather than false-positive
+                continue
+            if age_seconds < self._STAGNATION_AGE_SECONDS:
+                continue
+            stagnant.append(aid)
 
         triggers = []
         for aid in stagnant[:policy.max_mutations_per_cycle]:

@@ -8,19 +8,34 @@ and attaching a child artifact that satisfies the need.
 """
 
 from __future__ import annotations
+import logging
+import sys
+import os
+from pathlib import Path
 from typing import List, Literal
 from pydantic import BaseModel, Field
 
+_log = logging.getLogger(__name__)
+
 ArtifactTypeLiteral = Literal[
     "pubmed_results", "protein_data", "sequence_alignment", "structure_data",
-    "compound_data", "admet_prediction", "rdkit_properties", "pathway_data",
+    "compound_data", "admet_prediction", "rdkit_properties", "molecular_descriptors", "pathway_data",
     "network_data", "genomic_data", "expression_data", "clinical_data",
     "drug_data", "metabolomics_data", "ml_prediction", "figure", "synthesis",
     # Protein design / evolution (real design components)
     "sequence_design",
-    # Convergence / ranking (optional but useful for “branch then converge” DAGs)
+    # Convergence / ranking (optional but useful for "branch then converge" DAGs)
     "ranking_table",
     "variant_set",
+    # Mutation / DAG operations
+    "mutation_policy",
+    # Peer validation
+    "peer_validation",
+    # Benchmark / tabular data tasks
+    "tabular_data",
+    "analysis_result",
+    # Materials science
+    "material_data",
 ]
 
 
@@ -63,3 +78,57 @@ class NeedItem(BaseModel):
 
 class NeedsSignal(BaseModel):
     needs: List[NeedItem] = Field(default_factory=list, max_length=2)
+
+
+class NeedsSignalBroadcaster:
+    """Best-effort broadcaster that POSTs each NeedItem to the Infinite platform API."""
+
+    def _get_infinite_client(self):
+        """Return a logged-in InfiniteClient, or None if config is missing/broken."""
+        try:
+            _here = Path(__file__).resolve().parent.parent  # scienceclaw/
+            if str(_here) not in sys.path:
+                sys.path.insert(0, str(_here))
+            from skills.infinite.scripts.infinite_client import InfiniteClient
+            client = InfiniteClient()
+            if not client.jwt_token:
+                return None
+            return client
+        except Exception as exc:
+            _log.debug("NeedsSignalBroadcaster: could not create InfiniteClient: %s", exc)
+            return None
+
+    def broadcast(self, signal: NeedsSignal, artifact_id: str) -> bool:
+        """POST each NeedItem separately to /api/needs-signals. Best-effort, returns True if all succeed."""
+        if not signal.needs:
+            return True
+        try:
+            client = self._get_infinite_client()
+            if client is None:
+                return False
+            all_ok = True
+            for need in signal.needs:
+                need_dict = {
+                    "artifactType":    need.artifact_type,
+                    "query":           need.query,
+                    "rationale":       need.rationale,
+                    "branch":          need.branch,
+                    "maxVariants":     need.max_variants,
+                    "preferredSkills": need.preferred_skills,
+                    "paramVariants":   need.param_variants,
+                }
+                try:
+                    result = client.broadcast_need(need_dict, artifact_id)
+                    if isinstance(result, dict) and result.get("error"):
+                        _log.warning(
+                            "NeedsSignalBroadcaster: API error broadcasting need '%s': %s",
+                            need.query, result["error"],
+                        )
+                        all_ok = False
+                except Exception as exc:
+                    _log.warning("NeedsSignalBroadcaster: failed to broadcast need '%s': %s", need.query, exc)
+                    all_ok = False
+            return all_ok
+        except Exception as exc:
+            _log.warning("NeedsSignalBroadcaster: failed to broadcast signal: %s", exc)
+            return False

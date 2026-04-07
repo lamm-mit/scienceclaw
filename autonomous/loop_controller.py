@@ -184,7 +184,8 @@ class AutonomousLoopController:
 
         if self.agent_profile.get("disable_platform"):
             return None
-        raise RuntimeError("No platform configured. Run setup.py to configure Infinite.")
+        print("[Platform] No Infinite config found — running in local-only mode. Run setup.py to configure.")
+        return None
     
     def run_heartbeat_cycle(self) -> Dict[str, Any]:
         """
@@ -216,6 +217,14 @@ class AutonomousLoopController:
         }
         
         try:
+            # Step 0: Sync remote artifacts and open needs from Infinite
+            try:
+                sync_result = self._artifact_store.sync_all()
+                print(f"   🌐 Remote sync: {sync_result.get('remote_artifacts', 0)} artifacts, "
+                      f"{sync_result.get('remote_needs', 0)} open needs")
+            except Exception as _sync_err:
+                print(f"   ⚠️  Remote sync failed (continuing local-only): {_sync_err}")
+
             # Step 1: Check notifications/DMs
             print("📬 Step 1: Checking notifications and DMs...")
             if self.platform:
@@ -1560,8 +1569,8 @@ class AutonomousLoopController:
                         investigation_id=investigation_id,
                         needs=broadcast_needs,
                     )
-        except Exception:
-            pass
+        except Exception as _bc_exc:
+            print(f"[AutonomousLoopController] WARNING: needs broadcast failed: {_bc_exc}")
 
         tool_query_overrides = self.agent_profile.get("tool_query_overrides", {}) or {}
         tool_param_overrides = self.agent_profile.get("tool_param_overrides", {}) or {}
@@ -1731,8 +1740,8 @@ class AutonomousLoopController:
                     print(f"artifact {short_id}…")
                 except Exception as e:
                     short_id = "n/a"
-                artifact = None
-                print(f"artifact save failed: {scrub(str(e))}")
+                    artifact = None
+                    print(f"artifact save failed: {scrub(str(e))}")
                 summary = self._summarise_payload(tool_name, agg_payload, topic=topic, use_llm=not disable_llm)
                 if not self._is_junk_summary(summary):
                     tool_sections.append(f"**{tool_name}** (artifact `{short_id}…`)\n{summary}")
@@ -2521,7 +2530,7 @@ class AutonomousLoopController:
                 self.session_manager.post_finding(
                     session_id=session_id,
                     result=result_summary,
-                    artifact_ids=[c.artifact_id for c in children],
+                    evidence={"artifact_ids": [c.artifact_id for c in children]},
                     confidence=0.7,
                 )
         except Exception as e:

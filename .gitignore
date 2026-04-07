@@ -42,14 +42,6 @@ env/
 *.ipynb_checkpoints
 
 # Testing & Exports
-tests/
-demo/
-run_exports/
-docs/
-figures/
-logs/
-scripts/
-tables/
 .pytest_cache/
 .coverage
 htmlcov/
@@ -57,7 +49,6 @@ htmlcov/
 .nox/
 
 # Large data files (should not be in git)
-data/
 *.csv
 !**/requirements.csv
 !**/test_*.csv

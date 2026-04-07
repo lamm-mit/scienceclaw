@@ -27,6 +27,7 @@ Execution path:
 import json
 import logging
 import math
+import os
 import re
 import subprocess
 import sys
@@ -141,6 +142,9 @@ SKILL_INPUT_MAP: Dict[str, Dict[str, str]] = {
     "hypothesis-generation":   {"param": "topic",        "entity": "research topic",                        "hint": "p53 reactivation small molecules TP53-mutant"},
     "scientific-brainstorming":{"param": "prompt",       "entity": "scientific prompt",                     "hint": "novel approaches to restore TP53 function"},
     "peer-review":             {"param": "paper",        "entity": "paper text or file",                    "hint": "manuscript content to review"},
+    # ── Computation / Benchmark tasks ────────────────────────────────────────
+    "python-exec":             {"param": "code",         "entity": "Python code string",                    "hint": "import pandas as pd; df = pd.read_csv(path)"},
+    "csv-read":                {"param": "path",         "entity": "CSV file path",                         "hint": "/path/to/data.csv"},
 }
 
 
@@ -435,6 +439,147 @@ class ArtifactReactor:
     # Public API
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # Infinite integration helpers
+    # ------------------------------------------------------------------
+
+    def _get_infinite_client(self):
+        """Return a logged-in InfiniteClient, or None if config is missing/broken."""
+        try:
+            _here = Path(__file__).resolve().parent.parent  # scienceclaw/
+            if str(_here) not in sys.path:
+                sys.path.insert(0, str(_here))
+            from skills.infinite.scripts.infinite_client import InfiniteClient
+            client = InfiniteClient()
+            if not client.jwt_token:
+                return None
+            return client
+        except Exception as exc:
+            _log.debug("ArtifactReactor: could not create InfiniteClient: %s", exc)
+            return None
+
+    def _fetch_remote_needs(self, limit: int = 100) -> List[str]:
+        """
+        GET /api/needs-signals?status=open&limit={limit} from Infinite via InfiniteClient.
+
+        Returns a list of JSON-encoded strings in global_index.jsonl format.
+        Each API row is a flat record; we reconstruct the `needs` array from
+        the per-row fields (artifactType, query, rationale, branch, etc.).
+        Best-effort — returns [] on failure.
+        """
+        try:
+            client = self._get_infinite_client()
+            if client is None:
+                return []
+            remote_signals = client.get_open_needs(limit=limit)
+            if not isinstance(remote_signals, list):
+                return []
+            lines: List[str] = []
+            for sig in remote_signals:
+                if not isinstance(sig, dict):
+                    continue
+                # Each row from /api/needs-signals is a flat record — reconstruct
+                # the NeedItem dict so reactor can score/match it.
+                need_item = {
+                    "artifact_type": sig.get("artifactType", sig.get("artifact_type", "")),
+                    "query":         sig.get("query", ""),
+                    "rationale":     sig.get("rationale", ""),
+                    "branch":        sig.get("branch", False),
+                    "max_variants":  sig.get("maxVariants", sig.get("max_variants", 1)),
+                    "preferred_skills": sig.get("preferredSkills", sig.get("preferred_skills", [])),
+                    "param_variants":   sig.get("paramVariants", sig.get("param_variants", [])),
+                }
+                entry = {
+                    "artifact_id":    sig.get("artifactId", sig.get("artifact_id", "")),
+                    "needs":          [need_item],
+                    "producer_agent": sig.get("producerAgent", sig.get("producer_agent", "")),
+                    "investigation_id": sig.get("investigationId", sig.get("investigation_id", "")),
+                    "timestamp":      sig.get("createdAt", sig.get("timestamp", "")),
+                    "_remote_signal_id": sig.get("id", ""),
+                }
+                lines.append(json.dumps(entry))
+            return lines
+        except Exception as exc:
+            _log.warning("ArtifactReactor: failed to fetch remote needs from Infinite: %s", exc)
+            return []
+
+    def _merge_remote_needs(self, local_lines: Optional[List[str]]) -> Optional[List[str]]:
+        """
+        Fetch open NeedsSignals from Infinite and merge them with local
+        global_index lines.  Deduplicates by (artifact_id, need_index) so the
+        same need is never processed twice even if it appears both locally and
+        remotely.
+
+        Returns the merged list, or the original local_lines if the remote
+        fetch fails or yields nothing new.
+        """
+        remote_lines = self._fetch_remote_needs(limit=100)
+        if not remote_lines:
+            return local_lines
+
+        # Build a set of (artifact_id, need_index) keys already present locally
+        seen_keys: Set[str] = set()
+        base_lines: List[str] = list(local_lines) if local_lines is not None else []
+        for line in base_lines:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            artifact_id = entry.get("artifact_id", "")
+            needs = entry.get("needs", [])
+            for idx in range(len(needs)):
+                seen_keys.add(f"{artifact_id}:{idx}")
+
+        # Append remote lines whose (artifact_id, need_index) pairs are novel
+        for rline in remote_lines:
+            rline = rline.strip()
+            if not rline:
+                continue
+            try:
+                entry = json.loads(rline)
+            except json.JSONDecodeError:
+                continue
+            artifact_id = entry.get("artifact_id", "")
+            needs = entry.get("needs", [])
+            novel = False
+            for idx in range(len(needs)):
+                if f"{artifact_id}:{idx}" not in seen_keys:
+                    novel = True
+                    seen_keys.add(f"{artifact_id}:{idx}")
+            if novel:
+                base_lines.append(rline)
+
+        return base_lines if base_lines else local_lines
+
+    def _patch_remote_need_fulfilled(self, remote_signal_id: str, fulfilled_by_artifact_id: str) -> None:
+        """
+        PATCH /api/needs-signals/{id} with fulfilled status via InfiniteClient. Best-effort.
+        """
+        if not remote_signal_id:
+            return
+        try:
+            client = self._get_infinite_client()
+            if client is None:
+                return
+            result = client.fulfill_need(remote_signal_id, fulfilled_by_artifact_id)
+            if isinstance(result, dict) and result.get("error"):
+                _log.warning(
+                    "ArtifactReactor: fulfill_need PATCH failed for signal %s: %s — retrying once",
+                    remote_signal_id, result["error"],
+                )
+                # Single best-effort retry
+                client.fulfill_need(remote_signal_id, fulfilled_by_artifact_id)
+        except Exception as exc:
+            _log.warning(
+                "ArtifactReactor: failed to patch remote need %s as fulfilled: %s",
+                remote_signal_id, exc,
+            )
+
+    # ------------------------------------------------------------------
+
     def register_peer(self, reactor: "ArtifactReactor") -> None:
         """Register a sibling reactor to receive mutation cascade outputs."""
         if reactor is not self and reactor not in self._peer_reactors:
@@ -557,6 +702,11 @@ class ArtifactReactor:
             )
         except OSError:
             index_lines = None  # fall back to per-method reads
+
+        # Merge remote needs from Infinite BEFORE ranking, so cross-machine
+        # NeedsSignals are included in the same priority queue as local ones.
+        # Deduplication key: (artifact_id, need_index) — same as consumed_needs.
+        index_lines = self._merge_remote_needs(index_lines)
 
         # Needs-driven reactions take priority: fulfil explicit peer requests first
         needs_children = self.react_to_needs(limit=max(0, int(self._needs_fulfillment_budget)), index_lines=index_lines)
@@ -1275,6 +1425,11 @@ class ArtifactReactor:
                     f"  [needs] Fulfilled need #{need_index} from {producer} "
                     f"({atype}, query='{query[:45]}', variant='{variant_id}')"
                 )
+                # If the fulfilled need came from a remote Infinite signal, PATCH
+                # its status so other machines know it has been handled.
+                remote_signal_id = entry.get("_remote_signal_id", "")
+                if remote_signal_id:
+                    self._patch_remote_need_fulfilled(remote_signal_id, child.artifact_id)
 
             if strict_variants and branch and succeeded != expected:
                 raise RuntimeError(
