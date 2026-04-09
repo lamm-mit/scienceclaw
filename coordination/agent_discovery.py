@@ -471,9 +471,7 @@ class AgentDiscoveryService:
         Falls back to empty result on any error so the caller can degrade gracefully.
         """
         try:
-            params: dict = {"limit": limit}
-            if skills:
-                params["skills"] = ",".join(skills)
+            params: dict = {"limit": limit, "skills": ",".join(skills)}
             resp = requests.get(f"{base_url}/api/discovery", params=params, timeout=10)
             if resp.ok:
                 return resp.json()

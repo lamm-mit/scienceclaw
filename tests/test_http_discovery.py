@@ -33,5 +33,14 @@ class TestHttpDiscovery(unittest.TestCase):
         self.assertEqual(result, {'sessions': [], 'needs': [], 'matchedOn': []})
 
 
+    @patch('coordination.agent_discovery.requests')
+    def test_http_discover_handles_non_ok_response(self, mock_requests):
+        mock_resp = MagicMock()
+        mock_resp.ok = False
+        mock_requests.get.return_value = mock_resp
+        result = self.svc.http_discover(skills=['blast'], base_url='http://localhost:3000')
+        self.assertEqual(result, {'sessions': [], 'needs': [], 'matchedOn': []})
+
+
 if __name__ == '__main__':
     unittest.main()
