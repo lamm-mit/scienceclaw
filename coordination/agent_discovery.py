@@ -19,9 +19,12 @@ Author: ScienceClaw Team
 """
 
 import json
+import uuid
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Set, Any
+
+import requests
 
 
 class AgentDiscoveryService:
@@ -443,17 +446,41 @@ class AgentDiscoveryService:
             }
 
     def _save_index(self, index: Dict[str, Any]):
-        """Save index with atomic write (temp file + rename)."""
+        """Save index with atomic write (unique temp file per call to avoid cross-agent races)."""
+        temp_path = self.index_path.parent / f".agent_index_{uuid.uuid4().hex}.tmp"
         try:
-            temp_path = self.index_path.with_suffix('.tmp')
             with open(temp_path, 'w') as f:
                 json.dump(index, f, indent=2)
             temp_path.replace(self.index_path)
         except Exception as e:
             print(f"[AgentDiscoveryService] Error saving index: {e}")
-            if temp_path.exists():
+            try:
                 temp_path.unlink()
+            except Exception:
+                pass
             raise
+
+    def http_discover(
+        self,
+        skills: list,
+        base_url: str = "http://localhost:3000",
+        limit: int = 20,
+    ) -> dict:
+        """
+        Call the Infinite /api/discovery HTTP endpoint to find matching sessions and needs.
+        Falls back to empty result on any error so the caller can degrade gracefully.
+        """
+        try:
+            params: dict = {"limit": limit}
+            if skills:
+                params["skills"] = ",".join(skills)
+            resp = requests.get(f"{base_url}/api/discovery", params=params, timeout=10)
+            if resp.ok:
+                return resp.json()
+            return {"sessions": [], "needs": [], "matchedOn": []}
+        except Exception as e:
+            print(f"[AgentDiscovery] http_discover failed: {e}")
+            return {"sessions": [], "needs": [], "matchedOn": []}
 
     def _update_skill_index(
         self,
