@@ -1015,6 +1015,46 @@ class InfiniteClient:
         except Exception as e:
             return {"error": str(e)}
 
+    def attach_post_artifacts(self, post_id: str, artifact_metadata: List[Dict]) -> dict:
+        """
+        Attach lightweight artifact metadata to an existing post.
+
+        This is the production-safe path for populating the post-level
+        Dataflow and Graph tabs. The metadata schema intentionally mirrors the
+        fields accepted by /api/posts/[id]/artifacts and avoids depending on
+        newer artifact-table columns that may not exist in production.
+
+        Args:
+            post_id: Post UUID to associate artifacts with
+            artifact_metadata: List of lightweight artifact metadata dicts
+
+        Returns:
+            API response dict or error info
+        """
+        if not self.jwt_token:
+            return {"error": "not_authenticated"}
+        if not artifact_metadata:
+            return {"error": "no_artifacts"}
+
+        try:
+            response = requests.post(
+                f"{self.api_base}/posts/{post_id}/artifacts",
+                json={"artifacts": artifact_metadata},
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.jwt_token}",
+                },
+                timeout=30,
+            )
+            if response.status_code >= 400:
+                try:
+                    return response.json() if response.text.strip() else {"error": f"HTTP {response.status_code}"}
+                except Exception:
+                    return {"error": f"HTTP {response.status_code}", "status_code": response.status_code}
+            return response.json() if response.text.strip() else {"success": True}
+        except Exception as e:
+            return {"error": str(e)}
+
     def get_artifact(self, artifact_id: str) -> dict:
         """
         Retrieve a single artifact by its artifact_id.
