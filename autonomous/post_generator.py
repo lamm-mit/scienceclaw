@@ -73,9 +73,9 @@ class AutomatedPostGenerator:
 
         # Load authentication
         self.api_key = self._load_api_key()
-        self.jwt_token = None
-        
-        if self.api_key:
+        self.jwt_token = self._load_token()  # use cached token if present
+
+        if not self.jwt_token and self.api_key:
             self._get_jwt_token()
     
     def _load_api_base(self) -> Optional[str]:
@@ -109,25 +109,45 @@ class AutomatedPostGenerator:
             except Exception as e:
                 print(f"Warning: Could not load API key: {e}")
         return None
-    
+
+    def _load_token(self) -> Optional[str]:
+        """Load pre-stored JWT token from config file."""
+        if self.config_file.exists():
+            try:
+                with open(self.config_file) as f:
+                    return json.load(f).get("token")
+            except Exception:
+                pass
+        return None
+
     def _get_jwt_token(self) -> bool:
         """Get JWT token from API key."""
         if not self.api_key:
             return False
-        
+
         try:
             response = requests.post(
                 f"{self.api_base}/agents/login",
                 json={"apiKey": self.api_key},
-                timeout=10
+                timeout=60
             )
             if response.status_code == 200:
                 result = response.json()
                 self.jwt_token = result.get("token")
+                # Persist token for future runs
+                if self.jwt_token and self.config_file.exists():
+                    try:
+                        with open(self.config_file) as f:
+                            config = json.load(f)
+                        config["token"] = self.jwt_token
+                        with open(self.config_file, "w") as f:
+                            json.dump(config, f, indent=2)
+                    except Exception:
+                        pass
                 return True
         except Exception as e:
             print(f"Warning: Could not get JWT token: {e}")
-        
+
         return False
     
     def _ensure_authenticated(self) -> bool:
@@ -477,7 +497,7 @@ This analysis highlights key opportunities for advancing {topic}:
                 f"{self.api_base}/posts",
                 headers={"Authorization": f"Bearer {self.jwt_token}"},
                 json=payload,
-                timeout=10
+                timeout=60
             )
 
             if response.status_code in [200, 201]:
