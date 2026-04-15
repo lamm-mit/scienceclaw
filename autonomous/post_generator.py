@@ -585,16 +585,32 @@ This analysis highlights key opportunities for advancing {topic}:
                 selected_community = community or self.select_community(topic)
                 print(f"  📍 Community: {selected_community}\n")
 
-                # Dry-run: print content and stop before posting
+                # Dry-run: save draft and print preview, but do not post
                 if dry_run:
                     inv = content_data.get("investigation_results", {})
+                    draft = {
+                        "agent": self.agent_name,
+                        "topic": topic,
+                        "community": selected_community,
+                        **{k: content_data.get(k) for k in ("title", "hypothesis", "method", "findings", "content", "investigation_results")},
+                    }
+                    drafts_dir = self.config_dir / "drafts"
+                    drafts_dir.mkdir(exist_ok=True)
+                    slug = topic.lower().replace(" ", "_")[:40]
+                    import datetime
+                    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                    draft_path = drafts_dir / f"{slug}_{ts}.json"
+                    with open(draft_path, "w") as f:
+                        json.dump(draft, f, indent=2)
                     print("  🏃 DRY RUN — would post:")
                     print(f"    Title: {content_data.get('title')}")
                     print(f"    Community: {selected_community}")
                     print(f"    Productive tools: {inv.get('productive_tools', [])}")
                     print(f"    Papers: {len(inv.get('papers', []))}, Proteins: {len(inv.get('proteins', []))}, Compounds: {len(inv.get('compounds', []))}")
                     print(f"    Findings preview: {content_data.get('findings', '')[:300]}...")
-                    return {"dry_run": True, "title": content_data.get("title"), "community": selected_community}
+                    print(f"\n  💾 Draft saved: {draft_path}")
+                    print(f"  ▶  To post later: scienceclaw-post --post-draft \"{draft_path}\"")
+                    return {"dry_run": True, "draft": str(draft_path), "title": content_data.get("title"), "community": selected_community}
 
                 # Post to Infinite
                 print("  📤 Posting to Infinite...")
@@ -695,21 +711,54 @@ if __name__ == "__main__":
     parser.add_argument("--query", help="Custom PubMed query (uses topic if not specified)")
     parser.add_argument("--max-results", type=int, default=3, help="Max PubMed results")
     parser.add_argument("--dry-run", action="store_true", help="Run investigation but do not post")
+    parser.add_argument("--post-draft", metavar="FILE", help="Post a previously saved dry-run draft without re-running the investigation")
     parser.add_argument("--skills", help="Comma-separated list of skills to use (overrides profile preferred_tools)")
 
     args = parser.parse_args()
 
-    force_skills = [s.strip() for s in args.skills.split(",") if s.strip()] if args.skills else None
-
     generator = AutomatedPostGenerator(agent_name=args.agent)
-    result = generator.generate_and_post(
-        topic=args.topic,
-        community=args.community,
-        search_query=args.query,
-        max_results=args.max_results,
-        dry_run=args.dry_run,
-        force_skills=force_skills,
-    )
-    
-    if "error" in result:
-        sys.exit(1)
+
+    if args.post_draft:
+        # Post from a saved draft file, skip investigation entirely
+        draft_path = Path(args.post_draft)
+        if not draft_path.exists():
+            print(f"❌ Draft file not found: {draft_path}")
+            sys.exit(1)
+        with open(draft_path) as f:
+            draft = json.load(f)
+        community = args.community or draft.get("community")
+        print(f"  📄 Posting draft: {draft_path.name}")
+        print(f"  📍 Community: {community}")
+        if not generator._ensure_authenticated():
+            print("❌ Authentication failed.")
+            sys.exit(1)
+        result = generator.post_to_infinite(
+            community=community,
+            title=draft["title"],
+            hypothesis=draft["hypothesis"],
+            method=draft["method"],
+            findings=draft["findings"],
+            content=draft["content"],
+            investigation_results=draft.get("investigation_results"),
+        )
+        if "error" in result:
+            print(f"  ❌ Post failed: {result['error']}")
+            sys.exit(1)
+        post_id = result.get("id") or result.get("post", {}).get("id")
+        print(f"  ✅ Post created! ID: {post_id}")
+        print(f"  🌐 https://infinite-lamm.vercel.app/post/{post_id}")
+    else:
+        if not args.topic:
+            print("❌ --topic is required unless using --post-draft")
+            sys.exit(1)
+        force_skills = [s.strip() for s in args.skills.split(",") if s.strip()] if args.skills else None
+        result = generator.generate_and_post(
+            topic=args.topic,
+            community=args.community,
+            search_query=args.query,
+            max_results=args.max_results,
+            dry_run=args.dry_run,
+            force_skills=force_skills,
+        )
+        if "error" in result:
+            sys.exit(1)
