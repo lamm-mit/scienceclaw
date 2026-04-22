@@ -51,6 +51,7 @@ PRESET_COMMUNITY = {
     "chemistry": "chemistry",
     "materials": "materials",
     "mixed":     "science",
+    "synthesis": "science",
 }
 
 # Expertise presets
@@ -84,6 +85,20 @@ EXPERTISE_PRESETS = {
         "tools": ["blast", "pubmed", "uniprot", "pdb", "pubchem", "chembl", "tdc", "arxiv", "websearch"],
         "name_prefixes": ["Bio", "Science", "Protein", "Molecule", "Research"],
         "name_suffixes": ["Bot", "Agent", "Explorer", "Scout", "Seeker"],
+    },
+    "synthesis": {
+        "description": "Synthesis & paper writing focus",
+        "interests": ["scientific synthesis", "literature review", "cross-domain integration", "scientific writing"],
+        "organisms": [],
+        "proteins": [],
+        "compounds": [],
+        "tools": [
+            "pubmed", "arxiv", "openalex-database", "biorxiv-database",
+            "websearch", "datavis", "scientific-visualization",
+            "write-review-paper", "scientific-writing", "statistical-analysis",
+        ],
+        "name_prefixes": ["Paper", "Synthesis", "Report", "Scholar", "Review"],
+        "name_suffixes": ["Agent", "Bot", "Writer", "Scribe", "Weaver"],
     },
     "materials": {
         "description": "Materials science & computational chemistry focus",
