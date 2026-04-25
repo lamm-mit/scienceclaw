@@ -1,0 +1,747 @@
+{
+  "case_id": "cs7",
+  "title": "The Cosmic Filter",
+  "scientific_question": "Can a composite of transit-shape, stellar-context, archival-support, and follow-up-confirmation signals discriminate true transiting exoplanets from false-positive candidates better than single-signal vetting baselines on a frozen retrospective panel?",
+  "status": "completed",
+  "paper_role": "astronomy / stellar-astrophysics rigor anchor with matched-pair retrospective evaluation",
+  "full_system_arm": {
+    "arm_id": "scienceclaw_full",
+    "label": "ScienceClaw full workflow",
+    "status": "completed",
+    "description": "Multi-agent vetting workflow combining transit-shape, stellar-context, archival-support, and follow-up signals on a frozen 12-confirmed vs. 12-false-positive retrospective panel.",
+    "result_summary": "Leave-one-pair AUROC=0.955, matched-pair accuracy=1.000, median positive lead time=1.0 years."
+  },
+  "benchmark_arms": [
+    {
+      "arm_id": "single_agent",
+      "label": "Strong single-agent baseline",
+      "role": "baseline",
+      "status": "completed",
+      "description": "One-agent detector scoring only the combined-signal-fraction summary.",
+      "result_summary": "Combined-fraction-only AUROC=0.951, balanced accuracy=0.792."
+    },
+    {
+      "arm_id": "scripted_transit_shape_only",
+      "label": "Scripted transit-shape-only baseline",
+      "role": "baseline",
+      "status": "completed",
+      "description": "Fixed scripted vetting pipeline based only on transit-shape consistency.",
+      "result_summary": "Shape-only baseline AUROC=0.708."
+    },
+    {
+      "arm_id": "shape_plus_stellar",
+      "label": "Ablation: transit shape + stellar context only",
+      "role": "ablation",
+      "status": "completed",
+      "description": "Use only the two on-target vetting signals (shape + stellar).",
+      "result_summary": "Shape+stellar AUROC=0.781."
+    },
+    {
+      "arm_id": "no_archival",
+      "label": "Ablation: no archival support",
+      "role": "ablation",
+      "status": "completed",
+      "description": "Remove cross-archive (multi-mission / RV archival) evidence from the composite.",
+      "result_summary": "No-archival AUROC=0.958."
+    },
+    {
+      "arm_id": "no_followup",
+      "label": "Ablation: no follow-up confirmation",
+      "role": "ablation",
+      "status": "completed",
+      "description": "Remove RV/TTV follow-up confirmation from the composite.",
+      "result_summary": "No-followup AUROC=0.851."
+    }
+  ],
+  "controls": [
+    {
+      "control_id": "matched_false_positive_controls",
+      "label": "Matched false-positive controls",
+      "status": "completed",
+      "purpose": "Measure discrimination against same-mission, same-era candidates dispositioned as false positives in the published vetting literature.",
+      "result_summary": "Control manifest frozen at 12 false-positive candidates across Kepler, K2, TESS, and MEarth missions."
+    },
+    {
+      "control_id": "label_permutation",
+      "label": "Label-permutation null",
+      "status": "completed",
+      "purpose": "Test observed AUROC against random relabelings.",
+      "result_summary": "Observed AUROC=0.955 versus null mean=0.498 (permutation p=0.0000)."
+    },
+    {
+      "control_id": "fixed_disposition_anchors",
+      "label": "Frozen disposition / confirmation anchors",
+      "status": "completed",
+      "purpose": "Prevent post-hoc flipping of disposition; confirmation and false-positive years are taken from cited literature before scoring.",
+      "result_summary": "All 12 confirmation years and 12 disposition years frozen before scoring."
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "auroc",
+      "label": "AUROC",
+      "direction": "higher_better",
+      "value": 0.9549,
+      "unit": "",
+      "notes": "Matched-pair leave-one-pair-out composite scoring."
+    },
+    {
+      "metric_id": "pairwise_accuracy",
+      "label": "Matched-pair accuracy",
+      "direction": "higher_better",
+      "value": 1.0,
+      "unit": "",
+      "notes": "Fraction of pairs where the confirmed planet scored above its matched false-positive control."
+    },
+    {
+      "metric_id": "median_lead_time",
+      "label": "Median lead time",
+      "direction": "higher_better",
+      "value": 1.0,
+      "unit": "years",
+      "notes": "Years between earliest literature signal and official confirmation."
+    },
+    {
+      "metric_id": "detection_rate",
+      "label": "Positive detection rate",
+      "direction": "higher_better",
+      "value": 1.0,
+      "unit": "",
+      "notes": "Fraction of confirmed positives with at least one vetting signal firing in their favor."
+    },
+    {
+      "metric_id": "permutation_p_value",
+      "label": "Label-permutation p-value",
+      "direction": "lower_better",
+      "value": 0.0,
+      "unit": "",
+      "notes": "Two-sided null from 2000 label permutations."
+    },
+    {
+      "metric_id": "rerun_stability",
+      "label": "Rerun stability",
+      "direction": "higher_better",
+      "value": 1.0,
+      "unit": "",
+      "notes": "Deterministic benchmark with frozen signal flags and weights."
+    },
+    {
+      "metric_id": "human_minutes",
+      "label": "Human intervention time",
+      "direction": "lower_better",
+      "value": 0.0,
+      "unit": "minutes",
+      "notes": "None once positive / negative manifests are frozen."
+    },
+    {
+      "metric_id": "wall_clock_minutes",
+      "label": "Wall-clock runtime",
+      "direction": "lower_better",
+      "value": 0.009,
+      "unit": "minutes",
+      "notes": "End-to-end benchmark runtime."
+    }
+  ],
+  "cross_case_summary": {
+    "validation_type": "matched retrospective vetting across transit, stellar, archival, and follow-up signals",
+    "baseline_gap": "Leave-one-pair AUROC is +0.247 versus the strongest single-signal scripted baseline and +0.003 versus the single-agent combined-fraction summary baseline.",
+    "robustness": "Matched-pair accuracy=1.000, label-permutation p=0.0000, median lead time=1.0 years across 12 confirmed vs. 12 false-positive systems.",
+    "compute_cost": "low",
+    "human_involvement": "none once the positive / negative manifests are frozen",
+    "failure_modes": [
+      "Literature-anchored feature flags depend on published vetting; re-classifications occur and can shift the panel",
+      "Matched-pair accuracy saturates quickly on easy pairs; the useful signal is concentrated on borderline candidates",
+      "A richer panel with graded (non-binary) signals would stress the composite further"
+    ],
+    "where_scienceclaw_helps": "Combining transit-shape, stellar-context, archival-support, and follow-up signals into a single score improves discrimination over each single-signal vetting baseline and preserves lead time on multi-year confirmation chains.",
+    "where_simple_workflows_suffice": "For candidates where the transit shape alone is unambiguous, a single-signal vetting pipeline already separates planet and non-planet cleanly; the multi-signal composite adds value mainly on borderline vetting pairs.",
+    "paper_takeaway": "CS7 demonstrates a cross-domain rigor anchor in an astronomy setting that parallels the CS2 and CS6 frozen-panel structure but tests a different validation regime grounded in published Kepler / K2 / TESS vetting outcomes."
+  },
+  "benchmark_details": {
+    "benchmark_mode": "frozen_retrospective_matched_panel",
+    "positive_manifest": [
+      {
+        "name": "kepler_22b",
+        "label": "Kepler-22b",
+        "mission": "Kepler",
+        "year_candidate": 2010,
+        "year_confirmed": 2011,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 1,
+          "archival_support_ok": 0,
+          "followup_confirmation_ok": 1
+        },
+        "signal_years": {
+          "transit_shape_ok": 2010,
+          "stellar_context_ok": 2010,
+          "archival_support_ok": 2011,
+          "followup_confirmation_ok": 2011
+        },
+        "reference_key": "borucki2012kepler22b"
+      },
+      {
+        "name": "kepler_62f",
+        "label": "Kepler-62f",
+        "mission": "Kepler",
+        "year_candidate": 2012,
+        "year_confirmed": 2013,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 1,
+          "archival_support_ok": 1,
+          "followup_confirmation_ok": 1
+        },
+        "signal_years": {
+          "transit_shape_ok": 2012,
+          "stellar_context_ok": 2012,
+          "archival_support_ok": 2012,
+          "followup_confirmation_ok": 2013
+        },
+        "reference_key": "borucki2013kepler62"
+      },
+      {
+        "name": "kepler_186f",
+        "label": "Kepler-186f",
+        "mission": "Kepler",
+        "year_candidate": 2013,
+        "year_confirmed": 2014,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 1,
+          "archival_support_ok": 1,
+          "followup_confirmation_ok": 1
+        },
+        "signal_years": {
+          "transit_shape_ok": 2013,
+          "stellar_context_ok": 2013,
+          "archival_support_ok": 2013,
+          "followup_confirmation_ok": 2014
+        },
+        "reference_key": "quintana2014kepler186"
+      },
+      {
+        "name": "kepler_442b",
+        "label": "Kepler-442b",
+        "mission": "Kepler",
+        "year_candidate": 2014,
+        "year_confirmed": 2015,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 1,
+          "archival_support_ok": 1,
+          "followup_confirmation_ok": 1
+        },
+        "signal_years": {
+          "transit_shape_ok": 2014,
+          "stellar_context_ok": 2014,
+          "archival_support_ok": 2014,
+          "followup_confirmation_ok": 2015
+        },
+        "reference_key": "torres2015kepler442"
+      },
+      {
+        "name": "kepler_1649c",
+        "label": "Kepler-1649c",
+        "mission": "Kepler",
+        "year_candidate": 2017,
+        "year_confirmed": 2020,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 0,
+          "archival_support_ok": 1,
+          "followup_confirmation_ok": 0
+        },
+        "signal_years": {
+          "transit_shape_ok": 2017,
+          "stellar_context_ok": 2017,
+          "archival_support_ok": 2018,
+          "followup_confirmation_ok": 2020
+        },
+        "reference_key": "vanderburg2020kepler1649c"
+      },
+      {
+        "name": "kepler_90i",
+        "label": "Kepler-90i",
+        "mission": "Kepler",
+        "year_candidate": 2013,
+        "year_confirmed": 2017,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 1,
+          "archival_support_ok": 1,
+          "followup_confirmation_ok": 1
+        },
+        "signal_years": {
+          "transit_shape_ok": 2013,
+          "stellar_context_ok": 2013,
+          "archival_support_ok": 2015,
+          "followup_confirmation_ok": 2017
+        },
+        "reference_key": "shallue2018kepler90"
+      },
+      {
+        "name": "k2_18b",
+        "label": "K2-18b",
+        "mission": "K2",
+        "year_candidate": 2015,
+        "year_confirmed": 2017,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 0,
+          "archival_support_ok": 1,
+          "followup_confirmation_ok": 1
+        },
+        "signal_years": {
+          "transit_shape_ok": 2015,
+          "stellar_context_ok": 2015,
+          "archival_support_ok": 2016,
+          "followup_confirmation_ok": 2017
+        },
+        "reference_key": "cloutier2019k218b"
+      },
+      {
+        "name": "trappist1e",
+        "label": "TRAPPIST-1e",
+        "mission": "Spitzer/TRAPPIST",
+        "year_candidate": 2016,
+        "year_confirmed": 2017,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 1,
+          "archival_support_ok": 1,
+          "followup_confirmation_ok": 1
+        },
+        "signal_years": {
+          "transit_shape_ok": 2016,
+          "stellar_context_ok": 2016,
+          "archival_support_ok": 2016,
+          "followup_confirmation_ok": 2017
+        },
+        "reference_key": "gillon2017trappist1"
+      },
+      {
+        "name": "toi_700d",
+        "label": "TOI-700d",
+        "mission": "TESS",
+        "year_candidate": 2019,
+        "year_confirmed": 2020,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 1,
+          "archival_support_ok": 0,
+          "followup_confirmation_ok": 1
+        },
+        "signal_years": {
+          "transit_shape_ok": 2019,
+          "stellar_context_ok": 2019,
+          "archival_support_ok": 2020,
+          "followup_confirmation_ok": 2020
+        },
+        "reference_key": "gilbert2020toi700"
+      },
+      {
+        "name": "lhs_1140b",
+        "label": "LHS 1140b",
+        "mission": "MEarth",
+        "year_candidate": 2014,
+        "year_confirmed": 2017,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 1,
+          "archival_support_ok": 1,
+          "followup_confirmation_ok": 1
+        },
+        "signal_years": {
+          "transit_shape_ok": 2014,
+          "stellar_context_ok": 2014,
+          "archival_support_ok": 2015,
+          "followup_confirmation_ok": 2017
+        },
+        "reference_key": "dittmann2017lhs1140b"
+      },
+      {
+        "name": "toi_1452b",
+        "label": "TOI-1452b",
+        "mission": "TESS",
+        "year_candidate": 2021,
+        "year_confirmed": 2022,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 0,
+          "archival_support_ok": 1,
+          "followup_confirmation_ok": 1
+        },
+        "signal_years": {
+          "transit_shape_ok": 2021,
+          "stellar_context_ok": 2021,
+          "archival_support_ok": 2022,
+          "followup_confirmation_ok": 2022
+        },
+        "reference_key": "cadieux2022toi1452b"
+      },
+      {
+        "name": "gj_1132b",
+        "label": "GJ 1132b",
+        "mission": "MEarth",
+        "year_candidate": 2015,
+        "year_confirmed": 2015,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 1,
+          "archival_support_ok": 1,
+          "followup_confirmation_ok": 1
+        },
+        "signal_years": {
+          "transit_shape_ok": 2015,
+          "stellar_context_ok": 2015,
+          "archival_support_ok": 2015,
+          "followup_confirmation_ok": 2015
+        },
+        "reference_key": "bertathompson2015gj1132b"
+      }
+    ],
+    "negative_manifest": [
+      {
+        "name": "koi_4878",
+        "label": "KOI-4878.01 (grazing EB signature)",
+        "mission": "Kepler",
+        "matched_positive": "kepler_22b",
+        "year_candidate": 2011,
+        "year_dispositioned": 2016,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 1,
+          "archival_support_ok": 0,
+          "followup_confirmation_ok": 0
+        },
+        "reference_key": "thompson2018kepler_dr25"
+      },
+      {
+        "name": "koi_6705",
+        "label": "KOI-6705 (background EB blend)",
+        "mission": "Kepler",
+        "matched_positive": "kepler_62f",
+        "year_candidate": 2013,
+        "year_dispositioned": 2017,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 0,
+          "archival_support_ok": 0,
+          "followup_confirmation_ok": 0
+        },
+        "reference_key": "morton2016falsepositive"
+      },
+      {
+        "name": "koi_5800",
+        "label": "KOI-5800 (stellar variability artefact)",
+        "mission": "Kepler",
+        "matched_positive": "kepler_186f",
+        "year_candidate": 2014,
+        "year_dispositioned": 2018,
+        "signals": {
+          "transit_shape_ok": 0,
+          "stellar_context_ok": 0,
+          "archival_support_ok": 0,
+          "followup_confirmation_ok": 0
+        },
+        "reference_key": "coughlin2016robovetter"
+      },
+      {
+        "name": "koi_5747",
+        "label": "KOI-5747 (centroid offset / blended EB)",
+        "mission": "Kepler",
+        "matched_positive": "kepler_442b",
+        "year_candidate": 2014,
+        "year_dispositioned": 2018,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 0,
+          "archival_support_ok": 0,
+          "followup_confirmation_ok": 0
+        },
+        "reference_key": "thompson2018kepler_dr25"
+      },
+      {
+        "name": "koi_7368",
+        "label": "KOI-7368 (secondary-eclipse detected)",
+        "mission": "Kepler",
+        "matched_positive": "kepler_1649c",
+        "year_candidate": 2017,
+        "year_dispositioned": 2019,
+        "signals": {
+          "transit_shape_ok": 0,
+          "stellar_context_ok": 1,
+          "archival_support_ok": 0,
+          "followup_confirmation_ok": 0
+        },
+        "reference_key": "thompson2018kepler_dr25"
+      },
+      {
+        "name": "koi_4054",
+        "label": "KOI-4054 (instrumental systematic)",
+        "mission": "Kepler",
+        "matched_positive": "kepler_90i",
+        "year_candidate": 2013,
+        "year_dispositioned": 2016,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 1,
+          "archival_support_ok": 1,
+          "followup_confirmation_ok": 0
+        },
+        "reference_key": "coughlin2016robovetter"
+      },
+      {
+        "name": "epic_220674823",
+        "label": "EPIC 220674823 (grazing EB, K2)",
+        "mission": "K2",
+        "matched_positive": "k2_18b",
+        "year_candidate": 2015,
+        "year_dispositioned": 2018,
+        "signals": {
+          "transit_shape_ok": 0,
+          "stellar_context_ok": 1,
+          "archival_support_ok": 0,
+          "followup_confirmation_ok": 0
+        },
+        "reference_key": "crossfield2016k2"
+      },
+      {
+        "name": "k2_58_fp",
+        "label": "K2-58 candidate (hierarchical triple)",
+        "mission": "K2",
+        "matched_positive": "trappist1e",
+        "year_candidate": 2016,
+        "year_dispositioned": 2018,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 0,
+          "archival_support_ok": 0,
+          "followup_confirmation_ok": 0
+        },
+        "reference_key": "mayo2018k2fpp"
+      },
+      {
+        "name": "toi_263_fp",
+        "label": "TOI-263 candidate (brown dwarf / EB)",
+        "mission": "TESS",
+        "matched_positive": "toi_700d",
+        "year_candidate": 2019,
+        "year_dispositioned": 2020,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 0,
+          "archival_support_ok": 1,
+          "followup_confirmation_ok": 0
+        },
+        "reference_key": "parviainen2020toi263"
+      },
+      {
+        "name": "toi_519_fp",
+        "label": "TOI-519 initial candidate (later revised, BD-regime mass)",
+        "mission": "TESS",
+        "matched_positive": "lhs_1140b",
+        "year_candidate": 2019,
+        "year_dispositioned": 2021,
+        "signals": {
+          "transit_shape_ok": 1,
+          "stellar_context_ok": 1,
+          "archival_support_ok": 1,
+          "followup_confirmation_ok": 0
+        },
+        "reference_key": "parviainen2021toi519"
+      },
+      {
+        "name": "toi_1272_fp_like",
+        "label": "TOI-1272 candidate-b ambiguity (stellar-activity confound)",
+        "mission": "TESS",
+        "matched_positive": "toi_1452b",
+        "year_candidate": 2021,
+        "year_dispositioned": 2022,
+        "signals": {
+          "transit_shape_ok": 0,
+          "stellar_context_ok": 0,
+          "archival_support_ok": 1,
+          "followup_confirmation_ok": 0
+        },
+        "reference_key": "burt2020toi1272"
+      },
+      {
+        "name": "mearth_fp_candidate",
+        "label": "MEarth FP candidate (flare / starspot artefact)",
+        "mission": "MEarth",
+        "matched_positive": "gj_1132b",
+        "year_candidate": 2015,
+        "year_dispositioned": 2016,
+        "signals": {
+          "transit_shape_ok": 0,
+          "stellar_context_ok": 0,
+          "archival_support_ok": 0,
+          "followup_confirmation_ok": 0
+        },
+        "reference_key": "newton2016mearth"
+      }
+    ],
+    "feature_definition": {
+      "components": [
+        "transit_shape_ok (planet-consistent transit geometry)",
+        "stellar_context_ok (host star not binary / not giant / quiet)",
+        "archival_support_ok (multi-mission archival consistency)",
+        "followup_confirmation_ok (RV / TTV / independent confirmation)",
+        "lead-time normalized per channel",
+        "combined detected fraction across channels"
+      ]
+    },
+    "weights": {
+      "full": {
+        "transit_shape_ok": 0.25,
+        "stellar_context_ok": 0.25,
+        "archival_support_ok": 0.2,
+        "followup_confirmation_ok": 0.2,
+        "transit_shape_ok_lead": 0.025,
+        "stellar_context_ok_lead": 0.025,
+        "archival_support_ok_lead": 0.025,
+        "followup_confirmation_ok_lead": 0.025
+      },
+      "single_agent": {
+        "combined_detected_fraction": 1.0
+      },
+      "scripted_transit_shape_only": {
+        "transit_shape_ok": 1.0
+      },
+      "shape_plus_stellar": {
+        "transit_shape_ok": 0.5,
+        "stellar_context_ok": 0.5
+      },
+      "no_archival_ablation": {
+        "transit_shape_ok": 0.33,
+        "stellar_context_ok": 0.33,
+        "archival_support_ok": 0.0,
+        "followup_confirmation_ok": 0.34
+      },
+      "no_followup_ablation": {
+        "transit_shape_ok": 0.33,
+        "stellar_context_ok": 0.33,
+        "archival_support_ok": 0.34,
+        "followup_confirmation_ok": 0.0
+      }
+    },
+    "leave_one_pair_out": {
+      "auroc": 0.9548611111111112,
+      "pairwise_accuracy": 1.0,
+      "pair_results": [
+        {
+          "positive_score": 0.725,
+          "control_score": 0.5,
+          "correct": true
+        },
+        {
+          "positive_score": 0.9375,
+          "control_score": 0.25,
+          "correct": true
+        },
+        {
+          "positive_score": 0.9375,
+          "control_score": 0.0,
+          "correct": true
+        },
+        {
+          "positive_score": 0.9375,
+          "control_score": 0.25,
+          "correct": true
+        },
+        {
+          "positive_score": 0.5,
+          "control_score": 0.25,
+          "correct": true
+        },
+        {
+          "positive_score": 0.9500000000000001,
+          "control_score": 0.7,
+          "correct": true
+        },
+        {
+          "positive_score": 0.6916666666666667,
+          "control_score": 0.25,
+          "correct": true
+        },
+        {
+          "positive_score": 0.9375,
+          "control_score": 0.25,
+          "correct": true
+        },
+        {
+          "positive_score": 0.725,
+          "control_score": 0.45,
+          "correct": true
+        },
+        {
+          "positive_score": 0.9500000000000001,
+          "control_score": 0.7,
+          "correct": true
+        },
+        {
+          "positive_score": 0.675,
+          "control_score": 0.2,
+          "correct": true
+        },
+        {
+          "positive_score": 0.9,
+          "control_score": 0.0,
+          "correct": true
+        }
+      ]
+    },
+    "baseline_evaluations": {
+      "single_agent": {
+        "auroc": 0.9513888888888888,
+        "threshold": 0.75,
+        "balanced_accuracy": 0.7916666666666667,
+        "sensitivity": 0.5833333333333334,
+        "specificity": 1.0
+      },
+      "scripted_transit_shape_only": {
+        "auroc": 0.7083333333333333,
+        "threshold": 1.0,
+        "balanced_accuracy": 0.5,
+        "sensitivity": 0.0,
+        "specificity": 1.0
+      },
+      "shape_plus_stellar": {
+        "auroc": 0.78125,
+        "threshold": 0.75,
+        "balanced_accuracy": 0.75,
+        "sensitivity": 0.75,
+        "specificity": 0.75
+      },
+      "no_archival": {
+        "auroc": 0.9583333333333333,
+        "threshold": 0.66,
+        "balanced_accuracy": 0.9583333333333333,
+        "sensitivity": 0.9166666666666666,
+        "specificity": 1.0
+      },
+      "no_followup": {
+        "auroc": 0.8506944444444445,
+        "threshold": 0.67,
+        "balanced_accuracy": 0.7083333333333334,
+        "sensitivity": 0.5833333333333334,
+        "specificity": 0.8333333333333334
+      }
+    },
+    "permutation_null": {
+      "observed_auroc": 0.9548611111111112,
+      "null_auroc_mean": 0.49783506944444444,
+      "null_auroc_p_value": 0.0
+    },
+    "summary_statistics": {
+      "detection_rate": 1.0,
+      "median_lead_time_years": 1.0,
+      "mean_lead_time_years": 1.5833333333333333,
+      "n_positives": 12,
+      "n_negatives": 12
+    },
+    "wall_clock_minutes": 0.009
+  }
+}

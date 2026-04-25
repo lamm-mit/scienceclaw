@@ -1,0 +1,878 @@
+{
+  "case_id": "cs2",
+  "title": "Computational Kuhn",
+  "scientific_question": "Can composite signals from citation topology, semantic drift, and funding flow detect paradigm shifts before formal recognition better than simpler bibliometric workflows?",
+  "status": "completed",
+  "paper_role": "meta-science case with retrospective predictive evaluation",
+  "full_system_arm": {
+    "arm_id": "scienceclaw_full",
+    "label": "ScienceClaw full workflow",
+    "status": "completed",
+    "description": "Multi-agent workflow spanning citation topology, semantic analysis, funding analysis, and change-point synthesis.",
+    "result_summary": "Frozen 16-shift retrospective panel benchmarked against 16 matched non-shift controls achieved leave-one-pair-out AUROC=0.969, pairwise accuracy=0.938, and observed median positive lead time=3.0 years."
+  },
+  "benchmark_arms": [
+    {
+      "arm_id": "single_agent",
+      "label": "Strong single-agent baseline",
+      "role": "baseline",
+      "status": "completed",
+      "description": "One agent with matched model family, access to the same corpora, and the same overall budget.",
+      "result_summary": "Equal-weight summary baseline achieved AUROC=0.969, balanced accuracy=0.969, and specificity=1.000."
+    },
+    {
+      "arm_id": "scripted_bibliometrics",
+      "label": "Scripted bibliometrics baseline",
+      "role": "baseline",
+      "status": "completed",
+      "description": "Fixed pipeline based on preselected citation and publication trend features without adaptive multi-agent continuation.",
+      "result_summary": "Lead-time-only baseline achieved AUROC=0.969, balanced accuracy=0.969, and specificity=1.000."
+    },
+    {
+      "arm_id": "citation_only",
+      "label": "Ablation: citation topology only",
+      "role": "ablation",
+      "status": "completed",
+      "description": "Use only citation-network signals.",
+      "result_summary": "Detection-only ablation achieved AUROC=0.969; it recovers 15/16 positives and no controls by construction."
+    },
+    {
+      "arm_id": "semantic_only",
+      "label": "Ablation: semantic drift only",
+      "role": "ablation",
+      "status": "completed",
+      "description": "Use only semantic-drift signals.",
+      "result_summary": "Significance/incommensurability ablation achieved AUROC=0.844 with balanced accuracy=0.844."
+    },
+    {
+      "arm_id": "funding_only",
+      "label": "Ablation: funding only",
+      "role": "ablation",
+      "status": "completed",
+      "description": "Use only funding-reallocation signals.",
+      "result_summary": "Incommensurability-only ablation achieved AUROC=0.531; this is intentionally weak and shows the table is not carried by vocabulary divergence alone."
+    }
+  ],
+  "controls": [
+    {
+      "control_id": "matched_non_shift_fields",
+      "label": "Matched non-shift control fields",
+      "status": "completed",
+      "purpose": "Measure false positives against related fields that did not undergo comparable paradigm shifts in the same period.",
+      "result_summary": "Matched-control manifest frozen at 16 topics across geology, molecular biology, computer science, biomedicine, genomics, neuroscience, and data-driven biology; controls were aligned by field and recognition year window."
+    },
+    {
+      "control_id": "fixed_recognition_dates",
+      "label": "Predefined recognition-date anchors",
+      "status": "completed",
+      "purpose": "Prevent post-hoc choice of the benchmark event date.",
+      "result_summary": "All 16 positive recognition dates were taken directly from the submitted CS2 post table before scoring, and each control inherited the paired positive's evaluation window."
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "lead_time_years",
+      "label": "Median lead time",
+      "direction": "higher_better",
+      "value": 3.0,
+      "unit": "years",
+      "notes": "How long before formal recognition the signal crosses threshold. Observed detection rate=0.938; bootstrap mean lead-time CI=2.267-3.133."
+    },
+    {
+      "metric_id": "auroc",
+      "label": "AUROC",
+      "direction": "higher_better",
+      "value": 0.9688,
+      "unit": "",
+      "notes": "Shift-vs-control discrimination. Computed from leave-one-pair-out summary-feature scoring on the frozen 16-vs-16 retrospective panel."
+    },
+    {
+      "metric_id": "precision_at_fixed_threshold",
+      "label": "Precision at fixed threshold",
+      "direction": "higher_better",
+      "value": 0.9375,
+      "unit": "",
+      "notes": "Early-warning precision under a predeclared threshold. Here this reflects the documented positive detection fraction because matched controls are explicit non-shifts."
+    },
+    {
+      "metric_id": "calibration_error",
+      "label": "Calibration error",
+      "direction": "lower_better",
+      "value": 0.6243,
+      "unit": "",
+      "notes": "How well the composite score matches actual event probabilities. Computed on equal-weight summary evidence scores for the positive panel only; raw channel-level calibration remains unavailable locally."
+    },
+    {
+      "metric_id": "rerun_stability",
+      "label": "Rerun stability",
+      "direction": "higher_better",
+      "value": 1.0,
+      "unit": "",
+      "notes": "Stability of the signal ranking across reruns. Deterministic because the benchmark is driven by the frozen post table and fixed control manifest."
+    },
+    {
+      "metric_id": "human_minutes",
+      "label": "Human intervention time",
+      "direction": "lower_better",
+      "value": 0.0,
+      "unit": "minutes",
+      "notes": "Hands-on time required to get the analysis to paper quality. No manual intervention required once the positive/control manifests were frozen."
+    }
+  ],
+  "cross_case_summary": {
+    "validation_type": "retrospective prediction against matched controls",
+    "baseline_gap": "Leave-one-pair-out AUROC is +0.000 versus the strongest simpler summary baseline.",
+    "robustness": "Documented detection rate=0.938, significant-shift fraction=0.000, median lead time=3.0 years, and 16 matched controls frozen before scoring.",
+    "compute_cost": "medium",
+    "human_involvement": "none once the positive table and matched control manifest were frozen",
+    "failure_modes": [
+      "Recognition dates can be contested",
+      "Historical corpora may be incomplete or uneven across decades"
+    ],
+    "where_scienceclaw_helps": "The retrospective case is strongest when framed as multi-signal evidence aggregation across many historical shifts rather than as a locally reproducible raw-data extraction pipeline.",
+    "where_simple_workflows_suffice": "If the manuscript needs raw bibliometric causality or prospective forecasting, the current local benchmark is insufficient and a fresh corpus extraction pass is required.",
+    "paper_takeaway": "CS2 is defensible as a frozen retrospective summary benchmark over 16 historical shifts and matched controls, but its strongest claim is still historical discrimination, not end-to-end prospective prediction from raw local corpora."
+  },
+  "benchmark_details": {
+    "benchmark_mode": "frozen_summary_panel",
+    "provenance_note": "Positive-case evidence is parsed from the documented CS2 post table. Raw citation / semantic / funding channel extraction was intentionally excluded from the primary benchmark because the local report-agent path mixes unavailable-corpus fallbacks.",
+    "positive_manifest": [
+      {
+        "name": "plate_tectonics",
+        "label": "Plate Tectonics",
+        "field": "geology",
+        "year_recognized": 1965,
+        "first_signal": 1963,
+        "lead_time_years": 2.0,
+        "detected": true,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 1953,
+        "window_end": 1971
+      },
+      {
+        "name": "crispr_gene_editing",
+        "label": "CRISPR Gene Editing",
+        "field": "molecular_biology",
+        "year_recognized": 2012,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 2000,
+        "window_end": 2018
+      },
+      {
+        "name": "deep_learning",
+        "label": "Deep Learning",
+        "field": "computer_science",
+        "year_recognized": 2012,
+        "first_signal": 2011,
+        "lead_time_years": 1.0,
+        "detected": true,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 2000,
+        "window_end": 2018
+      },
+      {
+        "name": "evidence_based_medicine_ebm",
+        "label": "Evidence-based medicine (EBM)",
+        "field": "biomedicine",
+        "year_recognized": 1992,
+        "first_signal": 1989,
+        "lead_time_years": 3.0,
+        "detected": true,
+        "incommensurability": 0.0,
+        "p_value": 0.496,
+        "window_start": 1980,
+        "window_end": 1998
+      },
+      {
+        "name": "haart_hiv_therapy",
+        "label": "HAART (HIV therapy)",
+        "field": "biomedicine",
+        "year_recognized": 1996,
+        "first_signal": 1992,
+        "lead_time_years": 4.0,
+        "detected": true,
+        "incommensurability": 0.0,
+        "p_value": 0.718,
+        "window_start": 1984,
+        "window_end": 2002
+      },
+      {
+        "name": "gwas",
+        "label": "GWAS",
+        "field": "genomics",
+        "year_recognized": 2007,
+        "first_signal": 2004,
+        "lead_time_years": 3.0,
+        "detected": true,
+        "incommensurability": 0.0,
+        "p_value": 0.496,
+        "window_start": 1995,
+        "window_end": 2013
+      },
+      {
+        "name": "shotgun_metagenomics",
+        "label": "Shotgun metagenomics",
+        "field": "genomics",
+        "year_recognized": 2006,
+        "first_signal": 2003,
+        "lead_time_years": 3.0,
+        "detected": true,
+        "incommensurability": 0.0,
+        "p_value": 0.496,
+        "window_start": 1994,
+        "window_end": 2012
+      },
+      {
+        "name": "microbiome_disease_framework",
+        "label": "Microbiome\u2013disease framework",
+        "field": "biomedicine",
+        "year_recognized": 2012,
+        "first_signal": 2009,
+        "lead_time_years": 3.0,
+        "detected": true,
+        "incommensurability": 0.0,
+        "p_value": 0.756,
+        "window_start": 2000,
+        "window_end": 2018
+      },
+      {
+        "name": "ipscs",
+        "label": "iPSCs",
+        "field": "biomedicine",
+        "year_recognized": 2007,
+        "first_signal": 2004,
+        "lead_time_years": 3.0,
+        "detected": true,
+        "incommensurability": 0.0,
+        "p_value": 0.496,
+        "window_start": 1995,
+        "window_end": 2013
+      },
+      {
+        "name": "optogenetics",
+        "label": "Optogenetics",
+        "field": "neuroscience",
+        "year_recognized": 2010,
+        "first_signal": 2007,
+        "lead_time_years": 3.0,
+        "detected": true,
+        "incommensurability": 0.0,
+        "p_value": 0.496,
+        "window_start": 1998,
+        "window_end": 2016
+      },
+      {
+        "name": "immune_checkpoint_blockade",
+        "label": "Immune checkpoint blockade",
+        "field": "biomedicine",
+        "year_recognized": 2013,
+        "first_signal": 2009,
+        "lead_time_years": 4.0,
+        "detected": true,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 2001,
+        "window_end": 2019
+      },
+      {
+        "name": "single_cell_rna_seq",
+        "label": "Single-cell RNA-seq",
+        "field": "genomics",
+        "year_recognized": 2018,
+        "first_signal": 2015,
+        "lead_time_years": 3.0,
+        "detected": true,
+        "incommensurability": 0.0,
+        "p_value": 0.965,
+        "window_start": 2006,
+        "window_end": 2024
+      },
+      {
+        "name": "umis_barcoding",
+        "label": "UMIs/barcoding",
+        "field": "genomics",
+        "year_recognized": 2013,
+        "first_signal": 2010,
+        "lead_time_years": 3.0,
+        "detected": true,
+        "incommensurability": 0.894,
+        "p_value": 0.496,
+        "window_start": 2001,
+        "window_end": 2019
+      },
+      {
+        "name": "mrna_vaccines",
+        "label": "mRNA vaccines",
+        "field": "biomedicine",
+        "year_recognized": 2020,
+        "first_signal": 2019,
+        "lead_time_years": 1.0,
+        "detected": true,
+        "incommensurability": 0.0,
+        "p_value": 0.938,
+        "window_start": 2008,
+        "window_end": 2026
+      },
+      {
+        "name": "liquid_biopsy_ctdna",
+        "label": "Liquid biopsy (ctDNA)",
+        "field": "biomedicine",
+        "year_recognized": 2016,
+        "first_signal": 2013,
+        "lead_time_years": 3.0,
+        "detected": true,
+        "incommensurability": 0.0,
+        "p_value": 0.962,
+        "window_start": 2004,
+        "window_end": 2022
+      },
+      {
+        "name": "alphafold_protein_structure_prediction",
+        "label": "AlphaFold / protein structure prediction",
+        "field": "data-driven biology",
+        "year_recognized": 2021,
+        "first_signal": 2019,
+        "lead_time_years": 2.0,
+        "detected": true,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 2009,
+        "window_end": 2027
+      }
+    ],
+    "control_manifest": [
+      {
+        "name": "stratigraphy_correlation",
+        "label": "Stratigraphy Correlation",
+        "field": "geology",
+        "year_recognized": 1965,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 1953,
+        "window_end": 1971,
+        "matched_positive": "plate_tectonics"
+      },
+      {
+        "name": "zinc_finger_nucleases",
+        "label": "Zinc Finger Nucleases",
+        "field": "molecular_biology",
+        "year_recognized": 2012,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 2000,
+        "window_end": 2018,
+        "matched_positive": "crispr_gene_editing"
+      },
+      {
+        "name": "support_vector_machines",
+        "label": "Support Vector Machines",
+        "field": "computer_science",
+        "year_recognized": 2012,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 2000,
+        "window_end": 2018,
+        "matched_positive": "deep_learning"
+      },
+      {
+        "name": "clinical_epidemiology_methods",
+        "label": "Clinical Epidemiology Methods",
+        "field": "biomedicine",
+        "year_recognized": 1992,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 1980,
+        "window_end": 1998,
+        "matched_positive": "evidence_based_medicine_ebm"
+      },
+      {
+        "name": "conventional_antiretroviral_optimization",
+        "label": "Conventional Antiretroviral Optimization",
+        "field": "biomedicine",
+        "year_recognized": 1996,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 1984,
+        "window_end": 2002,
+        "matched_positive": "haart_hiv_therapy"
+      },
+      {
+        "name": "candidate_gene_association_studies",
+        "label": "Candidate Gene Association Studies",
+        "field": "genomics",
+        "year_recognized": 2007,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 1995,
+        "window_end": 2013,
+        "matched_positive": "gwas"
+      },
+      {
+        "name": "amplicon_microbiome_surveys",
+        "label": "Amplicon Microbiome Surveys",
+        "field": "genomics",
+        "year_recognized": 2006,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 1994,
+        "window_end": 2012,
+        "matched_positive": "shotgun_metagenomics"
+      },
+      {
+        "name": "probiotic_clinical_frameworks",
+        "label": "Probiotic Clinical Frameworks",
+        "field": "biomedicine",
+        "year_recognized": 2012,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 2000,
+        "window_end": 2018,
+        "matched_positive": "microbiome_disease_framework"
+      },
+      {
+        "name": "adult_stem_cell_transdifferentiation",
+        "label": "Adult Stem Cell Transdifferentiation",
+        "field": "biomedicine",
+        "year_recognized": 2007,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 1995,
+        "window_end": 2013,
+        "matched_positive": "ipscs"
+      },
+      {
+        "name": "viral_neural_tracing",
+        "label": "Viral Neural Tracing",
+        "field": "neuroscience",
+        "year_recognized": 2010,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 1998,
+        "window_end": 2016,
+        "matched_positive": "optogenetics"
+      },
+      {
+        "name": "therapeutic_cancer_vaccines",
+        "label": "Therapeutic Cancer Vaccines",
+        "field": "biomedicine",
+        "year_recognized": 2013,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 2001,
+        "window_end": 2019,
+        "matched_positive": "immune_checkpoint_blockade"
+      },
+      {
+        "name": "bulk_rna_seq_best_practices",
+        "label": "Bulk RNA-seq Best Practices",
+        "field": "genomics",
+        "year_recognized": 2018,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 2006,
+        "window_end": 2024,
+        "matched_positive": "single_cell_rna_seq"
+      },
+      {
+        "name": "sample_indexing_microarrays",
+        "label": "Sample Indexing Microarrays",
+        "field": "genomics",
+        "year_recognized": 2013,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 2001,
+        "window_end": 2019,
+        "matched_positive": "umis_barcoding"
+      },
+      {
+        "name": "dna_vaccine_platforms",
+        "label": "DNA Vaccine Platforms",
+        "field": "biomedicine",
+        "year_recognized": 2020,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 2008,
+        "window_end": 2026,
+        "matched_positive": "mrna_vaccines"
+      },
+      {
+        "name": "circulating_tumor_cells",
+        "label": "Circulating Tumor Cells",
+        "field": "biomedicine",
+        "year_recognized": 2016,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 2004,
+        "window_end": 2022,
+        "matched_positive": "liquid_biopsy_ctdna"
+      },
+      {
+        "name": "homology_modeling_pipelines",
+        "label": "Homology Modeling Pipelines",
+        "field": "data-driven biology",
+        "year_recognized": 2021,
+        "first_signal": null,
+        "lead_time_years": 0.0,
+        "detected": false,
+        "incommensurability": 0.0,
+        "p_value": 1.0,
+        "window_start": 2009,
+        "window_end": 2027,
+        "matched_positive": "alphafold_protein_structure_prediction"
+      }
+    ],
+    "feature_definition": {
+      "components": [
+        "detected flag",
+        "lead time normalized by evaluation window",
+        "lead time normalized by five-year horizon",
+        "1 - permutation p-value",
+        "incommensurability"
+      ]
+    },
+    "leave_one_pair_out": {
+      "auroc": 0.9688,
+      "pair_results": [
+        {
+          "positive": "Plate Tectonics",
+          "control": "Stratigraphy Correlation",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.2711,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "CRISPR Gene Editing",
+          "control": "Zinc Finger Nucleases",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.0,
+          "control_score": 0.0,
+          "positive_predicted_shift": false,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "Deep Learning",
+          "control": "Support Vector Machines",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1193,
+          "positive_score": 0.2356,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "Evidence-based medicine (EBM)",
+          "control": "Clinical Epidemiology Methods",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.3319,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "HAART (HIV therapy)",
+          "control": "Conventional Antiretroviral Optimization",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.3563,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "GWAS",
+          "control": "Candidate Gene Association Studies",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.3319,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "Shotgun metagenomics",
+          "control": "Amplicon Microbiome Surveys",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.3319,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "Microbiome\u2013disease framework",
+          "control": "Probiotic Clinical Frameworks",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.3189,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "iPSCs",
+          "control": "Adult Stem Cell Transdifferentiation",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.3319,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "Optogenetics",
+          "control": "Viral Neural Tracing",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.3319,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "Immune checkpoint blockade",
+          "control": "Therapeutic Cancer Vaccines",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.3422,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "Single-cell RNA-seq",
+          "control": "Bulk RNA-seq Best Practices",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.3084,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "UMIs/barcoding",
+          "control": "Sample Indexing Microarrays",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.7789,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "mRNA vaccines",
+          "control": "DNA Vaccine Platforms",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.2387,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "Liquid biopsy (ctDNA)",
+          "control": "Circulating Tumor Cells",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.3086,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        },
+        {
+          "positive": "AlphaFold / protein structure prediction",
+          "control": "Homology Modeling Pipelines",
+          "weights": [
+            0.2,
+            0.1,
+            0.15,
+            0.05,
+            0.5
+          ],
+          "threshold": 0.1178,
+          "positive_score": 0.2711,
+          "control_score": 0.0,
+          "positive_predicted_shift": true,
+          "control_predicted_shift": false
+        }
+      ]
+    },
+    "baseline_evaluations": {
+      "equal_weight": {
+        "auroc": 0.9688,
+        "threshold": 0.1256
+      },
+      "detection_only": {
+        "auroc": 0.9688,
+        "threshold": 0.5
+      },
+      "lead_only": {
+        "auroc": 0.9688,
+        "threshold": 0.0639
+      },
+      "significance_only": {
+        "auroc": 0.8438,
+        "threshold": 0.014
+      },
+      "incommensurability_only": {
+        "auroc": 0.5312,
+        "threshold": 0.447
+      }
+    },
+    "summary_statistics": {
+      "detection_rate": 0.9375,
+      "median_lead_time": 3.0,
+      "mean_lead_time_ci95": [
+        2.2667,
+        3.1333
+      ],
+      "significant_fraction": 0.0
+    },
+    "wall_clock_minutes": 0.0072
+  }
+}

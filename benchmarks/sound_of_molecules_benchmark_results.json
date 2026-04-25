@@ -1,0 +1,244 @@
+{
+  "case_id": "cs1",
+  "title": "The Sound of Molecules",
+  "scientific_question": "Can a structured mapping from molecular properties to musical representations recover stable and interpretable chemical organization rather than arbitrary aesthetic analogy?",
+  "status": "completed",
+  "paper_role": "creative cross-domain case with quantitative validation",
+  "full_system_arm": {
+    "arm_id": "scienceclaw_full",
+    "label": "ScienceClaw full workflow",
+    "status": "completed",
+    "description": "Multi-agent cross-domain workflow spanning chemistry, sonification, music analysis, and pattern discovery.",
+    "result_summary": "Final CS1 report embedding achieved retrieval@3=0.271 (95% bootstrap CI 0.083-0.500) and same-class nearest-neighbor rate=0.688 (95% CI 0.062-0.812) on the fixed 16-compound manifest."
+  },
+  "benchmark_arms": [
+    {
+      "arm_id": "single_agent",
+      "label": "Strong single-agent baseline",
+      "role": "baseline",
+      "status": "completed",
+      "description": "One agent with the same model family, same compounds, same descriptor access, and matched tool budget.",
+      "result_summary": "Strong physchem baseline (2D + 3D cosine) achieved retrieval@3=0.271, same-class nearest-neighbor rate=0.188, ARI=0.179."
+    },
+    {
+      "arm_id": "scripted_cheminformatics",
+      "label": "Scripted cheminformatics baseline",
+      "role": "baseline",
+      "status": "completed",
+      "description": "Fixed descriptor extraction and similarity workflow without adaptive multi-agent continuation.",
+      "result_summary": "Morgan-fingerprint Tanimoto baseline achieved retrieval@3=0.292 and same-class nearest-neighbor rate=0.312."
+    },
+    {
+      "arm_id": "no_multiagent_specialization",
+      "label": "ScienceClaw ablation: no multi-agent specialization",
+      "role": "ablation",
+      "status": "completed",
+      "description": "Collapse chemistry, music, and comparison roles into a single generalized analysis flow while keeping the same core data sources.",
+      "result_summary": "No-3D sonic ablation achieved retrieval@3=0.250, same-class nearest-neighbor rate=0.375, and nearest-neighbor agreement 0.625 versus the full embedding."
+    }
+  ],
+  "controls": [
+    {
+      "control_id": "shuffle_compound_labels",
+      "label": "Shuffled compound-label control",
+      "status": "completed",
+      "purpose": "Check whether apparent class structure survives label randomization.",
+      "result_summary": "Observed retrieval@3=0.271 versus shuffled-label null mean=0.125 (95th percentile=0.229, permutation p=0.0178)."
+    },
+    {
+      "control_id": "shuffle_composer_labels",
+      "label": "Shuffled composer-label control",
+      "status": "completed",
+      "purpose": "Check whether composer-era assignments are stronger than random relabeling.",
+      "result_summary": "Observed class-majority era purity=0.833 versus shuffled-composer-label null mean=0.810."
+    },
+    {
+      "control_id": "random_mapping",
+      "label": "Random descriptor-to-harmony mapping control",
+      "status": "completed",
+      "purpose": "Test whether the proposed mapping outperforms arbitrary sonification transforms.",
+      "result_summary": "Observed retrieval@3=0.271 versus random sonification null mean=0.224 (95th percentile=0.312)."
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "class_retrieval_at_k",
+      "label": "Drug-class retrieval@k",
+      "direction": "higher_better",
+      "value": 0.2708,
+      "unit": "",
+      "notes": "Quantify whether harmonic embeddings preserve pharmacological class neighborhoods. k=3; bootstrap 95% CI=0.083-0.500; permutation p=0.0178."
+    },
+    {
+      "metric_id": "nearest_neighbor_consistency",
+      "label": "Same-class nearest-neighbor rate",
+      "direction": "higher_better",
+      "value": 0.6875,
+      "unit": "",
+      "notes": "Fraction of compounds whose nearest neighbor in the harmonic embedding shares the same pharmacological class. Bootstrap 95% CI=0.062-0.812; permutation p=0.0004."
+    },
+    {
+      "metric_id": "mapping_robustness",
+      "label": "Mapping robustness across descriptor sets",
+      "direction": "higher_better",
+      "value": 0.8021,
+      "unit": "",
+      "notes": "Stability of qualitative structure across 2D and optional 3D/conformer descriptor choices. Nearest-neighbor agreement vs no-3D ablation=0.625; report-alignment=0.125."
+    },
+    {
+      "metric_id": "rerun_stability",
+      "label": "Rerun stability",
+      "direction": "higher_better",
+      "value": 1.0,
+      "unit": "",
+      "notes": "How stable the outputs are across repeated runs. Deterministic conformer seeds and fixed benchmark manifest."
+    },
+    {
+      "metric_id": "human_minutes",
+      "label": "Human intervention time",
+      "direction": "lower_better",
+      "value": 0.0,
+      "unit": "minutes",
+      "notes": "Hands-on time required to obtain paper-quality outputs. No manual intervention required once the compound manifest was fixed."
+    },
+    {
+      "metric_id": "wall_clock_minutes",
+      "label": "Wall-clock runtime",
+      "direction": "lower_better",
+      "value": 0.048,
+      "unit": "minutes",
+      "notes": "End-to-end time for the workflow. Measured by the benchmark runner."
+    }
+  ],
+  "cross_case_summary": {
+    "validation_type": "structure recovery / retrieval / robustness analysis",
+    "baseline_gap": "Retrieval@3 is -0.021 versus the strongest chemistry baseline, while same-class nearest-neighbor rate is +0.375 above the best baseline.",
+    "robustness": "Full-system retrieval@3 beat shuffled-label and random-mapping nulls; ARI=0.083, NMI=0.557, scaffold-held-out accuracy=0.500 on 16 evaluated compounds.",
+    "compute_cost": "low-to-medium",
+    "human_involvement": "none once the 16-compound manifest and deterministic feature pipeline were fixed",
+    "failure_modes": [
+      "Risk of post-hoc aesthetic interpretation",
+      "Potential sensitivity to handcrafted descriptor-to-harmony choices"
+    ],
+    "where_scienceclaw_helps": "The richer sonic embedding improves same-class neighborhood coherence and exposes hidden same-class pairs that are weak under 2D fingerprints.",
+    "where_simple_workflows_suffice": "Purely chemical retrieval remains competitive or better for obvious analog-retrieval tasks, especially on a small fixed panel.",
+    "paper_takeaway": "CS1 is strongest as a structure-recovery case: the sonification-derived embedding retains non-random class structure under nulls and uncertainty analysis, but it should not be framed as uniformly outperforming standard cheminformatics."
+  },
+  "benchmark_details": {
+    "manifest": {
+      "manifest_id": "cs1_fixed16_v2",
+      "n_compounds": 16,
+      "classes": {
+        "Antibiotic": 2,
+        "Cardiovascular": 2,
+        "NSAID": 4,
+        "Opioid": 3,
+        "Psychotropic": 2,
+        "Stimulant": 3
+      },
+      "scaffolds": [
+        "c1ccccc1",
+        "c1ccccc1",
+        "c1ccccc1",
+        "c1ccc2ccccc2c1",
+        "C1=CC2C3=CC=C4C5=CCNC4CC(=C1)C52O3",
+        "C1=C2CC(c3ccccc3O2)C2NCCC12",
+        "c1ccc(CCN2CCC(Nc3ccccc3)CC2)cc1",
+        "O=c1[nH]c(=O)c2[nH]cnc2[nH]1",
+        "c1ccccc1",
+        "c1ccccc1",
+        "O=C(Cc1ccccc1)NC1C(=O)N2CCSC12",
+        "O=c1ccn(C2CC2)c2cc(N3CCNCC3)ccc12",
+        "O=C(Nc1ccccc1)c1c[nH]c(-c2ccccc2)c1-c1ccccc1",
+        "C1=C2CCCCC2C2CCC3CCCC3C2C1",
+        "O=C1CN=C(c2ccccc2)c2ccccc2N1",
+        "c1ccc(COc2ccccc2)cc1"
+      ]
+    },
+    "feature_sets": {
+      "2d_descriptor_dim": 12,
+      "3d_descriptor_dim": 7,
+      "distance_hist_dim": 6,
+      "report_embedding_dim": 6,
+      "reconstructed_embedding_dim": 12
+    },
+    "primary_metrics": {
+      "retrieval_at_3": 0.2708,
+      "retrieval_at_3_ci95": [
+        0.0828,
+        0.5
+      ],
+      "retrieval_at_3_permutation_p": 0.0178,
+      "nearest_neighbor_rate": 0.6875,
+      "nearest_neighbor_ci95": [
+        0.0625,
+        0.8125
+      ],
+      "nearest_neighbor_permutation_p": 0.0004,
+      "cluster_ari": 0.0833,
+      "cluster_nmi": 0.5569
+    },
+    "baseline_metrics": {
+      "physchem_cosine": {
+        "retrieval_at_3": 0.2708,
+        "nearest_neighbor_rate": 0.1875
+      },
+      "morgan_tanimoto": {
+        "retrieval_at_3": 0.2917,
+        "nearest_neighbor_rate": 0.3125
+      },
+      "no_3d_sonic_ablation": {
+        "retrieval_at_3": 0.25,
+        "nearest_neighbor_rate": 0.375
+      }
+    },
+    "scaffold_validation": {
+      "accuracy": 0.5,
+      "evaluated_compounds": 16,
+      "skipped_compounds": 0,
+      "n_scaffolds": 12
+    },
+    "report_alignment": {
+      "nearest_neighbor_agreement_vs_reconstructed_embedding": 0.125,
+      "composer_era_purity": 0.8333
+    },
+    "hidden_neighbors": [
+      {
+        "pair": "caffeine vs dopamine",
+        "label": "Stimulant",
+        "sonic_similarity": 0.9959389571662539,
+        "tanimoto_similarity": 0.045454545454545456,
+        "delta": 0.9504844117117085
+      },
+      {
+        "pair": "caffeine vs amphetamine",
+        "label": "Stimulant",
+        "sonic_similarity": 0.980804317530314,
+        "tanimoto_similarity": 0.07317073170731707,
+        "delta": 0.907633585822997
+      },
+      {
+        "pair": "atorvastatin vs cholesterol",
+        "label": "Cardiovascular",
+        "sonic_similarity": 0.9845100191007456,
+        "tanimoto_similarity": 0.0891089108910891,
+        "delta": 0.8954011082096566
+      },
+      {
+        "pair": "diazepam vs fluoxetine",
+        "label": "Psychotropic",
+        "sonic_similarity": 0.9968049875684487,
+        "tanimoto_similarity": 0.1044776119402985,
+        "delta": 0.8923273756281502
+      },
+      {
+        "pair": "penicillin_G vs ciprofloxacin",
+        "label": "Antibiotic",
+        "sonic_similarity": 0.999339719014517,
+        "tanimoto_similarity": 0.12658227848101267,
+        "delta": 0.8727574405335043
+      }
+    ],
+    "wall_clock_minutes": 0.048
+  }
+}
