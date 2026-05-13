@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+"""
+scienceclaw-migrate-profile — migrate a legacy agent profile to the
+current schema.
+
+Legacy profiles store the tool list at preferences.tools; current code
+reads top-level preferred_tools. Without migration, the loop controller
+silently no-ops every cycle. This script:
+
+  1. Locates the profile (default: ~/.scienceclaw/agent_profile.json;
+     --agent NAME for ~/.scienceclaw/profiles/NAME/agent_profile.json).
+  2. Backs it up to <path>.bak (unless --no-backup is passed).
+  3. Hoists preferences.tools → preferred_tools.
+  4. Normalizes any double-spaces in research.interests strings.
+  5. Optionally expands the tool list (--expand) to a fuller starter set
+     that matches the agent's stated interests.
+
+Idempotent: re-running on an already-migrated profile is a no-op (and
+prints a clear message).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import shutil
+import sys
+from pathlib import Path
+from typing import Dict, List
+
+_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ROOT))
+
+from utils.profile import profile_is_legacy, profile_preferred_tools
+
+
+HOME = Path.home() / ".scienceclaw"
+
+
+# Curated starter sets by interest area. We intersect this with the
+# skill registry at runtime so we only suggest tools that are actually
+# installed.
+STARTER_TOOLS = {
+    "biomedical": [
+        "pubmed", "arxiv", "uniprot", "alphafold-database", "chembl",
+        "rdkit", "tdc", "clinicaltrials-database", "ensembl-database",
+    ],
+    "chemistry": [
+        "pubchem-database", "chembl", "rdkit", "tdc", "askcos",
+        "molfeat", "datamol",
+    ],
+    "materials": [
+        "materials", "pymatgen", "ase", "dft", "phonon",
+    ],
+    "always": ["websearch"],
+}
+
+
+def _profile_path(agent: str | None) -> Path:
+    if agent:
+        return HOME / "profiles" / agent / "agent_profile.json"
+    return HOME / "agent_profile.json"
+
+
+def _infer_starter(profile: Dict) -> List[str]:
+    """Pick a starter toolset based on the profile's interests."""
+    interests = " ".join(
+        profile.get("research", {}).get("interests", [])
+        + profile.get("interests", [])
+    ).lower()
+
+    sets = []
+    if any(k in interests for k in (
+        "biology", "biomedic", "drug", "protein", "genom", "clinical",
+        "oncolog", "cancer", "precision medicine", "immuno",
+    )):
+        sets.append("biomedical")
+    if any(k in interests for k in ("chemistr", "compound", "molecul")):
+        sets.append("chemistry")
+    if any(k in interests for k in ("material", "crystal", "dft", "phonon")):
+        sets.append("materials")
+    sets.append("always")
+
+    seen: set = set()
+    out: List[str] = []
+    for s in sets:
+        for t in STARTER_TOOLS[s]:
+            if t not in seen:
+                out.append(t)
+                seen.add(t)
+    return out
+
+
+def _filter_to_registered(tools: List[str]) -> List[str]:
+    """Drop tools that aren't in the skill registry."""
+    try:
+        from core.skill_registry import get_registry
+        reg_skills = set(get_registry().skills.keys())
+    except Exception:
+        return tools
+    return [t for t in tools if t in reg_skills]
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Migrate a legacy agent profile to the current schema.",
+    )
+    parser.add_argument(
+        "--agent", default=None,
+        help="Named profile (default: ~/.scienceclaw/agent_profile.json)",
+    )
+    parser.add_argument(
+        "--path", default=None,
+        help="Explicit path to a profile JSON (overrides --agent).",
+    )
+    parser.add_argument(
+        "--expand", action="store_true",
+        help="Replace the (possibly thin) legacy tool list with an "
+             "interest-matched starter set rather than just hoisting it.",
+    )
+    parser.add_argument(
+        "--no-backup", action="store_true",
+        help="Skip the .bak backup file.",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Print the new profile without writing it.",
+    )
+    args = parser.parse_args()
+
+    path = Path(args.path) if args.path else _profile_path(args.agent)
+    if not path.exists():
+        print(f"error: profile not found at {path}", file=sys.stderr)
+        return 2
+
+    try:
+        profile = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        print(f"error: profile is not valid JSON: {e}", file=sys.stderr)
+        return 2
+
+    legacy = profile_is_legacy(profile)
+    current_tools = profile_preferred_tools(profile)
+
+    if not legacy and current_tools and not args.expand:
+        print(f"already migrated: {len(current_tools)} preferred_tools — nothing to do")
+        return 0
+
+    if args.expand:
+        new_tools = _filter_to_registered(_infer_starter(profile))
+        if not new_tools:
+            print("warning: starter set is empty after filtering to registry — "
+                  "falling back to hoist-only")
+            new_tools = current_tools
+        action = "expanded"
+    else:
+        new_tools = current_tools  # already merged from legacy by profile_preferred_tools
+        action = "hoisted"
+
+    profile["preferred_tools"] = new_tools
+
+    # Clean up double-spaces in interests.
+    interests = profile.get("research", {}).get("interests")
+    if isinstance(interests, list):
+        profile["research"]["interests"] = [" ".join(str(i).split()) for i in interests]
+
+    if args.dry_run:
+        print(json.dumps(profile, indent=2))
+        print(f"\n(dry run) would have {action} {len(new_tools)} tools at {path}",
+              file=sys.stderr)
+        return 0
+
+    if not args.no_backup:
+        bak = path.with_suffix(path.suffix + ".bak")
+        if not bak.exists():
+            shutil.copy2(path, bak)
+            print(f"backup: {bak}")
+        else:
+            print(f"backup already exists: {bak} (not overwritten)")
+
+    path.write_text(json.dumps(profile, indent=2), encoding="utf-8")
+    print(f"{action} {len(new_tools)} preferred_tools into {path}")
+    for t in new_tools:
+        print(f"  - {t}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

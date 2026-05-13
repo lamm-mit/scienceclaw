@@ -1,0 +1,259 @@
+#!/usr/bin/env python3
+"""
+scienceclaw-status — operator-friendly snapshot of agent health.
+
+Reports:
+  - whether the heartbeat daemon is running (and PID)
+  - last successful heartbeat (age)
+  - last failure (age + count of consecutive failures)
+  - next scheduled cycle (estimated from interval)
+  - top 5 worst-performing skills by failure rate (from SkillMetrics)
+  - LLM cache hit/miss ratio (since process start of *this* invocation is
+    not useful; we read the persisted cache size instead)
+  - recent log lines (last 5 ERROR/WARNING entries)
+
+Read-only. Safe to run while the daemon is active.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional
+
+_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ROOT))
+
+
+HOME = Path.home() / ".scienceclaw"
+RESET = "\033[0m"
+GREEN = "\033[32m"
+RED = "\033[31m"
+YELLOW = "\033[33m"
+DIM = "\033[2m"
+BOLD = "\033[1m"
+
+
+def _supports_color() -> bool:
+    return sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+
+
+def _c(color: str, s: str) -> str:
+    return f"{color}{s}{RESET}" if _supports_color() else s
+
+
+def _human_age(iso_ts: Optional[str]) -> str:
+    if not iso_ts:
+        return "never"
+    try:
+        ts = datetime.fromisoformat(iso_ts)
+    except ValueError:
+        return iso_ts
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    delta = datetime.now(timezone.utc) - ts
+    secs = int(delta.total_seconds())
+    if secs < 0:
+        return f"in {-secs}s"
+    if secs < 60:
+        return f"{secs}s ago"
+    if secs < 3600:
+        return f"{secs // 60}m ago"
+    if secs < 86400:
+        return f"{secs // 3600}h{(secs % 3600) // 60}m ago"
+    return f"{secs // 86400}d ago"
+
+
+def _find_daemon_pid() -> Optional[int]:
+    """Return PID of a heartbeat_daemon.py process, if exactly one is running."""
+    try:
+        out = subprocess.check_output(
+            ["pgrep", "-f", "autonomous/heartbeat_daemon.py"],
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+    pids = [int(p) for p in out.splitlines() if p.strip().isdigit()]
+    # Filter out our own pgrep wrapper; usually 1-2 pids.
+    pids = [p for p in pids if p != os.getpid()]
+    return pids[0] if pids else None
+
+
+def _state_path(agent: Optional[str]) -> Path:
+    if agent:
+        return HOME / "profiles" / agent / "heartbeat_state.json"
+    return HOME / "heartbeat_state.json"
+
+
+def _read_json(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _top_skills_by_failure(snapshot: dict, n: int = 5) -> list:
+    items = []
+    for skill, stats in snapshot.items():
+        total = stats.get("success", 0) + stats.get("failure", 0)
+        if total < 2:
+            continue
+        rate = stats["failure"] / total
+        items.append((skill, rate, total, stats.get("ema_latency_ms", 0)))
+    items.sort(key=lambda x: (-x[1], -x[2]))
+    return items[:n]
+
+
+def _recent_log_warnings(path: Path, n: int = 5) -> list:
+    if not path.exists():
+        return []
+    # Read tail with a bounded buffer; jsonl lines are short.
+    try:
+        lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    except OSError:
+        return []
+    warnings = []
+    for raw in reversed(lines):
+        try:
+            entry = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if entry.get("level") in ("WARNING", "ERROR"):
+            warnings.append(entry)
+            if len(warnings) >= n:
+                break
+    return list(reversed(warnings))
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="ScienceClaw agent status")
+    parser.add_argument("--agent", default=None, help="Named agent profile")
+    parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+    args = parser.parse_args()
+
+    state = _read_json(_state_path(args.agent))
+    pid = _find_daemon_pid()
+    interval = state.get("interval_seconds") or 6 * 3600
+
+    # SkillMetrics snapshot
+    metrics_path = HOME / "metrics" / "skills.json"
+    metrics = _read_json(metrics_path)
+    top_failures = _top_skills_by_failure(metrics)
+
+    # LLM cache footprint
+    cache_dir = HOME / "llm_cache"
+    cache_files = 0
+    cache_bytes = 0
+    if cache_dir.exists():
+        for p in cache_dir.rglob("*.json"):
+            cache_files += 1
+            try:
+                cache_bytes += p.stat().st_size
+            except OSError:
+                pass
+
+    # Artifact stats
+    global_index = HOME / "artifacts" / "global_index.jsonl"
+    artifact_count = 0
+    if global_index.exists():
+        try:
+            with open(global_index, "rb") as fh:
+                for _ in fh:
+                    artifact_count += 1
+        except OSError:
+            pass
+
+    # Recent warnings
+    warnings = _recent_log_warnings(HOME / "logs" / "scienceclaw.jsonl")
+
+    if args.json:
+        print(json.dumps({
+            "daemon_running": pid is not None,
+            "daemon_pid": pid,
+            "last_heartbeat": state.get("lastHeartbeat"),
+            "last_success": state.get("lastSuccess"),
+            "last_failure": state.get("lastFailure"),
+            "consecutive_failures": state.get("consecutiveFailures", 0),
+            "interval_seconds": interval,
+            "artifact_count": artifact_count,
+            "llm_cache_files": cache_files,
+            "llm_cache_bytes": cache_bytes,
+            "top_failing_skills": [
+                {"skill": s, "failure_rate": rate, "runs": runs, "ema_latency_ms": lat}
+                for s, rate, runs, lat in top_failures
+            ],
+            "recent_warnings": warnings,
+        }, indent=2))
+        return 0
+
+    # Human-readable
+    print(_c(BOLD, "ScienceClaw status"))
+    if args.agent:
+        print(f"  profile: {args.agent}")
+    print()
+
+    if pid is None:
+        print(f"  daemon:        {_c(RED, 'not running')}")
+    else:
+        print(f"  daemon:        {_c(GREEN, 'running')} (pid {pid})")
+
+    last_success = state.get("lastSuccess")
+    last_failure = state.get("lastFailure")
+    consec = state.get("consecutiveFailures", 0)
+
+    if last_success:
+        print(f"  last success:  {_human_age(last_success)}  ({last_success})")
+    else:
+        print(f"  last success:  {_c(YELLOW, 'never')}")
+
+    if consec > 0:
+        color = RED if consec >= 3 else YELLOW
+        print(f"  failures:      {_c(color, f'{consec} consecutive')}, last {_human_age(last_failure)}")
+    else:
+        print(f"  failures:      0")
+
+    # Next-run estimate
+    if last_success:
+        try:
+            ts = datetime.fromisoformat(last_success)
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            next_ts = ts.timestamp() + interval
+            secs_until = int(next_ts - datetime.now(timezone.utc).timestamp())
+            if secs_until <= 0:
+                print(f"  next run:      {_c(GREEN, 'now or overdue')}")
+            else:
+                print(f"  next run:      in {secs_until // 60}m{secs_until % 60}s")
+        except ValueError:
+            pass
+
+    print()
+    print(f"  artifacts:     {artifact_count} in global index")
+    print(f"  llm cache:     {cache_files} files / {cache_bytes // 1024} KB")
+
+    if top_failures:
+        print()
+        print(_c(BOLD, "  Top failing skills:"))
+        for skill, rate, runs, lat in top_failures:
+            print(f"    {skill:30s}  fail={int(rate*100)}%  runs={runs}  latency≈{int(lat)}ms")
+
+    if warnings:
+        print()
+        print(_c(BOLD, "  Recent warnings/errors:"))
+        for w in warnings:
+            level = w.get("level", "?")
+            lvl_c = RED if level == "ERROR" else YELLOW
+            print(f"    {_c(lvl_c, level):7s}  {w.get('ts', '?')[:19]}  {w.get('msg', '')}")
+    print()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

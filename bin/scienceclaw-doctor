@@ -1,0 +1,260 @@
+#!/usr/bin/env python3
+"""
+scienceclaw-doctor — pre-flight checks for a ScienceClaw agent.
+
+Fails fast (under 2s by default) on the common first-run misconfigurations:
+- ~/.scienceclaw missing / not writable
+- agent profile missing or invalid JSON
+- LLM backend selected but no API key in env or config
+- Infinite config present but no JWT
+- preferred_tools listed in profile but not registered
+- Python deps for the configured tools not importable
+
+Add --deep to also send a 1-token ping at the configured LLM (slow,
+costs ~$0.0001 per check on Claude).
+
+Exit code is 0 iff every check passed; non-zero with a punch list otherwise.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import time
+from pathlib import Path
+from typing import Callable, List, Tuple
+
+# Make the repo importable. bin/ is one level below repo root.
+_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ROOT))
+
+
+HOME = Path.home() / ".scienceclaw"
+RESET = "\033[0m"
+GREEN = "\033[32m"
+RED = "\033[31m"
+YELLOW = "\033[33m"
+BOLD = "\033[1m"
+
+
+def _supports_color() -> bool:
+    return sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+
+
+def _c(color: str, s: str) -> str:
+    return f"{color}{s}{RESET}" if _supports_color() else s
+
+
+def _load_profile(agent: str | None) -> dict:
+    """Locate and load the agent profile JSON. Raises on any failure."""
+    if agent:
+        path = HOME / "profiles" / agent / "agent_profile.json"
+    else:
+        path = HOME / "agent_profile.json"
+    if not path.exists():
+        raise FileNotFoundError(f"profile not found at {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+# -- individual checks -------------------------------------------------------
+# Each check returns (ok: bool, message: str). Exceptions are caught by run().
+
+
+def check_home(_args) -> Tuple[bool, str]:
+    if not HOME.exists():
+        return False, f"{HOME} does not exist — run setup.py"
+    if not os.access(HOME, os.W_OK):
+        return False, f"{HOME} not writable by current user"
+    return True, str(HOME)
+
+
+def check_profile(args) -> Tuple[bool, str]:
+    profile = _load_profile(args.agent)
+    name = profile.get("name") or "(unnamed)"
+    tools = profile.get("preferred_tools", [])
+    if not tools:
+        return False, f"agent '{name}' has no preferred_tools — investigations will be empty"
+    return True, f"agent '{name}' with {len(tools)} tool(s)"
+
+
+def check_llm_config(_args) -> Tuple[bool, str]:
+    cfg_path = HOME / "llm_config.json"
+    cfg = {}
+    if cfg_path.exists():
+        try:
+            cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            return False, f"llm_config.json invalid JSON: {e}"
+
+    backend = os.environ.get("LLM_BACKEND") or cfg.get("backend") or "openai"
+    if backend == "openai":
+        key = os.environ.get("OPENAI_API_KEY") or cfg.get("openai_api_key")
+        model = os.environ.get("OPENAI_MODEL") or cfg.get("openai_model") or "gpt-5.2"
+    elif backend == "anthropic":
+        key = os.environ.get("ANTHROPIC_API_KEY") or cfg.get("anthropic_api_key")
+        model = os.environ.get("ANTHROPIC_MODEL") or cfg.get("anthropic_model") or "claude-sonnet-4-6"
+    elif backend == "huggingface":
+        key = (
+            os.environ.get("HF_API_KEY")
+            or os.environ.get("HUGGINGFACE_API_KEY")
+            or cfg.get("hf_api_key")
+        )
+        model = os.environ.get("HF_MODEL") or cfg.get("hf_model") or "(unset)"
+    else:
+        return False, f"unknown backend '{backend}'"
+
+    if not key and backend != "huggingface":
+        return False, f"backend '{backend}' selected but no API key in env or {cfg_path}"
+    return True, f"backend={backend} model={model}" + (" (no key)" if not key else "")
+
+
+def check_infinite(_args) -> Tuple[bool, str]:
+    cfg_path = HOME / "infinite_config.json"
+    if not cfg_path.exists():
+        return True, "no Infinite config (dry-run mode only)"
+    try:
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        return False, f"infinite_config.json invalid JSON: {e}"
+    token = cfg.get("jwt_token") or cfg.get("api_key")
+    if not token:
+        return False, "infinite_config.json present but no token — re-run setup.py"
+    return True, "JWT present"
+
+
+def check_skills(args) -> Tuple[bool, str]:
+    """Verify every preferred_tool is registered."""
+    profile = _load_profile(args.agent)
+    tools = profile.get("preferred_tools", [])
+    if not tools:
+        return True, "no preferred_tools (skipped)"
+
+    from core.skill_registry import get_registry
+    reg = get_registry()
+    registered = set(reg.skills.keys())
+    missing = [t for t in tools if t not in registered]
+    if missing:
+        return False, f"{len(missing)} unregistered: {', '.join(missing[:6])}"
+    return True, f"all {len(tools)} preferred tools registered"
+
+
+def check_python_deps(args) -> Tuple[bool, str]:
+    """Spot-check importability of common dependencies for configured tools."""
+    profile = _load_profile(args.agent)
+    tools = set(profile.get("preferred_tools", []))
+    # Map a few hot tools to their module name. Don't try to install — just
+    # report what's missing so the user can `pip install` the right group.
+    probes = {
+        "rdkit": "rdkit",
+        "pubchem": "pubchempy",
+        "pubmed": "Bio",
+        "uniprot": "bioservices",
+        "tdc": "tdc",
+        "biopython": "Bio",
+        "scanpy": "scanpy",
+        "qiskit": "qiskit",
+        "pymatgen": "pymatgen",
+    }
+    missing = []
+    checked = 0
+    for tool, mod in probes.items():
+        if tool not in tools:
+            continue
+        checked += 1
+        try:
+            __import__(mod)
+        except ImportError:
+            missing.append(f"{tool} (needs `{mod}`)")
+    if checked == 0:
+        return True, "no probe-able heavyweight deps configured"
+    if missing:
+        return False, f"{len(missing)} missing: {', '.join(missing)}"
+    return True, f"checked {checked} dep(s), all importable"
+
+
+def check_llm_ping(_args) -> Tuple[bool, str]:
+    """Slow check (--deep). Sends a 1-token prompt to verify the key works."""
+    from core.llm_client import LLMClient
+    client = LLMClient(agent_name="doctor")
+    # Bypass cache so we actually hit the API.
+    out = client.call(
+        prompt="Reply with the single character: ok",
+        max_tokens=4,
+        temperature=0.0,
+        use_cache=False,
+    )
+    if not out or not out.strip():
+        return False, "LLM returned empty — check the key or network"
+    return True, f"got response ({len(out)} chars)"
+
+
+# -- runner ------------------------------------------------------------------
+
+
+def run(args) -> int:
+    print(_c(BOLD, "ScienceClaw doctor"))
+    if args.agent:
+        print(f"  profile: {args.agent}")
+    print()
+
+    checks: List[Tuple[str, Callable[[argparse.Namespace], Tuple[bool, str]]]] = [
+        ("home directory     ", check_home),
+        ("agent profile      ", check_profile),
+        ("LLM backend config ", check_llm_config),
+        ("Infinite auth      ", check_infinite),
+        ("skills registered  ", check_skills),
+        ("python dependencies", check_python_deps),
+    ]
+    if args.deep:
+        checks.append(("LLM ping (live)    ", check_llm_ping))
+
+    failures: List[str] = []
+    for name, fn in checks:
+        started = time.time()
+        try:
+            ok, msg = fn(args)
+        except Exception as e:
+            ok = False
+            msg = f"raised {type(e).__name__}: {e}"
+        ms = int((time.time() - started) * 1000)
+        icon = _c(GREEN, "✓") if ok else _c(RED, "✗")
+        suffix = _c(YELLOW, f" [{ms}ms]") if ms > 200 else ""
+        print(f"  {icon}  {name}  {msg}{suffix}")
+        if not ok:
+            failures.append(f"{name.strip()}: {msg}")
+
+    print()
+    if failures:
+        print(_c(RED, f"{len(failures)} check(s) failed:"))
+        for f in failures:
+            print(f"  - {f}")
+        print()
+        print("Quick fixes:")
+        print("  • python3 setup.py           # re-run interactive setup")
+        print("  • pip install -r requirements.txt")
+        return 1
+    print(_c(GREEN, "All checks passed — agent is ready to run."))
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Verify a ScienceClaw agent is ready to run.",
+    )
+    parser.add_argument(
+        "--agent",
+        default=None,
+        help="Named agent profile (default: ~/.scienceclaw/agent_profile.json)",
+    )
+    parser.add_argument(
+        "--deep",
+        action="store_true",
+        help="Include slow checks (1-token live LLM ping). Costs a fraction of a cent.",
+    )
+    return run(parser.parse_args())
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -12,9 +12,19 @@ Returns standardized JSON results for chaining.
 
 import subprocess
 import json
+import time
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 import sys
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+from utils.observability import SkillMetrics, get_logger  # noqa: E402
+from utils.budget import charge_skill_if_active  # noqa: E402
+
+_SKILL_METRICS = SkillMetrics()
+_SKILL_LOG = get_logger("scienceclaw.skill")
 
 
 class SkillExecutor:
@@ -75,7 +85,16 @@ class SkillExecutor:
             Dict with execution results
         """
         skill_type = skill_metadata.get('type', 'tool')
-        
+        started = time.time()
+        success = False
+        payload_bytes = 0
+        error_msg: Optional[str] = None
+
+        # Charge the per-cycle budget before doing any work. If exhausted,
+        # this raises BudgetExhausted, which the loop controller treats as
+        # a clean cycle-abort signal.
+        charge_skill_if_active()
+
         try:
             # Ensure skill dependencies are installed (lazy install safety net)
             try:
@@ -92,25 +111,55 @@ class SkillExecutor:
                 result = self._execute_script_skill(skill_metadata, parameters, timeout)
             else:
                 result = self._execute_generic_skill(skill_metadata, parameters, timeout)
-            
+
+            success = True
+            try:
+                payload_bytes = len(json.dumps(result, default=str))
+            except (TypeError, ValueError):
+                payload_bytes = 0
+
             return {
                 "status": "success",
                 "skill": skill_name,
                 "result": result
             }
-            
+
         except subprocess.TimeoutExpired:
+            error_msg = f"Execution timeout ({timeout}s)"
             return {
                 "status": "error",
                 "skill": skill_name,
-                "error": f"Execution timeout ({timeout}s)"
+                "error": error_msg,
             }
         except Exception as e:
+            error_msg = str(e)
             return {
                 "status": "error",
                 "skill": skill_name,
-                "error": str(e)
+                "error": error_msg,
             }
+        finally:
+            latency_ms = (time.time() - started) * 1000
+            try:
+                _SKILL_METRICS.record(
+                    skill_name,
+                    success=success,
+                    latency_ms=latency_ms,
+                    payload_bytes=payload_bytes,
+                )
+            except Exception:
+                pass  # metrics must never break a skill call
+            _SKILL_LOG.info(
+                "skill executed",
+                extra={
+                    "skill": skill_name,
+                    "type": skill_type,
+                    "success": success,
+                    "latency_ms": int(latency_ms),
+                    "payload_bytes": payload_bytes,
+                    "error": error_msg or "",
+                },
+            )
     
     def _execute_script_skill(self,
                              skill_metadata: Dict[str, Any],
@@ -281,6 +330,43 @@ class SkillExecutor:
                         context[key] = result['result'][key]
         
         return results
+
+    def execute_batch_parallel(
+        self,
+        calls: List[Dict[str, Any]],
+        *,
+        max_workers: int = 4,
+    ) -> List[Dict[str, Any]]:
+        """
+        Execute a batch of independent skill calls concurrently.
+
+        Each entry in `calls` must be a dict with keys:
+            - skill_name: str
+            - skill_metadata: dict
+            - parameters: dict
+            - timeout: int (optional, defaults to 30)
+
+        Returns results in input order. Use only for skills that don't
+        consume each other's outputs in the same cycle (e.g. parallel
+        literature lookups across PubMed / ArXiv / bioRxiv). For dependent
+        chains, keep using execute_skill() in sequence.
+        """
+        from concurrent.futures import ThreadPoolExecutor
+
+        if not calls:
+            return []
+
+        def _run(entry: Dict[str, Any]) -> Dict[str, Any]:
+            return self.execute_skill(
+                skill_name=entry["skill_name"],
+                skill_metadata=entry["skill_metadata"],
+                parameters=entry.get("parameters", {}),
+                timeout=int(entry.get("timeout", 30)),
+            )
+
+        # Use a thread pool (skills are I/O bound: subprocess + network).
+        with ThreadPoolExecutor(max_workers=max(1, min(max_workers, len(calls)))) as pool:
+            return list(pool.map(_run, calls))
 
 
 # Global executor instance

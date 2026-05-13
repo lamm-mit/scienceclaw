@@ -20,8 +20,23 @@ Configuration via environment variables or config file:
 import os
 import json
 import re
+import sys
+import time
 from typing import Optional, Dict, Any
 from pathlib import Path
+
+# Make sibling 'utils' importable. core/ is a sibling of utils/.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+from utils.observability import LLMCache, get_logger  # noqa: E402
+from utils.budget import charge_llm_if_active  # noqa: E402
+
+_LLM_LOG = get_logger("scienceclaw.llm")
+# Single, process-wide cache. TTL defaults to 1 hour; override with
+# SCIENCECLAW_LLM_CACHE_TTL env var. Set to 0 to disable caching.
+_CACHE_TTL = int(os.environ.get("SCIENCECLAW_LLM_CACHE_TTL", "3600"))
+_LLM_CACHE: Optional[LLMCache] = LLMCache(ttl_seconds=_CACHE_TTL) if _CACHE_TTL > 0 else None
 
 
 class LLMClient:
@@ -146,40 +161,81 @@ class LLMClient:
              max_tokens: int = 1000,
              temperature: float = 1.0,
              timeout: Optional[int] = None,
-             session_id: Optional[str] = None) -> str:
+             session_id: Optional[str] = None,
+             use_cache: bool = True) -> str:
         """
         Call the LLM with a prompt.
 
+        Caches deterministic responses (temperature <= 0.2) by prompt hash so
+        per-cycle redundant queries (gap detection, hypothesis ranking, skill
+        selection) reuse a single backend call. Set use_cache=False to bypass.
+
         If Coherence Shield is enabled, routes through the Shield proxy
         for hallucination filtering and PQC attestation of responses.
-
-        Args:
-            prompt: The prompt to send
-            max_tokens: Maximum tokens in response
-            temperature: Sampling temperature
-            timeout: Timeout in seconds
-            session_id: Optional session ID for tracking
-
-        Returns:
-            LLM response text
         """
         t = timeout if timeout is not None else self.timeout
 
+        model = (
+            self.openai_model if self.backend == "openai"
+            else self.anthropic_model if self.backend == "anthropic"
+            else self.hf_model
+        )
+        cache_eligible = (
+            use_cache
+            and _LLM_CACHE is not None
+            and temperature <= 0.2  # caching non-deterministic samples is misleading
+        )
+        cache_key = None
+        if cache_eligible:
+            cache_key = LLMCache.make_key(self.backend, model, prompt, max_tokens, temperature)
+            cached = _LLM_CACHE.get(cache_key)
+            if cached is not None:
+                _LLM_LOG.debug(
+                    "llm cache hit",
+                    extra={"backend": self.backend, "model": model, "key": cache_key[:8]},
+                )
+                return cached
+
         # Coherence Shield: route through Paraxiom's trust proxy if enabled
+        started = time.time()
         if self._coherence_shield_enabled():
             result = self._call_coherence_shield(prompt, max_tokens, temperature)
             if result is not None:
+                if cache_eligible and cache_key:
+                    _LLM_CACHE.put(cache_key, result)
                 return result
             # Fall through to direct call if Shield is unavailable
 
         if self.backend == "anthropic":
-            return self._call_anthropic(prompt, max_tokens, temperature)
+            result = self._call_anthropic(prompt, max_tokens, temperature)
         elif self.backend == "openai":
-            return self._call_openai(prompt, max_tokens, temperature)
+            result = self._call_openai(prompt, max_tokens, temperature)
         elif self.backend == "huggingface":
-            return self._call_huggingface(prompt, max_tokens, temperature)
+            result = self._call_huggingface(prompt, max_tokens, temperature)
         else:
             raise ValueError(f"Unknown backend: {self.backend}")
+
+        _LLM_LOG.info(
+            "llm call",
+            extra={
+                "backend": self.backend,
+                "model": model,
+                "prompt_chars": len(prompt),
+                "response_chars": len(result or ""),
+                "temperature": temperature,
+                "latency_ms": int((time.time() - started) * 1000),
+                "session_id": session_id or "",
+            },
+        )
+        if cache_eligible and cache_key and result:
+            _LLM_CACHE.put(cache_key, result)
+        # Charge the active cycle budget. Approximate tokens via the 4
+        # chars/token rule; good enough for runaway detection. If the
+        # budget is exhausted this raises BudgetExhausted, which the loop
+        # controller should let propagate so the cycle aborts cleanly.
+        approx_tokens = (len(prompt) + len(result or "")) // 4
+        charge_llm_if_active(approx_tokens)
+        return result
 
     def _coherence_shield_enabled(self) -> bool:
         """Check if Coherence Shield proxy is configured."""
@@ -259,7 +315,10 @@ class LLMClient:
 
         def _extract_text(resp) -> str:
             try:
-                return resp.choices[0].message.content or ""
+                text = resp.choices[0].message.content or ""
+                # Strip <think>...</think> reasoning blocks (MiniMax-M2.7, DeepSeek-R1, etc.)
+                text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+                return text
             except Exception:
                 return ""
 

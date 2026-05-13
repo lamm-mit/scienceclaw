@@ -209,13 +209,29 @@ class AutonomousLoopController:
         print(f"\n{'='*60}")
         print(f"🦞 HEARTBEAT CYCLE START: {cycle_start.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"{'='*60}\n")
-        
+
         summary = {
             "cycle_start": cycle_start.isoformat(),
             "steps_completed": [],
             "errors": []
         }
-        
+
+        # Establish a per-cycle resource budget. LLMClient and SkillExecutor
+        # consult this transparently via charge_*_if_active(); if a limit is
+        # hit, BudgetExhausted is raised and caught below so the cycle ends
+        # cleanly (next scheduled heartbeat gets a fresh budget).
+        from utils.budget import (
+            BudgetExhausted, CycleBudget,
+            set_active_budget, get_active_budget,
+        )
+        budget = CycleBudget()
+        set_active_budget(budget)
+        if budget.is_paused():
+            print(f"   ⏸ PAUSE file present at {budget.PAUSE_FILE if hasattr(budget, 'PAUSE_FILE') else '~/.scienceclaw/PAUSE'} — skipping cycle")
+            summary["paused"] = True
+            set_active_budget(None)
+            return summary
+
         try:
             # Step 0: Sync remote artifacts and open needs from Infinite
             try:
@@ -286,10 +302,22 @@ class AutonomousLoopController:
                 print("   (platform disabled) skipping peer engagement")
             summary["steps_completed"].append("engage_with_peers")
             
+        except BudgetExhausted as be:
+            # Hit a configured cap (LLM calls/tokens, skill execs, wallclock,
+            # or the PAUSE kill-switch). Not an error — the cycle ends here
+            # and resources reset on the next scheduled heartbeat.
+            print(f"\n⏹  Cycle aborted by budget guard: {be}")
+            summary["aborted_by_budget"] = str(be)
         except Exception as e:
             print(f"\n❌ Error during heartbeat cycle: {scrub(str(e))}")
             summary["errors"].append(str(e))
-        
+        finally:
+            try:
+                summary["budget"] = budget.snapshot()
+            except Exception:
+                pass
+            set_active_budget(None)
+
         cycle_end = datetime.now()
         duration = (cycle_end - cycle_start).total_seconds()
         summary["cycle_end"] = cycle_end.isoformat()
@@ -965,7 +993,8 @@ class AutonomousLoopController:
 
             # Step 2: Find sessions by skill match
             print("   Searching for sessions matching my skills...")
-            skills = self.agent_profile.get("preferred_tools", [])
+            from utils.profile import profile_preferred_tools as _ppt
+            skills = _ppt(self.agent_profile)
             skill_sessions = self.discovery_service.find_sessions_by_skill(skills, limit=5)
             summary["sessions_found"] += len(skill_sessions)
 
@@ -1044,7 +1073,8 @@ class AutonomousLoopController:
         
         # Feasibility: Check if required tools are available
         tools_needed = hypothesis.get("tools_needed", [])
-        preferred_tools = self.agent_profile.get("preferred_tools", [])
+        from utils.profile import profile_preferred_tools as _ppt
+        preferred_tools = _ppt(self.agent_profile)
         if tools_needed:
             tools_available = sum(1 for t in tools_needed if t in preferred_tools)
             score += tools_available / len(tools_needed)
@@ -1356,7 +1386,14 @@ class AutonomousLoopController:
             "interests",
             self.agent_profile.get("research", {}).get("interests", [])
         )
-        preferred_tools = self.agent_profile.get("preferred_tools", [])
+        # Honor both current (top-level preferred_tools) and legacy
+        # (preferences.tools) profile schemas. Without this fallback,
+        # legacy profiles silently no-op every cycle.
+        from utils.profile import profile_preferred_tools as _ppt, profile_is_legacy
+        preferred_tools = _ppt(self.agent_profile)
+        if profile_is_legacy(self.agent_profile):
+            print("   ⚠️  Legacy profile schema detected — "
+                  "consider running `scienceclaw-migrate-profile`")
         if not preferred_tools:
             print("   No tools configured — skipping")
             return None, None
@@ -1472,6 +1509,58 @@ class AutonomousLoopController:
         if len(preferred_tools) > 4:
             preferred_tools = _random.sample(preferred_tools, 4)
         print(f"   Tools (this cycle): {preferred_tools}")
+
+        # ------------------------------------------------------------------
+        # Investigation fingerprinting — avoid re-running essentially the
+        # same investigation when allow_reinvestigation is not set. The
+        # fingerprint covers (normalized topic + sorted tools); tool
+        # rotation above means re-investigation with a different tool
+        # subset produces a new fingerprint and is allowed.
+        # ------------------------------------------------------------------
+        try:
+            from utils.observability import investigation_fingerprint as _fp
+            fingerprint = _fp(
+                topic,
+                method="interest_investigation",
+                params={"tools": sorted(preferred_tools)},
+            )
+            fp_path = (
+                Path.home()
+                / ".scienceclaw"
+                / "artifacts"
+                / self.agent_name
+                / "investigation_fingerprints.json"
+            )
+            fp_path.parent.mkdir(parents=True, exist_ok=True)
+            seen: dict = {}
+            if fp_path.exists():
+                try:
+                    seen = json.loads(fp_path.read_text(encoding="utf-8"))
+                except Exception:
+                    seen = {}
+            if (
+                fingerprint in seen
+                and not self.agent_profile.get("allow_reinvestigation", False)
+            ):
+                print(
+                    f"   Skipping: already investigated this topic+tool fingerprint "
+                    f"({fingerprint}) on {seen[fingerprint].get('first_seen', 'unknown')}"
+                )
+                return None, None
+            seen[fingerprint] = {
+                "topic": topic,
+                "tools": sorted(preferred_tools),
+                "investigation_id": investigation_id,
+                "first_seen": seen.get(fingerprint, {}).get(
+                    "first_seen", datetime.now().isoformat()
+                ),
+                "last_seen": datetime.now().isoformat(),
+            }
+            fp_path.write_text(json.dumps(seen, indent=2), encoding="utf-8")
+        except Exception as _fp_err:
+            # Fingerprint guard is advisory — never block an investigation
+            # if the file or import fails.
+            print(f"   (fingerprint guard skipped: {_fp_err})")
 
         community = self._select_community_for_topic(topic)
         disable_llm = bool(self.agent_profile.get("disable_llm", False))

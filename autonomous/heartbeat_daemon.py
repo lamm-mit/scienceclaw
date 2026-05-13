@@ -13,7 +13,10 @@ import argparse
 import time
 import subprocess
 import json
+import random
+import signal
 import sys
+import threading
 from pathlib import Path
 from datetime import datetime, timedelta
 
@@ -21,22 +24,66 @@ from datetime import datetime, timedelta
 DEFAULT_HEARTBEAT_INTERVAL = 6 * 60 * 60  # 6 hours in seconds
 SCIENCECLAW_DIR = Path(__file__).parent.parent  # scienceclaw root (parent of autonomous/)
 
+# Backoff parameters when run_heartbeat() fails. Replaces the previous fixed
+# 60s retry, which wasted cycles during transient API outages.
+BACKOFF_BASE_SECONDS = 30
+BACKOFF_MAX_SECONDS = 1800        # cap individual sleep at 30 min
+BACKOFF_FACTOR = 2.0
+BACKOFF_JITTER = 0.25
+ESCALATE_AFTER_FAILURES = 3       # log at ERROR after this many consecutive misses
+
 # These are set after arg parsing
 HEARTBEAT_INTERVAL: int = DEFAULT_HEARTBEAT_INTERVAL
 AGENT_PROFILE_NAME: str = ""  # empty = default single-agent path
 STATE_FILE: Path = Path.home() / ".scienceclaw" / "heartbeat_state.json"
 LOG_FILE: Path = Path.home() / ".scienceclaw" / "heartbeat_daemon.log"
 
-def log(message):
-    """Log message with timestamp."""
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_msg = f"[{timestamp}] {message}"
-    print(log_msg)
-    
-    # Also write to log file
-    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(LOG_FILE, "a") as f:
-        f.write(log_msg + "\n")
+# Make the repo importable so utils.observability is available.
+if str(SCIENCECLAW_DIR) not in sys.path:
+    sys.path.insert(0, str(SCIENCECLAW_DIR))
+from utils.observability import get_logger  # noqa: E402
+
+_LOGGER = None  # configured lazily in _parse_args once LOG_FILE is known
+
+
+def log(message, *, level: str = "info", **fields):
+    """Structured log that also keeps the historical text-log format."""
+    global _LOGGER
+    if _LOGGER is None:
+        _LOGGER = get_logger("scienceclaw.heartbeat", log_file=LOG_FILE)
+    fn = getattr(_LOGGER, level, _LOGGER.info)
+    if fields:
+        fn(message, extra=fields)
+    else:
+        fn(message)
+
+
+# Shutdown coordination. The main loop polls _shutdown.is_set() so a SIGTERM
+# arriving mid-cycle lets the in-flight heartbeat finish (the file locks
+# ensure no torn writes), then exits cleanly before the next iteration.
+_shutdown = threading.Event()
+_shutdown_reason = "unknown"
+
+
+def _install_signal_handlers() -> None:
+    def _handle(signum, _frame):
+        global _shutdown_reason
+        _shutdown_reason = {
+            signal.SIGTERM: "SIGTERM",
+            signal.SIGINT: "SIGINT",
+            signal.SIGHUP: "SIGHUP",
+        }.get(signum, f"signal {signum}")
+        # Use the print fallback because the logger handler might be mid-flush.
+        sys.stderr.write(f"\n[shutdown] received {_shutdown_reason}, exiting after current cycle\n")
+        sys.stderr.flush()
+        _shutdown.set()
+
+    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        try:
+            signal.signal(sig, _handle)
+        except (ValueError, OSError):
+            # SIGHUP isn't available everywhere; ignore.
+            pass
 
 def load_state():
     """Load last heartbeat timestamp."""
@@ -225,42 +272,119 @@ def main():
         log("Please ensure autonomous loop components are installed")
         sys.exit(1)
     
-    # Main loop
-    while True:
+    _install_signal_handlers()
+    log("signal handlers installed (SIGTERM/SIGINT/SIGHUP)")
+
+    # Main loop. Consecutive-failure counter drives exponential backoff so a
+    # transient outage (e.g. Infinite or PubMed flaking) doesn't burn the
+    # next scheduled heartbeat window.
+    consecutive_failures = 0
+    while not _shutdown.is_set():
         try:
             state = load_state()
-            
+
             if should_run_heartbeat(state):
-                log("Time for heartbeat!")
+                log("heartbeat tick")
                 success = run_heartbeat()
-                
+                now_iso = datetime.now().isoformat()
+
                 if success:
-                    state["lastHeartbeat"] = datetime.now().isoformat()
-                    state["lastSuccess"] = datetime.now().isoformat()
+                    consecutive_failures = 0
+                    state["lastHeartbeat"] = now_iso
+                    state["lastSuccess"] = now_iso
+                    state["consecutiveFailures"] = 0
                     save_state(state)
+                    next_time = datetime.now() + timedelta(seconds=HEARTBEAT_INTERVAL)
+                    log(
+                        "heartbeat scheduled",
+                        next_run=next_time.strftime("%Y-%m-%d %H:%M:%S"),
+                    )
+
+                    # Opportunistic JSONL compaction during idle window.
+                    # Only runs when files exceed the size threshold, so
+                    # this is a no-op for most cycles.
+                    try:
+                        from utils.compaction import compact_all_stores
+                        result = compact_all_stores()
+                        for r in result.get("results", []):
+                            if r.get("kept") or r.get("dropped_old") or r.get("dropped_dup"):
+                                log(
+                                    "compacted",
+                                    path=r.get("path", ""),
+                                    kept=r.get("kept", 0),
+                                    dropped_old=r.get("dropped_old", 0),
+                                    dropped_dup=r.get("dropped_dup", 0),
+                                )
+                    except Exception as _ce:
+                        log("compaction error", level="warning", error=str(_ce))
                 else:
-                    state["lastFailure"] = datetime.now().isoformat()
+                    consecutive_failures += 1
+                    state["lastFailure"] = now_iso
+                    state["consecutiveFailures"] = consecutive_failures
                     save_state(state)
-                
-                # Calculate next heartbeat time
-                next_time = datetime.now() + timedelta(seconds=HEARTBEAT_INTERVAL)
-                log(f"Next heartbeat scheduled for: {next_time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+                    delay = min(
+                        BACKOFF_BASE_SECONDS * (BACKOFF_FACTOR ** (consecutive_failures - 1)),
+                        BACKOFF_MAX_SECONDS,
+                    )
+                    delay *= 1 + random.uniform(-BACKOFF_JITTER, BACKOFF_JITTER)
+                    delay = max(BACKOFF_BASE_SECONDS, delay)
+
+                    level = "error" if consecutive_failures >= ESCALATE_AFTER_FAILURES else "warning"
+                    log(
+                        "heartbeat failed; backing off",
+                        level=level,
+                        consecutive_failures=consecutive_failures,
+                        retry_in_s=round(delay, 1),
+                    )
+                    # Wait, but exit early if a shutdown signal arrives.
+                    if _shutdown.wait(delay):
+                        break
+                    continue
             else:
                 last_heartbeat = datetime.fromisoformat(state["lastHeartbeat"])
                 next_time = last_heartbeat + timedelta(seconds=HEARTBEAT_INTERVAL)
                 time_until = (next_time - datetime.now()).total_seconds()
-                log(f"Next heartbeat in {time_until:.0f}s at {next_time.strftime('%H:%M:%S')}")
+                log(
+                    "idle",
+                    next_run=next_time.strftime("%H:%M:%S"),
+                    seconds_until=int(time_until),
+                )
 
             # Sleep for up to 10 % of the interval (min 10 s, max 600 s) before re-checking
             sleep_secs = min(max(int(HEARTBEAT_INTERVAL * 0.1), 10), 600)
-            time.sleep(sleep_secs)
-            
+            if _shutdown.wait(sleep_secs):
+                break
+
         except KeyboardInterrupt:
-            log("🛑 Daemon stopped by user")
+            log("daemon stopped by user")
+            _shutdown.set()
             break
         except Exception as e:
-            log(f"✗ Unexpected error: {e}")
-            time.sleep(60)  # Wait 1 minute before retrying
+            consecutive_failures += 1
+            delay = min(
+                BACKOFF_BASE_SECONDS * (BACKOFF_FACTOR ** (consecutive_failures - 1)),
+                BACKOFF_MAX_SECONDS,
+            )
+            log(
+                "unexpected error",
+                level="error",
+                error=str(e),
+                consecutive_failures=consecutive_failures,
+                retry_in_s=round(delay, 1),
+            )
+            if _shutdown.wait(delay):
+                break
+
+    # Persist shutdown reason so `scienceclaw-status` can show it.
+    try:
+        final_state = load_state()
+        final_state["lastShutdown"] = datetime.now().isoformat()
+        final_state["lastShutdownReason"] = _shutdown_reason
+        save_state(final_state)
+    except Exception:
+        pass
+    log("daemon exited cleanly", reason=_shutdown_reason)
 
 if __name__ == "__main__":
     main()

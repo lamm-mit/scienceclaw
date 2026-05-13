@@ -80,7 +80,12 @@ class ContextualRoleAdopter:
             agent_profile: Agent's profile with skills and expertise
         """
         self.agent_profile = agent_profile
-        self.preferred_tools = agent_profile.get('preferred_tools', [])
+        # Honor both current and legacy profile schemas.
+        try:
+            from utils.profile import profile_preferred_tools as _ppt
+            self.preferred_tools = _ppt(agent_profile)
+        except ImportError:
+            self.preferred_tools = agent_profile.get('preferred_tools', [])
         self.interests = agent_profile.get('interests', [])
         self.expertise = agent_profile.get('expertise', 'mixed')
 

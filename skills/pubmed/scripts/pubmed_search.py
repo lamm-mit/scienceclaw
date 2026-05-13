@@ -25,6 +25,19 @@ Entrez.email = os.environ.get("NCBI_EMAIL", "scienceclaw@example.com")
 if os.environ.get("NCBI_API_KEY"):
     Entrez.api_key = os.environ.get("NCBI_API_KEY")
 
+# NCBI throttles to 3 req/s without an API key, 10 req/s with one. The
+# shared token bucket prevents a multi-skill cycle from getting IP-banned.
+try:
+    from pathlib import Path as _Path
+    import sys as _sys
+    _repo = _Path(__file__).resolve().parents[3]
+    if str(_repo) not in _sys.path:
+        _sys.path.insert(0, str(_repo))
+    from utils.rate_limit import throttle_ncbi
+except ImportError:
+    def throttle_ncbi() -> None:  # type: ignore[no-redef]
+        pass
+
 
 def search_pubmed(
     query: str,
@@ -82,6 +95,7 @@ def search_pubmed(
     print(f"Max results: {max_results}, Sort: {sort_order}")
     print("")
 
+    throttle_ncbi()
     handle = Entrez.esearch(
         db="pubmed",
         term=full_query,
@@ -114,6 +128,7 @@ def fetch_articles(pmids: List[str]) -> List[Dict]:
         return []
 
     # Fetch article details
+    throttle_ncbi()
     handle = Entrez.efetch(
         db="pubmed",
         id=",".join(pmids),

@@ -20,11 +20,22 @@ import urllib.request
 import urllib.error
 import json
 import os
+import sys
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 from uuid import uuid4
+
+# Make sibling 'utils' package importable even when artifact.py is imported
+# from a context where scienceclaw root isn't already on sys.path.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from utils.observability import locked_append, safe_jsonl_lines, get_logger
+
+_LOG = get_logger("scienceclaw.artifact")
 
 
 # ---------------------------------------------------------------------------
@@ -402,6 +413,7 @@ SKILL_DOMAIN_MAP: Dict[str, List[str]] = {
     "clinical-guidelines":                  ["clinical_data", "report"],
     "clinical-trial-design":                ["clinical_data", "report"],
     "clinical-trial-matching":              ["clinical_data"],
+    "protocol-effectiveness-rater":         ["protocol_assessment"],
     "disease-research":                     ["report", "clinical_data", "genomic_data"],
     "immunotherapy-response-prediction":    ["ml_prediction", "clinical_data"],
     "infectious-disease":                   ["genomic_data", "drug_data", "report"],
@@ -605,10 +617,13 @@ class ArtifactStore:
     def save(self, artifact: Artifact) -> str:
         """Append artifact to per-agent store and global index. Returns artifact_id."""
         line = json.dumps(artifact.to_dict(), ensure_ascii=False) + "\n"
-        with open(self.store_path, "a", encoding="utf-8") as fh:
-            # Record byte offset before writing so the ID index stays current.
-            offset = fh.seek(0, 2)  # seek to end
-            fh.write(line)
+        # Per-agent store is single-writer in normal use, but multiple
+        # heartbeat processes for the same agent must not interleave.
+        from utils.observability import _file_lock  # local import to avoid cycles
+        with _file_lock(self.store_path):
+            with open(self.store_path, "a", encoding="utf-8") as fh:
+                offset = fh.seek(0, 2)
+                fh.write(line)
         # Update in-memory index if it has been built already.
         if self._id_index is not None:
             self._id_index[artifact.artifact_id] = offset
@@ -657,8 +672,13 @@ class ArtifactStore:
             "fulfilled_need_query": (fulfilled_need or {}).get("query", "")[:180] if fulfilled_need else "",
             "fulfillment_variant": fulfillment_variant or {},
         }
-        with open(self._global_index_path, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        # The global index is shared by every agent on this machine, so an
+        # unsynchronized append can interleave bytes from concurrent writers
+        # and corrupt JSONL. Use a file lock for the append.
+        locked_append(
+            self._global_index_path,
+            json.dumps(entry, ensure_ascii=False) + "\n",
+        )
 
     @staticmethod
     def _generate_summary(skill_used: str, artifact_type: str, payload: dict) -> str:
@@ -844,16 +864,10 @@ class ArtifactStore:
     # ------------------------------------------------------------------
 
     def _iter_lines(self):
-        if not self.store_path.exists():
-            return
-        with open(self.store_path, "r", encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if line:
-                    try:
-                        yield json.loads(line)
-                    except json.JSONDecodeError:
-                        pass
+        # safe_jsonl_lines surfaces parse errors to the logger so silent
+        # corruption doesn't go unnoticed; older callers relied on the
+        # silent-skip behaviour but that hid real bugs.
+        yield from safe_jsonl_lines(self.store_path, logger=_LOG)
 
     def get(self, artifact_id: str) -> Optional["Artifact"]:
         """Retrieve artifact by ID using a byte-offset index for O(1) seek."""
@@ -941,21 +955,9 @@ class ArtifactStore:
 
     def _get_parent_ids_from_index(self, artifact_id: str) -> List[str]:
         """Scan global_index.jsonl for artifact_id and return its parent_artifact_ids."""
-        if not self._global_index_path.exists():
-            return []
-        try:
-            for line in self._global_index_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    entry = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if entry.get("artifact_id") == artifact_id:
-                    return entry.get("parent_artifact_ids", [])
-        except OSError:
-            pass
+        for entry in safe_jsonl_lines(self._global_index_path, logger=_LOG):
+            if entry.get("artifact_id") == artifact_id:
+                return entry.get("parent_artifact_ids", [])
         return []
 
     def get_parent_ids(self, artifact_id: str) -> List[str]:
@@ -1032,13 +1034,11 @@ def _get_system_version() -> str:
 
 def emit_registration_artifact(agent_name: str, agent_profile: dict) -> "Artifact":
     """Emit a registration_metadata artifact when an agent profile is created."""
+    from utils.profile import profile_preferred_tools
     store = ArtifactStore(agent_name)
     payload = {
         "agent_name": agent_name,
-        "preferred_tools": agent_profile.get(
-            "preferred_tools",
-            agent_profile.get("preferences", {}).get("tools", []),
-        ),
+        "preferred_tools": profile_preferred_tools(agent_profile),
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "system_version": _get_system_version(),
     }
