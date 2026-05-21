@@ -651,36 +651,31 @@ IMPORTANT RULES:
                                     "in your generated code):"
                                     + "".join(_related[:3]))
 
+                        _retry_prompt = (
+                            f'A skill script "{_script_name}" failed with this error:\n'
+                            f'{_err_msg[:500]}\n\n'
+                            f'The task is: "{topic}"\n'
+                            f"The skill's reason: {skill.reason}\n"
+                            f"The parameters that were tried: {json.dumps(params)}\n"
+                            f"{_prior_context}\n\n"
+                            "Here is the skill's documentation (SKILL.md):\n"
+                            f"{_skill_md[:3000]}\n"
+                            f"{_related_docs}\n\n"
+                            "INSTRUCTIONS:\n"
+                            f'1. Find the section in SKILL.md that documents "{_script_name}" specifically\n'
+                            "2. Identify the EXACT parameter names from the Parameters table for that script\n"
+                            "3. Map the task requirements to those exact parameter names\n"
+                            "4. Include all REQUIRED parameters\n"
+                            "5. If prior skills produced output directories or file paths, use those as input paths for this skill\n"
+                            "6. If the script accepts a --code parameter, generate the COMPLETE Python code for the task and "
+                            'return it as {"code": "<your python code here>"}\n'
+                            "7. Generated code should print JSON results to stdout and status to stderr\n"
+                            "8. If code needs GPU and none is available, write a SLURM script and submit it via sbatch\n\n"
+                            'Otherwise return ONLY a JSON object like {"param1": "value1", "param2": "value2"}.\n'
+                            "No explanation, no markdown, and no text outside the JSON object."
+                        )
                         _retry_resp = _retry_client.call(
-                            prompt=f'''A skill script "{_script_name}" failed with this error:
-{_err_msg[:500]}
-
-The task is: "{topic}"
-The skill's reason: {skill.reason}
-The parameters that were tried: {json.dumps(params)}
-{_prior_context}
-
-Here is the skill's documentation (SKILL.md):
-{_skill_md[:3000]}
-{_related_docs}
-
-INSTRUCTIONS:
-1. Find the section in SKILL.md that documents "{_script_name}" specifically
-2. Identify the EXACT parameter names from the Parameters table for that script
-3. Map the task requirements to those exact parameter names
-4. Include all REQUIRED parameters
-5. If prior skills produced output directories or file paths, use those as input paths for this skill
-
-Return ONLY a JSON object like {{"param1": "value1", "param2": "value2"}}.
-No explanation, no markdown, just the JSON object.''',
-                            max_tokens=500,
-If the script accepts a --code parameter, generate the COMPLETE Python code
-that performs the task, and return it as: {{"code": "<your python code here>"}}
-The code should print JSON results to stdout and status to stderr.
-If the code needs GPU and none is available, it should write a SLURM script and submit via sbatch.
-
-Otherwise return a JSON object like {{"param1": "value1", "param2": "value2"}}.
-No explanation, no markdown outside the JSON.''',
+                            prompt=_retry_prompt,
                             max_tokens=4096,
                             session_id=f"retry_params_{self.agent_name}"
                         )
@@ -785,24 +780,22 @@ No explanation, no markdown outside the JSON.''',
                             break
 
                     _fix_code = _new_params.get('code', params.get('code', ''))
+                    _fix_prompt = (
+                        "The Python code you generated failed with this error:\n\n"
+                        f"{_code_stderr[:1000]}\n\n"
+                        "Here is the code that failed:\n"
+                        "```python\n"
+                        f"{_fix_code[:3000]}\n"
+                        "```\n\n"
+                        "SKILL DOCUMENTATION (use ONLY these API patterns):\n"
+                        f"{_fix_related[:6000]}\n\n"
+                        "Fix the error using ONLY the API calls shown in the skill documentation above.\n"
+                        "Do NOT use APIs from your training data - use EXACTLY what the docs show.\n"
+                        'Refer to the "Verification Checklist" section in the UMA SKILL.md.\n\n'
+                        "Output ONLY the corrected Python code. No markdown fences, no explanations."
+                    )
                     _fix_resp = _fix_client.call(
-                        prompt=f'''The Python code you generated failed with this error:
-
-{_code_stderr[:1000]}
-
-Here is the code that failed:
-```python
-{_fix_code[:3000]}
-```
-
-SKILL DOCUMENTATION (use ONLY these API patterns):
-{_fix_related[:6000]}
-
-Fix the error using ONLY the API calls shown in the skill documentation above.
-Do NOT use APIs from your training data — use EXACTLY what the docs show.
-Refer to the "Verification Checklist" section in the UMA SKILL.md.
-
-Output ONLY the corrected Python code. No markdown fences, no explanations.''',
+                        prompt=_fix_prompt,
                         max_tokens=4096,
                         session_id=f"code_fix_{self.agent_name}"
                     )
