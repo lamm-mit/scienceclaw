@@ -19,8 +19,8 @@ certificate proving the execution was type- and provenance-valid.
 ## Quick Start
 
 ```bash
-categoryscienceclaw init /tmp/csc-run --topic "toy mechanism" --agents examples/agents.json
-categoryscienceclaw run /tmp/csc-run --agents examples/agents.json --cycles 4
+categoryscienceclaw init /tmp/csc-run --topic "toy mechanism"
+categoryscienceclaw run /tmp/csc-run --cycles 4
 categoryscienceclaw audit /tmp/csc-run
 categoryscienceclaw replay /tmp/csc-run
 ```

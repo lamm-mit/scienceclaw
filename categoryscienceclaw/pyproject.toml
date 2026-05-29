@@ -14,5 +14,4 @@ dependencies = []
 categoryscienceclaw = "categoryscienceclaw.cli:main"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = [".."]
