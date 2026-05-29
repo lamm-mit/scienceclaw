@@ -1,0 +1,58 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-bd7779564165abed9153a4e797571122026d79ddeafab2e70273546cbba8762f",
+  "kind": "postrun.skill",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "ContactGraph",
+      "actual": "ContactGraph",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "MDTrajectory",
+      "actual": "MDTrajectory",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "contact_graph_7T10"
+      ],
+      "actual_parent_ids": [
+        "contact_graph_7T10"
+      ],
+      "ok": true
+    },
+    {
+      "name": "recorded_source_sha256",
+      "source": "cg_md_trajectory_7T10.json",
+      "expected": "0c1451fe7bf51e51699d0df07c2cb17b4a0de096d3b1febcace754902d5d6d3e",
+      "actual": "0c1451fe7bf51e51699d0df07c2cb17b4a0de096d3b1febcace754902d5d6d3e",
+      "verified_against_current_file": true,
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "run_coarse_grained_md",
+    "input_artifact_ids": [
+      "contact_graph_7T10"
+    ],
+    "output_artifact_id": "cg_md_trajectory_7T10",
+    "output_content_hash": "2d6deb9ae59e0a3ebc30066841cb23aa44cf84be842b8ad78170ca08a93541c2"
+  },
+  "errors": [],
+  "metadata": {
+    "producer_agent": "OpenMMMechanicsAgent",
+    "source_path": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/cg_md_trajectory_7T10.json"
+  }
+}

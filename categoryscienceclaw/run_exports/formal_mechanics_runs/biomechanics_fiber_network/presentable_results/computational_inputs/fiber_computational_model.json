@@ -1,0 +1,18 @@
+{
+  "boundary_conditions": {
+    "loading": "uniaxial_tension",
+    "strain_range": [
+      0.0,
+      0.1
+    ]
+  },
+  "input_origin": "synthetic_computational",
+  "model": "deterministic fiber network and linear-elastic stress-strain table",
+  "seed_rule": "fixed orientation list plus deterministic stress polynomial",
+  "units": {
+    "length": "um",
+    "orientation": "degree",
+    "strain": "dimensionless",
+    "stress": "kPa"
+  }
+}

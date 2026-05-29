@@ -1,0 +1,58 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-6054772433a32f8f611ddfd132e29ba94990a82ce3d37f46e548076cdb40887e",
+  "kind": "postrun.skill",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "StructureMetadata",
+      "actual": "StructureMetadata",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "ContactGraph",
+      "actual": "ContactGraph",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "pdb_metadata_7T10"
+      ],
+      "actual_parent_ids": [
+        "pdb_metadata_7T10"
+      ],
+      "ok": true
+    },
+    {
+      "name": "recorded_source_sha256",
+      "source": "contact_graph_7T10.json",
+      "expected": "897a6ca7fe454ecb2d52544bcf3ebd512c1dfe4998ffefb1ad3ec9650d95174f",
+      "actual": "897a6ca7fe454ecb2d52544bcf3ebd512c1dfe4998ffefb1ad3ec9650d95174f",
+      "verified_against_current_file": true,
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "analyze_structure_contacts",
+    "input_artifact_ids": [
+      "pdb_metadata_7T10"
+    ],
+    "output_artifact_id": "contact_graph_7T10",
+    "output_content_hash": "deded3730b0041a044b53d8b3a6f08b1df10ee7febef4ed45765ff11b0b1298e"
+  },
+  "errors": [],
+  "metadata": {
+    "producer_agent": "StructureContactAnalysisAgent",
+    "source_path": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/contact_graph_7T10.json"
+  }
+}

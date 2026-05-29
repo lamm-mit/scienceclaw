@@ -1,0 +1,78 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-69023b60b0f85c9652bb5c2683571c665759eb57661b063dbf293118bf4198ce",
+  "kind": "postrun.synthesis",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 3,
+      "actual": 3,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "ForceExtensionTrace",
+      "actual": "ForceExtensionTrace",
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 1,
+      "expected": "MDTrajectory",
+      "actual": "MDTrajectory",
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 2,
+      "expected": "ContactGraph",
+      "actual": "ContactGraph",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "Claim",
+      "actual": "Claim",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "force_extension_7T10",
+        "cg_md_trajectory_7T10",
+        "contact_graph_7T10"
+      ],
+      "actual_parent_ids": [
+        "force_extension_7T10",
+        "cg_md_trajectory_7T10",
+        "contact_graph_7T10"
+      ],
+      "ok": true
+    },
+    {
+      "name": "recorded_source_sha256",
+      "source": "mechanics_claim_7T10.json",
+      "expected": "3afc6d8ee542fcc20e9d3b7548161a0f446f41f46de02d9f50afe2345d7912e6",
+      "actual": "3afc6d8ee542fcc20e9d3b7548161a0f446f41f46de02d9f50afe2345d7912e6",
+      "verified_against_current_file": true,
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "synthesize_mechanics_claim_actual",
+    "input_artifact_ids": [
+      "force_extension_7T10",
+      "cg_md_trajectory_7T10",
+      "contact_graph_7T10"
+    ],
+    "output_artifact_id": "mechanics_claim_7T10",
+    "output_content_hash": "7d624bf38b1791820bc6e342dae860a0a26466a2cf0eeec13adee51ccc8421ce"
+  },
+  "errors": [],
+  "metadata": {
+    "producer_agent": "MechanicsSynthesisAgent",
+    "source_path": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/mechanics_claim_7T10.json"
+  }
+}

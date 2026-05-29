@@ -1,0 +1,119 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-aed9e5ceb08899142556823df9d98e812f148d7b11b68ffe82a59bbb187e2838",
+  "kind": "execution",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 3,
+      "actual": 3,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "MechanicsClaim",
+      "actual": "MechanicsClaim",
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 1,
+      "expected": "ContactGraph",
+      "actual": "ContactGraph",
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 2,
+      "expected": "ForceExtensionTrace",
+      "actual": "ForceExtensionTrace",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "CompositionAuditRecord",
+      "actual": "CompositionAuditRecord",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "mechanics_claim_7T10",
+        "contact_graph_7T10",
+        "force_extension_7T10"
+      ],
+      "actual_parent_ids": [
+        "mechanics_claim_7T10",
+        "contact_graph_7T10",
+        "force_extension_7T10"
+      ],
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "mechanics_claim_7T10",
+      "expected": "7d624bf38b1791820bc6e342dae860a0a26466a2cf0eeec13adee51ccc8421ce",
+      "actual": "7d624bf38b1791820bc6e342dae860a0a26466a2cf0eeec13adee51ccc8421ce",
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "contact_graph_7T10",
+      "expected": "deded3730b0041a044b53d8b3a6f08b1df10ee7febef4ed45765ff11b0b1298e",
+      "actual": "deded3730b0041a044b53d8b3a6f08b1df10ee7febef4ed45765ff11b0b1298e",
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "force_extension_7T10",
+      "expected": "dbbd85d543897ef01d6f37600cd9a3e7b9d6afd738f71abc0f854d242f1ee00e",
+      "actual": "dbbd85d543897ef01d6f37600cd9a3e7b9d6afd738f71abc0f854d242f1ee00e",
+      "ok": true
+    },
+    {
+      "name": "output_hash_matches",
+      "artifact_id": "art-e27d3f5180d94f36a921614560d7dea5",
+      "ok": true
+    },
+    {
+      "name": "formal_metadata_present",
+      "ok": true
+    },
+    {
+      "name": "invariants_present",
+      "ok": true
+    },
+    {
+      "name": "symmetry_or_parity_present",
+      "expected": false,
+      "ok": true
+    },
+    {
+      "name": "source_parent_ids_present",
+      "ok": true
+    },
+    {
+      "name": "symbolic_status_declared_when_no_real_data",
+      "ok": true
+    },
+    {
+      "name": "composition_path_valid",
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "audit_mechanics_composition",
+    "input_artifact_ids": [
+      "mechanics_claim_7T10",
+      "contact_graph_7T10",
+      "force_extension_7T10"
+    ],
+    "output_artifact_id": "art-e27d3f5180d94f36a921614560d7dea5",
+    "output_content_hash": "ba353383dc1b2c9267681e765ff63c5bcb4bdc18fbf1530beace086c0baa80e6",
+    "claim_id": "claim:need:mechanics_claim_7T10:0:FormalValidatorAgent"
+  },
+  "errors": [],
+  "metadata": {}
+}

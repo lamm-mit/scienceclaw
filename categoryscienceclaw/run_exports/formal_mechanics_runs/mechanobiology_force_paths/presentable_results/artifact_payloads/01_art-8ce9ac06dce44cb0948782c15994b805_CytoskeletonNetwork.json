@@ -1,0 +1,188 @@
+{
+  "content_hash": "94bce08cbacbcaf460a50a03ee617e01bdc50939ce1921d397a7914caebd643b",
+  "id": "art-8ce9ac06dce44cb0948782c15994b805",
+  "metadata": {
+    "certificate_id": "cert-58b7d3e118a790dfac5fef1cac71b8c9de5faf6619de10a0f02761ae2b5d1e54",
+    "claim_id": "claim:need:art-82917f504c6648ad8ef211eea31fadd9:1:StructureBreakerAgent",
+    "fulfilled_need_id": "need:art-82917f504c6648ad8ef211eea31fadd9:1"
+  },
+  "morphism": "infer_cytoskeleton_network",
+  "needs": [
+    {
+      "allowed_morphisms": [
+        "compute_cytoskeleton_invariants"
+      ],
+      "created_at": "2026-05-29T00:04:58.335571+00:00",
+      "id": "need:art-8ce9ac06dce44cb0948782c15994b805:0",
+      "metadata": {},
+      "need_index": 0,
+      "parent_artifact_id": "art-8ce9ac06dce44cb0948782c15994b805",
+      "query": "compute cytoskeleton graph invariants",
+      "rationale": "Need CytoskeletonInvariantDescriptor via compute_cytoskeleton_invariants.",
+      "required_type": "CytoskeletonInvariantDescriptor",
+      "schema_version": "categoryscienceclaw.v1",
+      "status": "open"
+    }
+  ],
+  "parent_ids": [
+    "art-82917f504c6648ad8ef211eea31fadd9"
+  ],
+  "payload": {
+    "data_status": "formal_descriptor_only",
+    "execution_backend": "scienceclaw",
+    "formal": {
+      "categorical_role": "need_fulfillment_morphism",
+      "invariants": [
+        "type_preserving",
+        "provenance_preserving",
+        "composition_auditable"
+      ],
+      "proof_obligations": [
+        "source_parent_ids_present",
+        "invariants_present"
+      ],
+      "symmetry": [
+        "formal_equivariance_checked_where_applicable"
+      ]
+    },
+    "formal_result": {
+      "edge_count": 1,
+      "edges": [
+        {
+          "relation": "infer_cytoskeleton_network",
+          "source": "art-82917f504c6648ad8ef211eea31fadd9",
+          "target": "CytoskeletonNetwork"
+        }
+      ],
+      "graph_invariants": {
+        "acyclic_by_construction": true,
+        "all_inputs_reach_output": true,
+        "parent_payload_features_attached": true,
+        "typed_parent_count": 1
+      },
+      "kind": "typed_provenance_graph",
+      "node_count": 2,
+      "nodes": [
+        {
+          "data_status": "example_seed_no_numeric_measurements",
+          "formal_result_kind": "",
+          "id": "art-82917f504c6648ad8ef211eea31fadd9",
+          "type": "CellGeometry"
+        },
+        {
+          "id": "CytoskeletonNetwork",
+          "type": "output_type"
+        }
+      ]
+    },
+    "input_count": 1,
+    "invariants": [
+      "type_preserving",
+      "provenance_preserving",
+      "composition_auditable"
+    ],
+    "morphism": "infer_cytoskeleton_network",
+    "needs": [
+      {
+        "allowed_morphisms": [
+          "compute_cytoskeleton_invariants"
+        ],
+        "query": "compute cytoskeleton graph invariants",
+        "rationale": "Need CytoskeletonInvariantDescriptor via compute_cytoskeleton_invariants.",
+        "required_type": "CytoskeletonInvariantDescriptor"
+      }
+    ],
+    "parents": [
+      {
+        "content_hash": "a404808f3bde5c37dff385c07014232087da64685e2278809a4be4cc1c5c8a71",
+        "id": "art-82917f504c6648ad8ef211eea31fadd9",
+        "type": "CellGeometry"
+      }
+    ],
+    "query": "infer cytoskeleton network",
+    "result_classification": "formal_symbolic_result",
+    "scienceclaw": {
+      "accepted_as_substantive": true,
+      "execution_backend": "scienceclaw",
+      "rejected_placeholder_summary": {},
+      "result_summary": {
+        "avg_clustering": 0.0,
+        "communities": [
+          {
+            "id": 0,
+            "members": [
+              "art-82917f504c6648ad8ef211eea31fadd9",
+              "art-82917f504c6648ad8ef211eea31fadd9:field:data_status",
+              "art-82917f504c6648ad8ef211eea31fadd9:field:topic"
+            ]
+          }
+        ],
+        "data_source": "papers",
+        "density": 0.3333,
+        "edges": 2,
+        "nodes": 3,
+        "source_data_analyzed": true,
+        "top_betweenness": [
+          {
+            "node": "art-82917f504c6648ad8ef211eea31fadd9",
+            "score": 0.0
+          },
+          {
+            "node": "art-82917f504c6648ad8ef211eea31fadd9:field:data_status",
+            "score": 0.0
+          },
+          {
+            "node": "art-82917f504c6648ad8ef211eea31fadd9:field:topic",
+            "score": 0.0
+          }
+        ],
+        "top_pagerank": [
+          {
+            "node": "art-82917f504c6648ad8ef211eea31fadd9:field:data_status",
+            "score": 0.37014
+          },
+          {
+            "node": "art-82917f504c6648ad8ef211eea31fadd9:field:topic",
+            "score": 0.37014
+          },
+          {
+            "node": "art-82917f504c6648ad8ef211eea31fadd9",
+            "score": 0.25973
+          }
+        ]
+      },
+      "skill_name": "networkx",
+      "status": "success"
+    },
+    "scienceclaw_skill_attempted": "networkx",
+    "source_content_features": [
+      {
+        "artifact_id": "art-82917f504c6648ad8ef211eea31fadd9",
+        "artifact_type": "CellGeometry",
+        "data_status": "example_seed_no_numeric_measurements",
+        "descriptor_type": "",
+        "emitted_need_types": [],
+        "formal_result_fields": [],
+        "formal_result_kind": "",
+        "morphism": "",
+        "payload_keys": [
+          "data_status",
+          "topic"
+        ],
+        "result_classification": ""
+      }
+    ],
+    "source_parent_ids": [
+      "art-82917f504c6648ad8ef211eea31fadd9"
+    ],
+    "summary": "StructureBreakerAgent executed infer_cytoskeleton_network via ScienceClaw skill networkx for infer cytoskeleton network",
+    "symmetry": [
+      "formal_equivariance_checked_where_applicable"
+    ],
+    "valid_result_basis": "deterministic formal computation over parent artifact payload fields, formal result kinds, declared morphism, and query; hashes retained only as provenance"
+  },
+  "producer_agent": "StructureBreakerAgent",
+  "schema_version": "categoryscienceclaw.v1",
+  "timestamp": "2026-05-29T00:04:58.335543+00:00",
+  "type": "CytoskeletonNetwork"
+}

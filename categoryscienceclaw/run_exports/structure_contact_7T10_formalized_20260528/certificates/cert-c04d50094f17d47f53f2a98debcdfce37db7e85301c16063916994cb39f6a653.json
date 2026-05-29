@@ -1,0 +1,50 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-c04d50094f17d47f53f2a98debcdfce37db7e85301c16063916994cb39f6a653",
+  "kind": "postrun.skill",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "Claim",
+      "actual": "Claim",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "OpenNeed",
+      "actual": "OpenNeed",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "mechanics_claim_7T10"
+      ],
+      "actual_parent_ids": [
+        "mechanics_claim_7T10"
+      ],
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "surface_downstream_need",
+    "input_artifact_ids": [
+      "mechanics_claim_7T10"
+    ],
+    "output_artifact_id": "need_receptor_bound_smd_ensemble",
+    "output_content_hash": "5b3381778211ce274aca264e5dcd3a8c25a02d2b00bb995285a5768367b11603"
+  },
+  "errors": [],
+  "metadata": {
+    "producer_agent": "ReceptorBoundSMDScoutAgent",
+    "source_path": ""
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-c8c640f74e449dca5b38864e0dac015977813979faa78bc07d22de5e879d964c",
+  "kind": "postrun.validation",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "Claim",
+      "actual": "Claim",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "ValidationRecord",
+      "actual": "ValidationRecord",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "mechanics_claim_7T10"
+      ],
+      "actual_parent_ids": [
+        "mechanics_claim_7T10"
+      ],
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "validate_claim",
+    "input_artifact_ids": [
+      "mechanics_claim_7T10"
+    ],
+    "output_artifact_id": "validation_7t10_mechanics",
+    "output_content_hash": "6d1dba3f21343b01630cbd186a09d537e4a0f82878e460075df624218f360900"
+  },
+  "errors": [],
+  "metadata": {
+    "producer_agent": "AuditAgent",
+    "source_path": ""
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-5dd522fce342ba45b3cbb288e0c3842b5137f1bba845a0016572f6f486282ca6",
+  "kind": "postrun.publication",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "Claim",
+      "actual": "Claim",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "DiscoursePost",
+      "actual": "DiscoursePost",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "contact_claim_7T10"
+      ],
+      "actual_parent_ids": [
+        "contact_claim_7T10"
+      ],
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "publish_claim",
+    "input_artifact_ids": [
+      "contact_claim_7T10"
+    ],
+    "output_artifact_id": "post_7t10_contacts",
+    "output_content_hash": "214cdf02bd5162ec9efa3f89432a0cd1bbfc04476fd77f18ff79cc6f7d4f7c5b"
+  },
+  "errors": [],
+  "metadata": {
+    "producer_agent": "PublisherAgent",
+    "source_path": ""
+  }
+}

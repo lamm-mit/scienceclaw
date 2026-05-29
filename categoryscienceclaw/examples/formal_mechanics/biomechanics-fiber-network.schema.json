@@ -1,0 +1,457 @@
+{
+  "topic": "formal fiber network mechanics",
+  "seed": {
+    "artifact_type": "TissueImageOrGeometry"
+  },
+  "objects": [
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "TissueImageOrGeometry",
+      "kind": "artifact",
+      "description": "Formal mechanics object: TissueImageOrGeometry"
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "FiberNetworkGraph",
+      "kind": "artifact",
+      "description": "Formal mechanics object: FiberNetworkGraph"
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "OrientationParityDescriptor",
+      "kind": "artifact",
+      "description": "Formal mechanics object: OrientationParityDescriptor"
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "GraphInvariantDescriptor",
+      "kind": "artifact",
+      "description": "Formal mechanics object: GraphInvariantDescriptor"
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "BlockedRealDataNeed",
+      "kind": "artifact",
+      "description": "Formal mechanics object: BlockedRealDataNeed"
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "AnisotropyTensor",
+      "kind": "artifact",
+      "description": "Formal mechanics object: AnisotropyTensor"
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "TensorSymmetryValidationRecord",
+      "kind": "artifact",
+      "description": "Formal mechanics object: TensorSymmetryValidationRecord"
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "NetworkMechanicsModel",
+      "kind": "artifact",
+      "description": "Formal mechanics object: NetworkMechanicsModel"
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "EvidenceCoverageRecord",
+      "kind": "artifact",
+      "description": "Formal mechanics object: EvidenceCoverageRecord"
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "PatchCompositionReplicationRecord",
+      "kind": "artifact",
+      "description": "Formal mechanics object: PatchCompositionReplicationRecord"
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "BiomechanicsClaim",
+      "kind": "artifact",
+      "description": "Formal mechanics object: BiomechanicsClaim"
+    }
+  ],
+  "morphisms": [
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "extract_fiber_network",
+      "input_types": [
+        "TissueImageOrGeometry"
+      ],
+      "output_type": "FiberNetworkGraph",
+      "kind": "formal_mechanics",
+      "description": "extract_fiber_network: TissueImageOrGeometry -> FiberNetworkGraph",
+      "adapter": "local",
+      "metadata": {
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ]
+        },
+        "data_status": "formal_descriptor_only",
+        "emits_needs": [
+          {
+            "required_type": "OrientationParityDescriptor",
+            "query": "compute orientation parity",
+            "rationale": "Need OrientationParityDescriptor via compute_orientation_parity.",
+            "allowed_morphisms": [
+              "compute_orientation_parity"
+            ]
+          },
+          {
+            "required_type": "GraphInvariantDescriptor",
+            "query": "compute graph invariants",
+            "rationale": "Need GraphInvariantDescriptor via compute_fiber_graph_invariants.",
+            "allowed_morphisms": [
+              "compute_fiber_graph_invariants"
+            ]
+          },
+          {
+            "required_type": "BlockedRealDataNeed",
+            "query": "request real boundary condition",
+            "rationale": "Need BlockedRealDataNeed via report_missing_boundary_condition.",
+            "allowed_morphisms": [
+              "report_missing_boundary_condition"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "compute_orientation_parity",
+      "input_types": [
+        "FiberNetworkGraph"
+      ],
+      "output_type": "OrientationParityDescriptor",
+      "kind": "formal_mechanics",
+      "description": "compute_orientation_parity: FiberNetworkGraph -> OrientationParityDescriptor",
+      "adapter": "local",
+      "metadata": {
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ]
+        },
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "OrientationParityDescriptor"
+      }
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "compute_fiber_graph_invariants",
+      "input_types": [
+        "FiberNetworkGraph"
+      ],
+      "output_type": "GraphInvariantDescriptor",
+      "kind": "formal_mechanics",
+      "description": "compute_fiber_graph_invariants: FiberNetworkGraph -> GraphInvariantDescriptor",
+      "adapter": "local",
+      "metadata": {
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ]
+        },
+        "data_status": "formal_descriptor_only",
+        "emits_needs": [
+          {
+            "required_type": "AnisotropyTensor",
+            "query": "derive symbolic anisotropy tensor",
+            "rationale": "Need AnisotropyTensor via compute_anisotropy_tensor.",
+            "allowed_morphisms": [
+              "compute_anisotropy_tensor"
+            ]
+          }
+        ],
+        "descriptor_type": "GraphInvariantDescriptor"
+      }
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "report_missing_boundary_condition",
+      "input_types": [
+        "FiberNetworkGraph"
+      ],
+      "output_type": "BlockedRealDataNeed",
+      "kind": "formal_mechanics",
+      "description": "report_missing_boundary_condition: FiberNetworkGraph -> BlockedRealDataNeed",
+      "adapter": "local",
+      "metadata": {
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ]
+        },
+        "data_status": "formal_descriptor_only",
+        "blocked_reason": "No real boundary-condition data supplied; emitting blocked need instead of unsupported mechanics."
+      }
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "compute_anisotropy_tensor",
+      "input_types": [
+        "GraphInvariantDescriptor",
+        "OrientationParityDescriptor"
+      ],
+      "output_type": "AnisotropyTensor",
+      "kind": "formal_mechanics",
+      "description": "compute_anisotropy_tensor: GraphInvariantDescriptor, OrientationParityDescriptor -> AnisotropyTensor",
+      "adapter": "local",
+      "metadata": {
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ]
+        },
+        "data_status": "formal_descriptor_only",
+        "emits_needs": [
+          {
+            "required_type": "TensorSymmetryValidationRecord",
+            "query": "validate tensor symmetry",
+            "rationale": "Need TensorSymmetryValidationRecord via validate_tensor_symmetry.",
+            "allowed_morphisms": [
+              "validate_tensor_symmetry"
+            ]
+          }
+        ],
+        "descriptor_type": "AnisotropyTensor"
+      }
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "validate_tensor_symmetry",
+      "input_types": [
+        "AnisotropyTensor"
+      ],
+      "output_type": "TensorSymmetryValidationRecord",
+      "kind": "formal_mechanics",
+      "description": "validate_tensor_symmetry: AnisotropyTensor -> TensorSymmetryValidationRecord",
+      "adapter": "local",
+      "metadata": {
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ]
+        },
+        "data_status": "formal_descriptor_only",
+        "emits_needs": [
+          {
+            "required_type": "NetworkMechanicsModel",
+            "query": "build formal network mechanics model",
+            "rationale": "Need NetworkMechanicsModel via build_network_mechanics_model.",
+            "allowed_morphisms": [
+              "build_network_mechanics_model"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "build_network_mechanics_model",
+      "input_types": [
+        "TensorSymmetryValidationRecord",
+        "AnisotropyTensor"
+      ],
+      "output_type": "NetworkMechanicsModel",
+      "kind": "formal_mechanics",
+      "description": "build_network_mechanics_model: TensorSymmetryValidationRecord, AnisotropyTensor -> NetworkMechanicsModel",
+      "adapter": "local",
+      "metadata": {
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ]
+        },
+        "data_status": "formal_descriptor_only",
+        "emits_needs": [
+          {
+            "required_type": "EvidenceCoverageRecord",
+            "query": "record formal evidence coverage",
+            "rationale": "Need EvidenceCoverageRecord via record_fiber_evidence_coverage.",
+            "allowed_morphisms": [
+              "record_fiber_evidence_coverage"
+            ]
+          },
+          {
+            "required_type": "PatchCompositionReplicationRecord",
+            "query": "replicate by alternative patch composition",
+            "rationale": "Need PatchCompositionReplicationRecord via replicate_patch_composition.",
+            "allowed_morphisms": [
+              "replicate_patch_composition"
+            ]
+          },
+          {
+            "required_type": "BiomechanicsClaim",
+            "query": "synthesize biomechanics formal claim",
+            "rationale": "Need BiomechanicsClaim via synthesize_biomechanics_claim.",
+            "allowed_morphisms": [
+              "synthesize_biomechanics_claim"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "record_fiber_evidence_coverage",
+      "input_types": [
+        "NetworkMechanicsModel"
+      ],
+      "output_type": "EvidenceCoverageRecord",
+      "kind": "formal_mechanics",
+      "description": "record_fiber_evidence_coverage: NetworkMechanicsModel -> EvidenceCoverageRecord",
+      "adapter": "local",
+      "metadata": {
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ]
+        },
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "EvidenceCoverageRecord"
+      }
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "replicate_patch_composition",
+      "input_types": [
+        "NetworkMechanicsModel"
+      ],
+      "output_type": "PatchCompositionReplicationRecord",
+      "kind": "formal_mechanics",
+      "description": "replicate_patch_composition: NetworkMechanicsModel -> PatchCompositionReplicationRecord",
+      "adapter": "local",
+      "metadata": {
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ]
+        },
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "PatchCompositionReplicationRecord"
+      }
+    },
+    {
+      "schema_version": "categoryscienceclaw.v1",
+      "name": "synthesize_biomechanics_claim",
+      "input_types": [
+        "NetworkMechanicsModel",
+        "PatchCompositionReplicationRecord"
+      ],
+      "output_type": "BiomechanicsClaim",
+      "kind": "formal_mechanics",
+      "description": "synthesize_biomechanics_claim: NetworkMechanicsModel, PatchCompositionReplicationRecord -> BiomechanicsClaim",
+      "adapter": "local",
+      "metadata": {
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ]
+        },
+        "data_status": "formal_descriptor_only"
+      }
+    }
+  ]
+}

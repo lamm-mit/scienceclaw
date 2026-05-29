@@ -1,0 +1,176 @@
+{
+  "content_hash": "8150f7e754cd59be33bebc38a87bf47076e6ef7a577b6720cf68b9430c91766e",
+  "id": "art-ca9e4b7672584c378635e5c05f9cf88a",
+  "metadata": {
+    "certificate_id": "cert-35a7b4baa6a475378257ef5da50ea7e47a32c2dd50395882aee2e98214ecc51a",
+    "claim_id": "claim:need:art-63d470a3ab0b417992ee36ee76d9101b:0:MechanicsBuilderAgent",
+    "fulfilled_need_id": "need:art-63d470a3ab0b417992ee36ee76d9101b:0"
+  },
+  "morphism": "build_alternative_force_path_model",
+  "needs": [],
+  "parent_ids": [
+    "art-63d470a3ab0b417992ee36ee76d9101b"
+  ],
+  "payload": {
+    "data_status": "formal_descriptor_only",
+    "execution_backend": "scienceclaw",
+    "formal": {
+      "categorical_role": "need_fulfillment_morphism",
+      "invariants": [
+        "type_preserving",
+        "provenance_preserving",
+        "composition_auditable"
+      ],
+      "proof_obligations": [
+        "source_parent_ids_present",
+        "invariants_present"
+      ],
+      "symmetry": [
+        "formal_equivariance_checked_where_applicable"
+      ]
+    },
+    "formal_result": {
+      "assumptions": [
+        "formal descriptor only",
+        "no measured force, stress, curvature, or energy values inferred",
+        "parent artifacts provide provenance and type constraints"
+      ],
+      "expression": "AlternativeForcePathModel := build_alternative_force_path_model(symbolic_mechanics_expression)",
+      "input_types": [
+        "MechanotransductionModel"
+      ],
+      "kind": "symbolic_mechanics_expression",
+      "source_content_features": [
+        {
+          "artifact_id": "art-63d470a3ab0b417992ee36ee76d9101b",
+          "artifact_type": "MechanotransductionModel",
+          "data_status": "formal_descriptor_only",
+          "descriptor_type": "",
+          "emitted_need_types": [
+            "AlternativeForcePathModel",
+            "ForcePathContradictionRecord"
+          ],
+          "expression": "MechanotransductionModel := build_mechanotransduction_model(formal_validation_record + symbolic_parity_descriptor)",
+          "formal_result_fields": [
+            "assumptions",
+            "expression",
+            "input_types",
+            "kind",
+            "source_content_features",
+            "symbols"
+          ],
+          "formal_result_kind": "symbolic_mechanics_expression",
+          "morphism": "build_mechanotransduction_model",
+          "payload_keys": [
+            "data_status",
+            "execution_backend",
+            "formal",
+            "formal_result",
+            "input_count",
+            "invariants",
+            "morphism",
+            "needs",
+            "parents",
+            "query",
+            "result_classification",
+            "scienceclaw",
+            "scienceclaw_skill_attempted",
+            "source_content_features",
+            "source_parent_ids",
+            "summary",
+            "symmetry",
+            "valid_result_basis"
+          ],
+          "result_classification": "formal_symbolic_result"
+        }
+      ],
+      "symbols": [
+        "symbolic_mechanics_expression"
+      ]
+    },
+    "input_count": 1,
+    "invariants": [
+      "type_preserving",
+      "provenance_preserving",
+      "composition_auditable"
+    ],
+    "morphism": "build_alternative_force_path_model",
+    "parents": [
+      {
+        "content_hash": "cf12506d308962f72863e4a04ed52b2392100e5624b04403676ee975175966cf",
+        "id": "art-63d470a3ab0b417992ee36ee76d9101b",
+        "type": "MechanotransductionModel"
+      }
+    ],
+    "query": "build alternative force path model",
+    "result_classification": "formal_symbolic_result",
+    "scienceclaw": {
+      "accepted_as_substantive": false,
+      "execution_backend": "scienceclaw",
+      "rejected_placeholder_summary": {
+        "rejection_reason": "ScienceClaw attempt returned a demo, scaffold, availability, or query-only concept result rather than an analysis of parent artifact data.",
+        "skill_name": "sympy"
+      },
+      "result_summary": {},
+      "skill_name": "sympy",
+      "status": "success"
+    },
+    "scienceclaw_skill_attempted": "sympy",
+    "source_content_features": [
+      {
+        "artifact_id": "art-63d470a3ab0b417992ee36ee76d9101b",
+        "artifact_type": "MechanotransductionModel",
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "",
+        "emitted_need_types": [
+          "AlternativeForcePathModel",
+          "ForcePathContradictionRecord"
+        ],
+        "expression": "MechanotransductionModel := build_mechanotransduction_model(formal_validation_record + symbolic_parity_descriptor)",
+        "formal_result_fields": [
+          "assumptions",
+          "expression",
+          "input_types",
+          "kind",
+          "source_content_features",
+          "symbols"
+        ],
+        "formal_result_kind": "symbolic_mechanics_expression",
+        "morphism": "build_mechanotransduction_model",
+        "payload_keys": [
+          "data_status",
+          "execution_backend",
+          "formal",
+          "formal_result",
+          "input_count",
+          "invariants",
+          "morphism",
+          "needs",
+          "parents",
+          "query",
+          "result_classification",
+          "scienceclaw",
+          "scienceclaw_skill_attempted",
+          "source_content_features",
+          "source_parent_ids",
+          "summary",
+          "symmetry",
+          "valid_result_basis"
+        ],
+        "result_classification": "formal_symbolic_result"
+      }
+    ],
+    "source_parent_ids": [
+      "art-63d470a3ab0b417992ee36ee76d9101b"
+    ],
+    "summary": "MechanicsBuilderAgent executed build_alternative_force_path_model via ScienceClaw skill sympy for build alternative force path model",
+    "symmetry": [
+      "formal_equivariance_checked_where_applicable"
+    ],
+    "valid_result_basis": "deterministic formal computation over parent artifact payload fields, formal result kinds, declared morphism, and query; hashes retained only as provenance"
+  },
+  "producer_agent": "MechanicsBuilderAgent",
+  "schema_version": "categoryscienceclaw.v1",
+  "timestamp": "2026-05-29T00:04:59.475913+00:00",
+  "type": "AlternativeForcePathModel"
+}

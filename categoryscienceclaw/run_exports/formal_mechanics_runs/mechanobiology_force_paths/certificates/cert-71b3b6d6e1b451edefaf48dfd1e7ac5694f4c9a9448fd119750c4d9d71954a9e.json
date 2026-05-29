@@ -1,0 +1,102 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-71b3b6d6e1b451edefaf48dfd1e7ac5694f4c9a9448fd119750c4d9d71954a9e",
+  "kind": "execution",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 2,
+      "actual": 2,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "MechanotransductionModel",
+      "actual": "MechanotransductionModel",
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 1,
+      "expected": "AlternativeForcePathModel",
+      "actual": "AlternativeForcePathModel",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "ForcePathContradictionRecord",
+      "actual": "ForcePathContradictionRecord",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "art-63d470a3ab0b417992ee36ee76d9101b",
+        "art-ca9e4b7672584c378635e5c05f9cf88a"
+      ],
+      "actual_parent_ids": [
+        "art-63d470a3ab0b417992ee36ee76d9101b",
+        "art-ca9e4b7672584c378635e5c05f9cf88a"
+      ],
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "art-63d470a3ab0b417992ee36ee76d9101b",
+      "expected": "cf12506d308962f72863e4a04ed52b2392100e5624b04403676ee975175966cf",
+      "actual": "cf12506d308962f72863e4a04ed52b2392100e5624b04403676ee975175966cf",
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "art-ca9e4b7672584c378635e5c05f9cf88a",
+      "expected": "8150f7e754cd59be33bebc38a87bf47076e6ef7a577b6720cf68b9430c91766e",
+      "actual": "8150f7e754cd59be33bebc38a87bf47076e6ef7a577b6720cf68b9430c91766e",
+      "ok": true
+    },
+    {
+      "name": "output_hash_matches",
+      "artifact_id": "art-99e1f915e5344039afa2ca9239bb86e7",
+      "ok": true
+    },
+    {
+      "name": "formal_metadata_present",
+      "ok": true
+    },
+    {
+      "name": "invariants_present",
+      "ok": true
+    },
+    {
+      "name": "symmetry_or_parity_present",
+      "expected": false,
+      "ok": true
+    },
+    {
+      "name": "source_parent_ids_present",
+      "ok": true
+    },
+    {
+      "name": "symbolic_status_declared_when_no_real_data",
+      "ok": true
+    },
+    {
+      "name": "composition_path_valid",
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "check_force_path_contradiction",
+    "input_artifact_ids": [
+      "art-63d470a3ab0b417992ee36ee76d9101b",
+      "art-ca9e4b7672584c378635e5c05f9cf88a"
+    ],
+    "output_artifact_id": "art-99e1f915e5344039afa2ca9239bb86e7",
+    "output_content_hash": "c2cd2b51a3f79910936244ac8c02b1cb4fd8f56b0885773f52eea39a7cdfe5af",
+    "claim_id": "claim:need:art-63d470a3ab0b417992ee36ee76d9101b:1:FormalValidatorAgent"
+  },
+  "errors": [],
+  "metadata": {}
+}

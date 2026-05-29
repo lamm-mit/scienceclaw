@@ -1,0 +1,58 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-d6c9175ce8734a41f3c15322b013e8011b70fd5f1f02302e2b32973d6ea0c7e9",
+  "kind": "postrun.skill",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "MDTrajectory",
+      "actual": "MDTrajectory",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "ForceExtensionTrace",
+      "actual": "ForceExtensionTrace",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "atomistic_villin_smd_trajectory_1L2Y"
+      ],
+      "actual_parent_ids": [
+        "atomistic_villin_smd_trajectory_1L2Y"
+      ],
+      "ok": true
+    },
+    {
+      "name": "recorded_source_sha256",
+      "source": "atomistic_villin_smd_force_extension_1L2Y.json",
+      "expected": "366126472eaa3e9b633b70395cef5b8a99ac6c8b3cc543e9a15b2097187e242a",
+      "actual": "366126472eaa3e9b633b70395cef5b8a99ac6c8b3cc543e9a15b2097187e242a",
+      "verified_against_current_file": false,
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "extract_atomistic_force_extension",
+    "input_artifact_ids": [
+      "atomistic_villin_smd_trajectory_1L2Y"
+    ],
+    "output_artifact_id": "atomistic_villin_force_extension_1L2Y",
+    "output_content_hash": "c2e58ebd03ffe38163cb0d8226bd86f42d0ee857d09b6d0aebb169ac9fd6f90e"
+  },
+  "errors": [],
+  "metadata": {
+    "producer_agent": "AtomisticForceExtensionAgent",
+    "source_path": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/atomistic_villin_smd_force_extension_1L2Y.json"
+  }
+}

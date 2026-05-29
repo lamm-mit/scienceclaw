@@ -1,0 +1,85 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-205d6eafdefa2c4c6fbe43fe6f9db31eec32a6aca59a8c9b15d03a24d9e9ad4e",
+  "kind": "execution",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "ContactParityDescriptor",
+      "actual": "ContactParityDescriptor",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "DescriptorInvarianceCheck",
+      "actual": "DescriptorInvarianceCheck",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "art-aa190b6d7dc046bb88fcb8a1e79aa99b"
+      ],
+      "actual_parent_ids": [
+        "art-aa190b6d7dc046bb88fcb8a1e79aa99b"
+      ],
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "art-aa190b6d7dc046bb88fcb8a1e79aa99b",
+      "expected": "5a9d391181828c4f1bfc26169c68d2a7581b43ab2cef0c7318a314af3f3c1471",
+      "actual": "5a9d391181828c4f1bfc26169c68d2a7581b43ab2cef0c7318a314af3f3c1471",
+      "ok": true
+    },
+    {
+      "name": "output_hash_matches",
+      "artifact_id": "art-4c5272bbf8734a419bc13b8896eebdb6",
+      "ok": true
+    },
+    {
+      "name": "formal_metadata_present",
+      "ok": true
+    },
+    {
+      "name": "invariants_present",
+      "ok": true
+    },
+    {
+      "name": "symmetry_or_parity_present",
+      "expected": true,
+      "ok": true
+    },
+    {
+      "name": "source_parent_ids_present",
+      "ok": true
+    },
+    {
+      "name": "symbolic_status_declared_when_no_real_data",
+      "ok": true
+    },
+    {
+      "name": "composition_path_valid",
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "verify_contact_parity_invariance",
+    "input_artifact_ids": [
+      "art-aa190b6d7dc046bb88fcb8a1e79aa99b"
+    ],
+    "output_artifact_id": "art-4c5272bbf8734a419bc13b8896eebdb6",
+    "output_content_hash": "1c8511a8fdd902cb99360b97cd19ac5d2457643b3dcc7744d89078f1b22c766a",
+    "claim_id": "claim:need:art-aa190b6d7dc046bb88fcb8a1e79aa99b:0:FormalValidatorAgent"
+  },
+  "errors": [],
+  "metadata": {}
+}

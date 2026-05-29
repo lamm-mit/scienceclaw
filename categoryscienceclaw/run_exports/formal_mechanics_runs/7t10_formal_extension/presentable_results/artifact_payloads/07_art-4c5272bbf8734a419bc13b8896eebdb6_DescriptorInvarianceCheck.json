@@ -1,0 +1,190 @@
+{
+  "content_hash": "1c8511a8fdd902cb99360b97cd19ac5d2457643b3dcc7744d89078f1b22c766a",
+  "id": "art-4c5272bbf8734a419bc13b8896eebdb6",
+  "metadata": {
+    "certificate_id": "cert-205d6eafdefa2c4c6fbe43fe6f9db31eec32a6aca59a8c9b15d03a24d9e9ad4e",
+    "claim_id": "claim:need:art-aa190b6d7dc046bb88fcb8a1e79aa99b:0:FormalValidatorAgent",
+    "fulfilled_need_id": "need:art-aa190b6d7dc046bb88fcb8a1e79aa99b:0"
+  },
+  "morphism": "verify_contact_parity_invariance",
+  "needs": [],
+  "parent_ids": [
+    "art-aa190b6d7dc046bb88fcb8a1e79aa99b"
+  ],
+  "payload": {
+    "data_status": "formal_descriptor_only",
+    "descriptor_type": "DescriptorInvarianceCheck",
+    "execution_backend": "scienceclaw",
+    "formal": {
+      "categorical_role": "need_fulfillment_morphism",
+      "invariants": [
+        "type_preserving",
+        "provenance_preserving",
+        "composition_auditable"
+      ],
+      "proof_obligations": [
+        "source_parent_ids_present",
+        "invariants_present"
+      ],
+      "symmetry": [
+        "formal_equivariance_checked_where_applicable"
+      ]
+    },
+    "formal_result": {
+      "checks": [
+        {
+          "name": "parents_present",
+          "ok": true
+        },
+        {
+          "name": "parent_payload_content_extracted",
+          "ok": true
+        },
+        {
+          "name": "formal_result_kinds_present",
+          "ok": true
+        },
+        {
+          "name": "formal_only_status_declared",
+          "ok": true
+        },
+        {
+          "name": "no_empirical_numeric_claim_added",
+          "ok": true
+        }
+      ],
+      "kind": "formal_validation_record",
+      "validated_parent_content": [
+        {
+          "artifact_id": "art-aa190b6d7dc046bb88fcb8a1e79aa99b",
+          "artifact_type": "ContactParityDescriptor",
+          "data_status": "formal_descriptor_only",
+          "descriptor_type": "ContactParityDescriptor",
+          "emitted_need_types": [
+            "DescriptorInvarianceCheck"
+          ],
+          "formal_result_fields": [
+            "graph_invariants",
+            "invariance_statement",
+            "kind",
+            "parity_domain",
+            "parity_value",
+            "source_content_features"
+          ],
+          "formal_result_kind": "symbolic_parity_descriptor",
+          "morphism": "compute_7t10_contact_parity",
+          "parity_value": "odd",
+          "payload_keys": [
+            "data_status",
+            "descriptor_type",
+            "execution_backend",
+            "formal",
+            "formal_result",
+            "input_count",
+            "invariants",
+            "morphism",
+            "needs",
+            "parents",
+            "query",
+            "result_classification",
+            "scienceclaw",
+            "scienceclaw_skill_attempted",
+            "source_content_features",
+            "source_parent_ids",
+            "summary",
+            "symmetry",
+            "valid_result_basis"
+          ],
+          "result_classification": "formal_symbolic_result"
+        }
+      ],
+      "validated_parent_types": [
+        "ContactParityDescriptor"
+      ]
+    },
+    "input_count": 1,
+    "invariants": [
+      "type_preserving",
+      "provenance_preserving",
+      "composition_auditable"
+    ],
+    "morphism": "verify_contact_parity_invariance",
+    "parents": [
+      {
+        "content_hash": "5a9d391181828c4f1bfc26169c68d2a7581b43ab2cef0c7318a314af3f3c1471",
+        "id": "art-aa190b6d7dc046bb88fcb8a1e79aa99b",
+        "type": "ContactParityDescriptor"
+      }
+    ],
+    "query": "verify 7T10 contact parity invariance",
+    "result_classification": "formal_symbolic_result",
+    "scienceclaw": {
+      "accepted_as_substantive": false,
+      "execution_backend": "scienceclaw",
+      "rejected_placeholder_summary": {
+        "rejection_reason": "ScienceClaw attempt returned a demo, scaffold, availability, or query-only concept result rather than an analysis of parent artifact data.",
+        "skill_name": "scientific-critical-thinking"
+      },
+      "result_summary": {},
+      "skill_name": "scientific-critical-thinking",
+      "status": "success"
+    },
+    "scienceclaw_skill_attempted": "scientific-critical-thinking",
+    "source_content_features": [
+      {
+        "artifact_id": "art-aa190b6d7dc046bb88fcb8a1e79aa99b",
+        "artifact_type": "ContactParityDescriptor",
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "ContactParityDescriptor",
+        "emitted_need_types": [
+          "DescriptorInvarianceCheck"
+        ],
+        "formal_result_fields": [
+          "graph_invariants",
+          "invariance_statement",
+          "kind",
+          "parity_domain",
+          "parity_value",
+          "source_content_features"
+        ],
+        "formal_result_kind": "symbolic_parity_descriptor",
+        "morphism": "compute_7t10_contact_parity",
+        "parity_value": "odd",
+        "payload_keys": [
+          "data_status",
+          "descriptor_type",
+          "execution_backend",
+          "formal",
+          "formal_result",
+          "input_count",
+          "invariants",
+          "morphism",
+          "needs",
+          "parents",
+          "query",
+          "result_classification",
+          "scienceclaw",
+          "scienceclaw_skill_attempted",
+          "source_content_features",
+          "source_parent_ids",
+          "summary",
+          "symmetry",
+          "valid_result_basis"
+        ],
+        "result_classification": "formal_symbolic_result"
+      }
+    ],
+    "source_parent_ids": [
+      "art-aa190b6d7dc046bb88fcb8a1e79aa99b"
+    ],
+    "summary": "FormalValidatorAgent executed verify_contact_parity_invariance via ScienceClaw skill scientific-critical-thinking for verify 7T10 contact parity invariance",
+    "symmetry": [
+      "formal_equivariance_checked_where_applicable"
+    ],
+    "valid_result_basis": "deterministic formal computation over parent artifact payload fields, formal result kinds, declared morphism, and query; hashes retained only as provenance"
+  },
+  "producer_agent": "FormalValidatorAgent",
+  "schema_version": "categoryscienceclaw.v1",
+  "timestamp": "2026-05-29T00:04:53.001079+00:00",
+  "type": "DescriptorInvarianceCheck"
+}

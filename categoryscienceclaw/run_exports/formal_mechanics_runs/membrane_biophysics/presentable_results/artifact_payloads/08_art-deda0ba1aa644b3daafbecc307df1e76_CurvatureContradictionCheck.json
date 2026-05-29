@@ -1,0 +1,189 @@
+{
+  "content_hash": "c161b79b5f1dfe705a0d471ef787384234f6c3777df84e10bff1be64069ed10b",
+  "id": "art-deda0ba1aa644b3daafbecc307df1e76",
+  "metadata": {
+    "certificate_id": "cert-e961e628bb94d39dc3be550d9380f076c0f56add3603e0208146529504137b94",
+    "claim_id": "claim:need:art-16c97823e6fb4639adc0d12ee85db8d6:0:FormalValidatorAgent",
+    "fulfilled_need_id": "need:art-16c97823e6fb4639adc0d12ee85db8d6:0"
+  },
+  "morphism": "check_curvature_contradiction",
+  "needs": [],
+  "parent_ids": [
+    "art-16c97823e6fb4639adc0d12ee85db8d6"
+  ],
+  "payload": {
+    "data_status": "formal_descriptor_only",
+    "execution_backend": "scienceclaw",
+    "formal": {
+      "categorical_role": "need_fulfillment_morphism",
+      "invariants": [
+        "type_preserving",
+        "provenance_preserving",
+        "composition_auditable"
+      ],
+      "proof_obligations": [
+        "source_parent_ids_present",
+        "invariants_present"
+      ],
+      "symmetry": [
+        "formal_equivariance_checked_where_applicable"
+      ]
+    },
+    "formal_result": {
+      "checks": [
+        {
+          "name": "parents_present",
+          "ok": true
+        },
+        {
+          "name": "parent_payload_content_extracted",
+          "ok": true
+        },
+        {
+          "name": "formal_result_kinds_present",
+          "ok": true
+        },
+        {
+          "name": "formal_only_status_declared",
+          "ok": true
+        },
+        {
+          "name": "no_empirical_numeric_claim_added",
+          "ok": true
+        }
+      ],
+      "kind": "formal_validation_record",
+      "validated_parent_content": [
+        {
+          "artifact_id": "art-16c97823e6fb4639adc0d12ee85db8d6",
+          "artifact_type": "ShapeTransitionModel",
+          "data_status": "formal_descriptor_only",
+          "descriptor_type": "",
+          "emitted_need_types": [
+            "CurvatureContradictionCheck",
+            "BiophysicsClaim"
+          ],
+          "expression": "ShapeTransitionModel := predict_shape_transition(formal_validation_record + symbolic_mechanics_expression)",
+          "formal_result_fields": [
+            "assumptions",
+            "expression",
+            "input_types",
+            "kind",
+            "source_content_features",
+            "symbols"
+          ],
+          "formal_result_kind": "symbolic_mechanics_expression",
+          "morphism": "predict_shape_transition",
+          "payload_keys": [
+            "data_status",
+            "execution_backend",
+            "formal",
+            "formal_result",
+            "input_count",
+            "invariants",
+            "morphism",
+            "needs",
+            "parents",
+            "query",
+            "result_classification",
+            "scienceclaw",
+            "scienceclaw_skill_attempted",
+            "source_content_features",
+            "source_parent_ids",
+            "summary",
+            "symmetry",
+            "valid_result_basis"
+          ],
+          "result_classification": "formal_symbolic_result"
+        }
+      ],
+      "validated_parent_types": [
+        "ShapeTransitionModel"
+      ]
+    },
+    "input_count": 1,
+    "invariants": [
+      "type_preserving",
+      "provenance_preserving",
+      "composition_auditable"
+    ],
+    "morphism": "check_curvature_contradiction",
+    "parents": [
+      {
+        "content_hash": "67c283beb989b272adf1a6e7d014d7652ffe278663dc93b7f03a6dbabfc9d773",
+        "id": "art-16c97823e6fb4639adc0d12ee85db8d6",
+        "type": "ShapeTransitionModel"
+      }
+    ],
+    "query": "check curvature contradiction",
+    "result_classification": "formal_symbolic_result",
+    "scienceclaw": {
+      "accepted_as_substantive": false,
+      "execution_backend": "scienceclaw",
+      "rejected_placeholder_summary": {
+        "rejection_reason": "ScienceClaw attempt returned a demo, scaffold, availability, or query-only concept result rather than an analysis of parent artifact data.",
+        "skill_name": "scientific-critical-thinking"
+      },
+      "result_summary": {},
+      "skill_name": "scientific-critical-thinking",
+      "status": "success"
+    },
+    "scienceclaw_skill_attempted": "scientific-critical-thinking",
+    "source_content_features": [
+      {
+        "artifact_id": "art-16c97823e6fb4639adc0d12ee85db8d6",
+        "artifact_type": "ShapeTransitionModel",
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "",
+        "emitted_need_types": [
+          "CurvatureContradictionCheck",
+          "BiophysicsClaim"
+        ],
+        "expression": "ShapeTransitionModel := predict_shape_transition(formal_validation_record + symbolic_mechanics_expression)",
+        "formal_result_fields": [
+          "assumptions",
+          "expression",
+          "input_types",
+          "kind",
+          "source_content_features",
+          "symbols"
+        ],
+        "formal_result_kind": "symbolic_mechanics_expression",
+        "morphism": "predict_shape_transition",
+        "payload_keys": [
+          "data_status",
+          "execution_backend",
+          "formal",
+          "formal_result",
+          "input_count",
+          "invariants",
+          "morphism",
+          "needs",
+          "parents",
+          "query",
+          "result_classification",
+          "scienceclaw",
+          "scienceclaw_skill_attempted",
+          "source_content_features",
+          "source_parent_ids",
+          "summary",
+          "symmetry",
+          "valid_result_basis"
+        ],
+        "result_classification": "formal_symbolic_result"
+      }
+    ],
+    "source_parent_ids": [
+      "art-16c97823e6fb4639adc0d12ee85db8d6"
+    ],
+    "summary": "FormalValidatorAgent executed check_curvature_contradiction via ScienceClaw skill scientific-critical-thinking for check curvature contradiction",
+    "symmetry": [
+      "formal_equivariance_checked_where_applicable"
+    ],
+    "valid_result_basis": "deterministic formal computation over parent artifact payload fields, formal result kinds, declared morphism, and query; hashes retained only as provenance"
+  },
+  "producer_agent": "FormalValidatorAgent",
+  "schema_version": "categoryscienceclaw.v1",
+  "timestamp": "2026-05-29T00:04:57.888753+00:00",
+  "type": "CurvatureContradictionCheck"
+}

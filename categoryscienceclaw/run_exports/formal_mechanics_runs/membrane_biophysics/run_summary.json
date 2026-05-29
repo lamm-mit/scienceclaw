@@ -1,0 +1,20 @@
+{
+  "artifacts_emitted": 9,
+  "audit_status": "pass",
+  "blocked_needs": [],
+  "complexity": "high",
+  "cycles_completed": 3,
+  "cycles_requested": 30,
+  "data_honesty_status": "no_fake_numeric_science",
+  "errors": [],
+  "example": "membrane-biophysics",
+  "executor_backend": "scienceclaw",
+  "needs_fulfilled": 9,
+  "open_needs_remaining": 0,
+  "scienceclaw_agents_used": true,
+  "terminal_artifacts": [
+    "ShapeTransitionModel",
+    "CurvatureContradictionCheck",
+    "BiophysicsClaim"
+  ]
+}

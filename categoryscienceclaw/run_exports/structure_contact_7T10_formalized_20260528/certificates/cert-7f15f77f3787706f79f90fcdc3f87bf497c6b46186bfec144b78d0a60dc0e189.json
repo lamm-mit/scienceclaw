@@ -1,0 +1,50 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-7f15f77f3787706f79f90fcdc3f87bf497c6b46186bfec144b78d0a60dc0e189",
+  "kind": "postrun.skill",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "Claim",
+      "actual": "Claim",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "OpenNeed",
+      "actual": "OpenNeed",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "contact_claim_7T10"
+      ],
+      "actual_parent_ids": [
+        "contact_claim_7T10"
+      ],
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "surface_downstream_need",
+    "input_artifact_ids": [
+      "contact_claim_7T10"
+    ],
+    "output_artifact_id": "need_prepare_7t10_atomistic_complex",
+    "output_content_hash": "5b3381778211ce274aca264e5dcd3a8c25a02d2b00bb995285a5768367b11603"
+  },
+  "errors": [],
+  "metadata": {
+    "producer_agent": "StructurePreparationScoutAgent",
+    "source_path": ""
+  }
+}

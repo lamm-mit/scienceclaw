@@ -1,0 +1,50 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-65e856f5a318122715b80d8c405826e1d2f0bb5e05b59c27bc436126e0496f84",
+  "kind": "postrun.validation",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "Claim",
+      "actual": "Claim",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "ValidationRecord",
+      "actual": "ValidationRecord",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "atomistic_villin_smd_claim_1L2Y"
+      ],
+      "actual_parent_ids": [
+        "atomistic_villin_smd_claim_1L2Y"
+      ],
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "validate_claim",
+    "input_artifact_ids": [
+      "atomistic_villin_smd_claim_1L2Y"
+    ],
+    "output_artifact_id": "validation_atomistic_villin_smd",
+    "output_content_hash": "23f2c3ae3e3f3e2822c1c08a1df12275fde58c55d66258fc171a4be222eed523"
+  },
+  "errors": [],
+  "metadata": {
+    "producer_agent": "AuditAgent",
+    "source_path": ""
+  }
+}

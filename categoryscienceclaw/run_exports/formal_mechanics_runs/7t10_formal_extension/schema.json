@@ -1,0 +1,527 @@
+{
+  "morphisms": [
+    {
+      "adapter": "local",
+      "description": "compute_7t10_contact_parity: ContactGraph -> ContactParityDescriptor",
+      "input_types": [
+        "ContactGraph"
+      ],
+      "kind": "formal_mechanics",
+      "metadata": {
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "ContactParityDescriptor",
+        "emits_needs": [
+          {
+            "allowed_morphisms": [
+              "verify_contact_parity_invariance"
+            ],
+            "query": "verify 7T10 contact parity invariance",
+            "rationale": "Need DescriptorInvarianceCheck via verify_contact_parity_invariance.",
+            "required_type": "DescriptorInvarianceCheck"
+          }
+        ],
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ]
+        }
+      },
+      "name": "compute_7t10_contact_parity",
+      "output_type": "ContactParityDescriptor",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "adapter": "local",
+      "description": "verify_contact_parity_invariance: ContactParityDescriptor -> DescriptorInvarianceCheck",
+      "input_types": [
+        "ContactParityDescriptor"
+      ],
+      "kind": "formal_mechanics",
+      "metadata": {
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "DescriptorInvarianceCheck",
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ]
+        }
+      },
+      "name": "verify_contact_parity_invariance",
+      "output_type": "DescriptorInvarianceCheck",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "adapter": "local",
+      "description": "derive_mechanics_functor_descriptor: ForceExtensionTrace, ContactGraph -> MechanicsFunctorDescriptor",
+      "input_types": [
+        "ForceExtensionTrace",
+        "ContactGraph"
+      ],
+      "kind": "formal_mechanics",
+      "metadata": {
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "MechanicsFunctorDescriptor",
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ]
+        }
+      },
+      "name": "derive_mechanics_functor_descriptor",
+      "output_type": "MechanicsFunctorDescriptor",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "adapter": "local",
+      "description": "audit_mechanics_composition: MechanicsClaim, ContactGraph, ForceExtensionTrace -> CompositionAuditRecord",
+      "input_types": [
+        "MechanicsClaim",
+        "ContactGraph",
+        "ForceExtensionTrace"
+      ],
+      "kind": "formal_mechanics",
+      "metadata": {
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "CompositionAuditRecord",
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ]
+        }
+      },
+      "name": "audit_mechanics_composition",
+      "output_type": "CompositionAuditRecord",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "adapter": "local",
+      "description": "build_open_need_dependency_graph: OpenNeedRecord -> OpenNeedDependencyGraph",
+      "input_types": [
+        "OpenNeedRecord"
+      ],
+      "kind": "formal_mechanics",
+      "metadata": {
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "OpenNeedDependencyGraph",
+        "emits_needs": [
+          {
+            "allowed_morphisms": [
+              "classify_7t10_needs"
+            ],
+            "query": "classify inherited 7T10 downstream needs",
+            "rationale": "Need NeedClassificationRecord via classify_7t10_needs.",
+            "required_type": "NeedClassificationRecord"
+          }
+        ],
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ]
+        }
+      },
+      "name": "build_open_need_dependency_graph",
+      "output_type": "OpenNeedDependencyGraph",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "adapter": "local",
+      "description": "classify_7t10_needs: OpenNeedDependencyGraph -> NeedClassificationRecord",
+      "input_types": [
+        "OpenNeedDependencyGraph"
+      ],
+      "kind": "formal_mechanics",
+      "metadata": {
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "NeedClassificationRecord",
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ]
+        }
+      },
+      "name": "classify_7t10_needs",
+      "output_type": "NeedClassificationRecord",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "adapter": "local",
+      "description": "formalize_rupture_need: OpenNeedRecord -> RupturePathwayFormalization",
+      "input_types": [
+        "OpenNeedRecord"
+      ],
+      "kind": "formal_mechanics",
+      "metadata": {
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "RupturePathwayFormalization",
+        "emits_needs": [
+          {
+            "allowed_morphisms": [
+              "synthesize_7t10_formal_claim"
+            ],
+            "query": "synthesize formal-only 7T10 extension claim",
+            "rationale": "Need FormalMechanicsExtensionClaim via synthesize_7t10_formal_claim.",
+            "required_type": "FormalMechanicsExtensionClaim"
+          }
+        ],
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ]
+        }
+      },
+      "name": "formalize_rupture_need",
+      "output_type": "RupturePathwayFormalization",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "adapter": "local",
+      "description": "synthesize_7t10_formal_claim: RupturePathwayFormalization, NeedClassificationRecord -> FormalMechanicsExtensionClaim",
+      "input_types": [
+        "RupturePathwayFormalization",
+        "NeedClassificationRecord"
+      ],
+      "kind": "formal_mechanics",
+      "metadata": {
+        "data_status": "formal_descriptor_only",
+        "formal": {
+          "categorical_role": "need_fulfillment_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "composition_auditable"
+          ],
+          "proof_obligations": [
+            "source_parent_ids_present",
+            "invariants_present"
+          ],
+          "symmetry": [
+            "formal_equivariance_checked_where_applicable"
+          ]
+        }
+      },
+      "name": "synthesize_7t10_formal_claim",
+      "output_type": "FormalMechanicsExtensionClaim",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "adapter": "local",
+      "description": "Assemble accepted and rejected candidate models from computational mechanics evidence.",
+      "input_types": [],
+      "kind": "categorical_discovery",
+      "metadata": {
+        "formal": {
+          "categorical_role": "discovery_subgraph_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "rejected_paths_preserved"
+          ]
+        }
+      },
+      "name": "instantiate_mechanics_candidate_models",
+      "output_type": "MechanicsCandidateModelSet",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "adapter": "local",
+      "description": "Preserve the gate-selected explanatory model as a typed accepted model artifact.",
+      "input_types": [],
+      "kind": "categorical_discovery",
+      "metadata": {
+        "formal": {
+          "categorical_role": "discovery_subgraph_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "rejected_paths_preserved"
+          ]
+        }
+      },
+      "name": "accept_mechanics_model",
+      "output_type": "MechanicsAcceptedModel",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "adapter": "local",
+      "description": "Preserve a failed alternative as a typed rejected model artifact rather than deleting it.",
+      "input_types": [],
+      "kind": "categorical_discovery",
+      "metadata": {
+        "formal": {
+          "categorical_role": "discovery_subgraph_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "rejected_paths_preserved"
+          ]
+        }
+      },
+      "name": "reject_mechanics_model",
+      "output_type": "MechanicsRejectedModel",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "adapter": "local",
+      "description": "Map candidate models to accepted/rejected decisions using AIC, BIC, or an explicit mechanics criterion.",
+      "input_types": [],
+      "kind": "categorical_discovery",
+      "metadata": {
+        "formal": {
+          "categorical_role": "discovery_subgraph_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "rejected_paths_preserved"
+          ]
+        }
+      },
+      "name": "apply_model_selection_gate",
+      "output_type": "MechanicsModelSelectionGate",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "adapter": "local",
+      "description": "Apply an ablation or perturbation showing what the accepted model explains beyond a simpler descriptor.",
+      "input_types": [],
+      "kind": "categorical_discovery",
+      "metadata": {
+        "formal": {
+          "categorical_role": "discovery_subgraph_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "rejected_paths_preserved"
+          ]
+        }
+      },
+      "name": "run_mechanics_stress_test",
+      "output_type": "MechanicsStressTest",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "adapter": "local",
+      "description": "Record old regime, transported artifacts, richer regime, and residual content.",
+      "input_types": [],
+      "kind": "categorical_discovery",
+      "metadata": {
+        "formal": {
+          "categorical_role": "discovery_subgraph_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "rejected_paths_preserved"
+          ]
+        }
+      },
+      "name": "audit_mechanics_regime_transition",
+      "output_type": "MechanicsRegimeTransition",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "adapter": "local",
+      "description": "Compose gate, stress-test, and regime-transition artifacts into a mechanics claim.",
+      "input_types": [],
+      "kind": "categorical_discovery",
+      "metadata": {
+        "formal": {
+          "categorical_role": "discovery_subgraph_morphism",
+          "invariants": [
+            "type_preserving",
+            "provenance_preserving",
+            "rejected_paths_preserved"
+          ]
+        }
+      },
+      "name": "synthesize_categorical_mechanics_claim",
+      "output_type": "MechanicsDiscoveryClaim",
+      "schema_version": "categoryscienceclaw.v1"
+    }
+  ],
+  "objects": [
+    {
+      "description": "Formal mechanics object: ContactGraph",
+      "kind": "artifact",
+      "name": "ContactGraph",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Formal mechanics object: ForceExtensionTrace",
+      "kind": "artifact",
+      "name": "ForceExtensionTrace",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Formal mechanics object: MechanicsClaim",
+      "kind": "artifact",
+      "name": "MechanicsClaim",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Formal mechanics object: OpenNeedRecord",
+      "kind": "artifact",
+      "name": "OpenNeedRecord",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Formal mechanics object: ContactParityDescriptor",
+      "kind": "artifact",
+      "name": "ContactParityDescriptor",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Formal mechanics object: MechanicsFunctorDescriptor",
+      "kind": "artifact",
+      "name": "MechanicsFunctorDescriptor",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Formal mechanics object: CompositionAuditRecord",
+      "kind": "artifact",
+      "name": "CompositionAuditRecord",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Formal mechanics object: OpenNeedDependencyGraph",
+      "kind": "artifact",
+      "name": "OpenNeedDependencyGraph",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Formal mechanics object: RupturePathwayFormalization",
+      "kind": "artifact",
+      "name": "RupturePathwayFormalization",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Formal mechanics object: NeedClassificationRecord",
+      "kind": "artifact",
+      "name": "NeedClassificationRecord",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Formal mechanics object: DescriptorInvarianceCheck",
+      "kind": "artifact",
+      "name": "DescriptorInvarianceCheck",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Formal mechanics object: FormalMechanicsExtensionClaim",
+      "kind": "artifact",
+      "name": "FormalMechanicsExtensionClaim",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Finite set of competing mechanics model artifacts considered for a run.",
+      "kind": "artifact",
+      "name": "MechanicsCandidateModelSet",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Model artifact accepted by a deterministic mechanics gate.",
+      "kind": "artifact",
+      "name": "MechanicsAcceptedModel",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Model artifact rejected but preserved as residual provenance.",
+      "kind": "artifact",
+      "name": "MechanicsRejectedModel",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Typed gate artifact mapping candidate models to accept/reject decisions.",
+      "kind": "artifact",
+      "name": "MechanicsModelSelectionGate",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Ablation or perturbation artifact testing accepted-model informativeness.",
+      "kind": "artifact",
+      "name": "MechanicsStressTest",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Artifact recording transport from a simple descriptor regime to a richer mechanics regime.",
+      "kind": "artifact",
+      "name": "MechanicsRegimeTransition",
+      "schema_version": "categoryscienceclaw.v1"
+    },
+    {
+      "description": "Mechanics-language claim derived from gate, stress test, and regime transition artifacts.",
+      "kind": "artifact",
+      "name": "MechanicsDiscoveryClaim",
+      "schema_version": "categoryscienceclaw.v1"
+    }
+  ],
+  "topic": "extend 7T10 with formal descriptors"
+}

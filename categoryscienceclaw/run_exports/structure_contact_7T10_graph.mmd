@@ -1,0 +1,83 @@
+flowchart TD
+    q["q_7t10_contacts<br/>ResearchQuestion"]
+    need["need_7t10_contacts<br/>OpenNeed"]
+    proposal["proposal_7t10_contacts<br/>AgentProposal"]
+
+    metadata["pdb_metadata_7T10<br/>StructureMetadata"]
+    contact["contact_graph_7T10<br/>ContactGraph"]
+    seq["peptide_sequence_stats_7T10<br/>SequenceDescriptor"]
+    contact_claim["contact_claim_7T10<br/>Claim"]
+
+    cgtraj["cg_md_trajectory_7T10<br/>MDTrajectory"]
+    cgforce["force_extension_7T10<br/>ForceExtensionTrace"]
+    mech_claim["mechanics_claim_7T10<br/>Claim"]
+
+    atom_struct["atomistic_villin_structure_1L2Y<br/>AtomisticStructure"]
+    atom_traj["atomistic_villin_smd_trajectory_1L2Y<br/>MDTrajectory"]
+    atom_force["atomistic_villin_force_extension_1L2Y<br/>ForceExtensionTrace"]
+    atom_claim["atomistic_villin_smd_claim_1L2Y<br/>Claim"]
+
+    val_contact["validation_7t10_contacts<br/>ValidationRecord"]
+    val_mech["validation_7t10_mechanics<br/>ValidationRecord"]
+    val_atom["validation_atomistic_villin_smd<br/>ValidationRecord"]
+
+    post_contact["post_7t10_contacts<br/>DiscoursePost"]
+    post_mech["post_7t10_mechanics<br/>DiscoursePost"]
+    post_atom["post_atomistic_villin_smd<br/>DiscoursePost"]
+
+    n_complex["need_prepare_7t10_atomistic_complex<br/>Need: PreparedAtomisticComplex"]
+    n_ensemble["need_receptor_bound_smd_ensemble<br/>Need: AtomisticSMDEnsemble"]
+    n_mutation["need_hotspot_mutation_mechanics<br/>Need: MutationMechanicsComparison"]
+    n_rupture["need_rupture_pathway_graph<br/>Need: RupturePathwayGraph"]
+    n_exp["need_experimental_anchor<br/>Need: ExperimentalReference"]
+    n_integrated["need_integrated_mechanics_synthesis<br/>Need: MechanisticClaim"]
+
+    q -->|surface_open_need| need
+    need -->|propose_agent_work| proposal
+
+    proposal -->|fetch_pdb_metadata| metadata
+    metadata -->|analyze_structure_contacts| contact
+    contact -->|compute_sequence_stats| seq
+    contact -->|synthesize_contact_claim| contact_claim
+    metadata -->|synthesize_contact_claim| contact_claim
+    seq -->|synthesize_contact_claim| contact_claim
+
+    contact -->|run_coarse_grained_md| cgtraj
+    cgtraj -->|extract_force_extension| cgforce
+    cgforce -->|synthesize_mechanics_claim_actual| mech_claim
+    cgtraj -->|synthesize_mechanics_claim_actual| mech_claim
+    contact -->|synthesize_mechanics_claim_actual| mech_claim
+
+    proposal -->|prepare_atomistic_structure| atom_struct
+    atom_struct -->|run_atomistic_steered_md| atom_traj
+    atom_traj -->|extract_atomistic_force_extension| atom_force
+    atom_force -->|synthesize_atomistic_smd_claim| atom_claim
+    atom_traj -->|synthesize_atomistic_smd_claim| atom_claim
+    atom_struct -->|synthesize_atomistic_smd_claim| atom_claim
+
+    contact_claim -->|validate_claim| val_contact
+    mech_claim -->|validate_claim| val_mech
+    atom_claim -->|validate_claim| val_atom
+
+    contact_claim -->|publish_claim| post_contact
+    mech_claim -->|publish_claim| post_mech
+    atom_claim -->|publish_claim| post_atom
+
+    contact_claim -.->|open need| n_complex
+    contact_claim -.->|open need| n_mutation
+    contact_claim -.->|open need| n_exp
+    mech_claim -.->|open need| n_ensemble
+    mech_claim -.->|open need| n_rupture
+    atom_claim -.->|open need| n_integrated
+
+    classDef question fill:#eef2ff,stroke:#4f46e5,color:#111827
+    classDef descriptor fill:#ecfeff,stroke:#0891b2,color:#111827
+    classDef claim fill:#fef3c7,stroke:#d97706,color:#111827
+    classDef verification fill:#f0fdf4,stroke:#16a34a,color:#111827
+    classDef need fill:#fdf2f8,stroke:#db2777,color:#111827,stroke-dasharray: 4 3
+
+    class q,need,proposal question
+    class metadata,contact,seq,cgtraj,cgforce,atom_struct,atom_traj,atom_force descriptor
+    class contact_claim,mech_claim,atom_claim claim
+    class val_contact,val_mech,val_atom,post_contact,post_mech,post_atom verification
+    class n_complex,n_ensemble,n_mutation,n_rupture,n_exp,n_integrated need

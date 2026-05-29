@@ -1,0 +1,50 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-ecdb1dc37fbfde6d24cf9011da4627fb49240aa0a1839948c5ed2b0208197d73",
+  "kind": "postrun.skill",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "OpenNeed",
+      "actual": "OpenNeed",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "AgentProposal",
+      "actual": "AgentProposal",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "need_integrated_mechanics_synthesis"
+      ],
+      "actual_parent_ids": [
+        "need_integrated_mechanics_synthesis"
+      ],
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "propose_downstream_agent_work",
+    "input_artifact_ids": [
+      "need_integrated_mechanics_synthesis"
+    ],
+    "output_artifact_id": "proposal_integrated_mechanics_synthesis",
+    "output_content_hash": "5b3381778211ce274aca264e5dcd3a8c25a02d2b00bb995285a5768367b11603"
+  },
+  "errors": [],
+  "metadata": {
+    "producer_agent": "SynthesisGatekeeperAgent",
+    "source_path": ""
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-eeb943fe2855a021b96a1cf7aa5b758dc8d44430f989285f6d91d3f9dea62c61",
+  "kind": "postrun.synthesis",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 3,
+      "actual": 3,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "ContactGraph",
+      "actual": "ContactGraph",
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 1,
+      "expected": "StructureMetadata",
+      "actual": "StructureMetadata",
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 2,
+      "expected": "SequenceDescriptor",
+      "actual": "SequenceDescriptor",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "Claim",
+      "actual": "Claim",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "contact_graph_7T10",
+        "pdb_metadata_7T10",
+        "peptide_sequence_stats_7T10"
+      ],
+      "actual_parent_ids": [
+        "contact_graph_7T10",
+        "pdb_metadata_7T10",
+        "peptide_sequence_stats_7T10"
+      ],
+      "ok": true
+    },
+    {
+      "name": "recorded_source_sha256",
+      "source": "synthesized_claim_7T10.json",
+      "expected": "e8928ef1734da123166d327d10a10f15527b2ce46ce81077fa638ecffab22cff",
+      "actual": "e8928ef1734da123166d327d10a10f15527b2ce46ce81077fa638ecffab22cff",
+      "verified_against_current_file": true,
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "synthesize_contact_claim",
+    "input_artifact_ids": [
+      "contact_graph_7T10",
+      "pdb_metadata_7T10",
+      "peptide_sequence_stats_7T10"
+    ],
+    "output_artifact_id": "contact_claim_7T10",
+    "output_content_hash": "7fbb5129a4edff61d57a87c127af610ffd68a9bc2d45fa377fe5a3e047905b37"
+  },
+  "errors": [],
+  "metadata": {
+    "producer_agent": "SynthesisAgent",
+    "source_path": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/synthesized_claim_7T10.json"
+  }
+}

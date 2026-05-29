@@ -1,0 +1,58 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-b295d0853f4978dd96b289d5ac688b6bad7340de78496c20ede3b7d93ef0ec51",
+  "kind": "postrun.skill",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "MDTrajectory",
+      "actual": "MDTrajectory",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "ForceExtensionTrace",
+      "actual": "ForceExtensionTrace",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "cg_md_trajectory_7T10"
+      ],
+      "actual_parent_ids": [
+        "cg_md_trajectory_7T10"
+      ],
+      "ok": true
+    },
+    {
+      "name": "recorded_source_sha256",
+      "source": "force_extension_7T10.json",
+      "expected": "240905d8ec2bedf135c95c190cd747fcc1622cb6f9d88b9a9d43358f7c12cd7c",
+      "actual": "240905d8ec2bedf135c95c190cd747fcc1622cb6f9d88b9a9d43358f7c12cd7c",
+      "verified_against_current_file": true,
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "extract_force_extension",
+    "input_artifact_ids": [
+      "cg_md_trajectory_7T10"
+    ],
+    "output_artifact_id": "force_extension_7T10",
+    "output_content_hash": "dbbd85d543897ef01d6f37600cd9a3e7b9d6afd738f71abc0f854d242f1ee00e"
+  },
+  "errors": [],
+  "metadata": {
+    "producer_agent": "ForceExtensionAgent",
+    "source_path": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/force_extension_7T10.json"
+  }
+}

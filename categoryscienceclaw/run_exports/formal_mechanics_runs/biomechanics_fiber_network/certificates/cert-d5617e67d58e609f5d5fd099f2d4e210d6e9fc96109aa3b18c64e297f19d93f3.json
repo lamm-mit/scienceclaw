@@ -1,0 +1,85 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-d5617e67d58e609f5d5fd099f2d4e210d6e9fc96109aa3b18c64e297f19d93f3",
+  "kind": "execution",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "AnisotropyTensor",
+      "actual": "AnisotropyTensor",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "TensorSymmetryValidationRecord",
+      "actual": "TensorSymmetryValidationRecord",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "art-cceea0e447bb4a6cacd53087b758569c"
+      ],
+      "actual_parent_ids": [
+        "art-cceea0e447bb4a6cacd53087b758569c"
+      ],
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "art-cceea0e447bb4a6cacd53087b758569c",
+      "expected": "87c013e865eb5757b6079dc943cf946bf4a39cf1934ae7f27e6763ad97b58751",
+      "actual": "87c013e865eb5757b6079dc943cf946bf4a39cf1934ae7f27e6763ad97b58751",
+      "ok": true
+    },
+    {
+      "name": "output_hash_matches",
+      "artifact_id": "art-ba907e06ff7246eea5b05cc6ae908282",
+      "ok": true
+    },
+    {
+      "name": "formal_metadata_present",
+      "ok": true
+    },
+    {
+      "name": "invariants_present",
+      "ok": true
+    },
+    {
+      "name": "symmetry_or_parity_present",
+      "expected": true,
+      "ok": true
+    },
+    {
+      "name": "source_parent_ids_present",
+      "ok": true
+    },
+    {
+      "name": "symbolic_status_declared_when_no_real_data",
+      "ok": true
+    },
+    {
+      "name": "composition_path_valid",
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "validate_tensor_symmetry",
+    "input_artifact_ids": [
+      "art-cceea0e447bb4a6cacd53087b758569c"
+    ],
+    "output_artifact_id": "art-ba907e06ff7246eea5b05cc6ae908282",
+    "output_content_hash": "37df7f57ee782ae641ab029c14b055135b38740ce8910ea31c63e5237d585f77",
+    "claim_id": "claim:need:art-cceea0e447bb4a6cacd53087b758569c:0:FormalValidatorAgent"
+  },
+  "errors": [],
+  "metadata": {}
+}

@@ -1,0 +1,151 @@
+{
+  "content_hash": "166561b9eec55d64e8727de818eb1347915a07554af4d4b769eae50b34d326f7",
+  "id": "art-470351c53c11461099002ccbcfccc3cf",
+  "metadata": {
+    "certificate_id": "cert-fb4e17cff88c88bf0a20d35537ab692666a2a1cda2b7dd4e09e230e567f39bed",
+    "claim_id": "claim:need:source_open_needs_7T10:1:MechanicsBuilderAgent",
+    "fulfilled_need_id": "need:source_open_needs_7T10:1"
+  },
+  "morphism": "formalize_rupture_need",
+  "needs": [
+    {
+      "allowed_morphisms": [
+        "synthesize_7t10_formal_claim"
+      ],
+      "created_at": "2026-05-29T00:04:52.605143+00:00",
+      "id": "need:art-470351c53c11461099002ccbcfccc3cf:0",
+      "metadata": {},
+      "need_index": 0,
+      "parent_artifact_id": "art-470351c53c11461099002ccbcfccc3cf",
+      "query": "synthesize formal-only 7T10 extension claim",
+      "rationale": "Need FormalMechanicsExtensionClaim via synthesize_7t10_formal_claim.",
+      "required_type": "FormalMechanicsExtensionClaim",
+      "schema_version": "categoryscienceclaw.v1",
+      "status": "open"
+    }
+  ],
+  "parent_ids": [
+    "source_open_needs_7T10"
+  ],
+  "payload": {
+    "data_status": "formal_descriptor_only",
+    "descriptor_type": "RupturePathwayFormalization",
+    "execution_backend": "scienceclaw",
+    "formal": {
+      "categorical_role": "need_fulfillment_morphism",
+      "invariants": [
+        "type_preserving",
+        "provenance_preserving",
+        "composition_auditable"
+      ],
+      "proof_obligations": [
+        "source_parent_ids_present",
+        "invariants_present"
+      ],
+      "symmetry": [
+        "formal_equivariance_checked_where_applicable"
+      ]
+    },
+    "formal_result": {
+      "assumptions": [
+        "formal descriptor only",
+        "no measured force, stress, curvature, or energy values inferred",
+        "parent artifacts provide provenance and type constraints"
+      ],
+      "expression": "RupturePathwayFormalization := formalize_rupture_need(openneedrecord)",
+      "input_types": [
+        "OpenNeedRecord"
+      ],
+      "kind": "symbolic_mechanics_expression",
+      "source_content_features": [
+        {
+          "artifact_id": "source_open_needs_7T10",
+          "artifact_type": "OpenNeedRecord",
+          "data_status": "",
+          "descriptor_type": "",
+          "emitted_need_types": [],
+          "formal_result_fields": [],
+          "formal_result_kind": "",
+          "morphism": "",
+          "payload_keys": [
+            "inherited_needs",
+            "source",
+            "status"
+          ],
+          "result_classification": ""
+        }
+      ],
+      "symbols": [
+        "openneedrecord"
+      ]
+    },
+    "input_count": 1,
+    "invariants": [
+      "type_preserving",
+      "provenance_preserving",
+      "composition_auditable"
+    ],
+    "morphism": "formalize_rupture_need",
+    "needs": [
+      {
+        "allowed_morphisms": [
+          "synthesize_7t10_formal_claim"
+        ],
+        "query": "synthesize formal-only 7T10 extension claim",
+        "rationale": "Need FormalMechanicsExtensionClaim via synthesize_7t10_formal_claim.",
+        "required_type": "FormalMechanicsExtensionClaim"
+      }
+    ],
+    "parents": [
+      {
+        "content_hash": "5faf08b056f14761bee17c070ff4d2f0248b96551ffe04681d0c520434344333",
+        "id": "source_open_needs_7T10",
+        "type": "OpenNeedRecord"
+      }
+    ],
+    "query": "formalize inherited rupture pathway need",
+    "result_classification": "formal_symbolic_result",
+    "scienceclaw": {
+      "accepted_as_substantive": false,
+      "execution_backend": "scienceclaw",
+      "rejected_placeholder_summary": {
+        "rejection_reason": "ScienceClaw attempt returned a demo, scaffold, availability, or query-only concept result rather than an analysis of parent artifact data.",
+        "skill_name": "sympy"
+      },
+      "result_summary": {},
+      "skill_name": "sympy",
+      "status": "success"
+    },
+    "scienceclaw_skill_attempted": "sympy",
+    "source_content_features": [
+      {
+        "artifact_id": "source_open_needs_7T10",
+        "artifact_type": "OpenNeedRecord",
+        "data_status": "",
+        "descriptor_type": "",
+        "emitted_need_types": [],
+        "formal_result_fields": [],
+        "formal_result_kind": "",
+        "morphism": "",
+        "payload_keys": [
+          "inherited_needs",
+          "source",
+          "status"
+        ],
+        "result_classification": ""
+      }
+    ],
+    "source_parent_ids": [
+      "source_open_needs_7T10"
+    ],
+    "summary": "MechanicsBuilderAgent executed formalize_rupture_need via ScienceClaw skill sympy for formalize inherited rupture pathway need",
+    "symmetry": [
+      "formal_equivariance_checked_where_applicable"
+    ],
+    "valid_result_basis": "deterministic formal computation over parent artifact payload fields, formal result kinds, declared morphism, and query; hashes retained only as provenance"
+  },
+  "producer_agent": "MechanicsBuilderAgent",
+  "schema_version": "categoryscienceclaw.v1",
+  "timestamp": "2026-05-29T00:04:52.605115+00:00",
+  "type": "RupturePathwayFormalization"
+}

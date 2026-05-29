@@ -1,0 +1,58 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-4385cc93e893d2e52fb3589bd0489975b6fc76eff7b86027a5a87edea7d33ada",
+  "kind": "postrun.skill",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "ContactGraph",
+      "actual": "ContactGraph",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "SequenceDescriptor",
+      "actual": "SequenceDescriptor",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "contact_graph_7T10"
+      ],
+      "actual_parent_ids": [
+        "contact_graph_7T10"
+      ],
+      "ok": true
+    },
+    {
+      "name": "recorded_source_sha256",
+      "source": "peptide_sequence_stats_7T10.json",
+      "expected": "6c5155eb84bfae9e0c8ce0ce1d11d17f2b9c6dc6fc4b5a691b0b21cb36fb117e",
+      "actual": "6c5155eb84bfae9e0c8ce0ce1d11d17f2b9c6dc6fc4b5a691b0b21cb36fb117e",
+      "verified_against_current_file": true,
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "compute_sequence_stats",
+    "input_artifact_ids": [
+      "contact_graph_7T10"
+    ],
+    "output_artifact_id": "peptide_sequence_stats_7T10",
+    "output_content_hash": "28776296ca7efc5b7f19e988715e66fb662296f7ec0b51fb51826a563638d1b9"
+  },
+  "errors": [],
+  "metadata": {
+    "producer_agent": "SequenceStatsAgent",
+    "source_path": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/peptide_sequence_stats_7T10.json"
+  }
+}

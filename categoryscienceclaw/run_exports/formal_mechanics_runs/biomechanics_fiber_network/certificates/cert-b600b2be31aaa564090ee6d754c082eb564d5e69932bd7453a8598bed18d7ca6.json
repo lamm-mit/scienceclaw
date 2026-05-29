@@ -1,0 +1,85 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-b600b2be31aaa564090ee6d754c082eb564d5e69932bd7453a8598bed18d7ca6",
+  "kind": "execution",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "FiberNetworkGraph",
+      "actual": "FiberNetworkGraph",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "GraphInvariantDescriptor",
+      "actual": "GraphInvariantDescriptor",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "art-6ee234cc170748fe80c4af134bb1acc0"
+      ],
+      "actual_parent_ids": [
+        "art-6ee234cc170748fe80c4af134bb1acc0"
+      ],
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "art-6ee234cc170748fe80c4af134bb1acc0",
+      "expected": "f3cd6b2d7db48ba0dc15131c916d2f3ba915d43f544bc3f467cc4b18852ace25",
+      "actual": "f3cd6b2d7db48ba0dc15131c916d2f3ba915d43f544bc3f467cc4b18852ace25",
+      "ok": true
+    },
+    {
+      "name": "output_hash_matches",
+      "artifact_id": "art-26284ee8a39e46549be99b55261f595b",
+      "ok": true
+    },
+    {
+      "name": "formal_metadata_present",
+      "ok": true
+    },
+    {
+      "name": "invariants_present",
+      "ok": true
+    },
+    {
+      "name": "symmetry_or_parity_present",
+      "expected": false,
+      "ok": true
+    },
+    {
+      "name": "source_parent_ids_present",
+      "ok": true
+    },
+    {
+      "name": "symbolic_status_declared_when_no_real_data",
+      "ok": true
+    },
+    {
+      "name": "composition_path_valid",
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "compute_fiber_graph_invariants",
+    "input_artifact_ids": [
+      "art-6ee234cc170748fe80c4af134bb1acc0"
+    ],
+    "output_artifact_id": "art-26284ee8a39e46549be99b55261f595b",
+    "output_content_hash": "449a13d17eb8fbee400cd13bd6c26dcae514751b66539baee70d959ed370eb87",
+    "claim_id": "claim:need:art-6ee234cc170748fe80c4af134bb1acc0:1:GraphInvariantAgent"
+  },
+  "errors": [],
+  "metadata": {}
+}

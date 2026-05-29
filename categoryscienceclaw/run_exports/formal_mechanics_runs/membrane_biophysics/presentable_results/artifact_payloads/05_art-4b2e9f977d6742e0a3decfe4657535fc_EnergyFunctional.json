@@ -1,0 +1,284 @@
+{
+  "content_hash": "f83a267781fa5dc73ce881993be5a05620d2bc023f6d6c43f1a68d9182b841aa",
+  "id": "art-4b2e9f977d6742e0a3decfe4657535fc",
+  "metadata": {
+    "certificate_id": "cert-760bff84f109364ef993344d307af2f60301536101a6b7b81b4ae16854e61ca6",
+    "claim_id": "claim:need:art-2657fef5a8ad408f9919cb8ed653af78:0:MechanicsBuilderAgent",
+    "fulfilled_need_id": "need:art-2657fef5a8ad408f9919cb8ed653af78:0"
+  },
+  "morphism": "derive_energy_functional",
+  "needs": [
+    {
+      "allowed_morphisms": [
+        "validate_energy_assumptions"
+      ],
+      "created_at": "2026-05-29T00:04:57.707834+00:00",
+      "id": "need:art-4b2e9f977d6742e0a3decfe4657535fc:0",
+      "metadata": {},
+      "need_index": 0,
+      "parent_artifact_id": "art-4b2e9f977d6742e0a3decfe4657535fc",
+      "query": "validate symbolic energy assumptions",
+      "rationale": "Need EnergyAssumptionValidationRecord via validate_energy_assumptions.",
+      "required_type": "EnergyAssumptionValidationRecord",
+      "schema_version": "categoryscienceclaw.v1",
+      "status": "open"
+    }
+  ],
+  "parent_ids": [
+    "art-2657fef5a8ad408f9919cb8ed653af78",
+    "art-1d4642ac944743a4893e5e968932a572"
+  ],
+  "payload": {
+    "data_status": "formal_descriptor_only",
+    "descriptor_type": "EnergyFunctional",
+    "execution_backend": "scienceclaw",
+    "formal": {
+      "categorical_role": "need_fulfillment_morphism",
+      "invariants": [
+        "type_preserving",
+        "provenance_preserving",
+        "composition_auditable"
+      ],
+      "proof_obligations": [
+        "source_parent_ids_present",
+        "invariants_present"
+      ],
+      "symmetry": [
+        "formal_equivariance_checked_where_applicable"
+      ]
+    },
+    "formal_result": {
+      "assumptions": [
+        "formal descriptor only",
+        "no measured force, stress, curvature, or energy values inferred",
+        "parent artifacts provide provenance and type constraints"
+      ],
+      "expression": "EnergyFunctional := derive_energy_functional(formal_validation_record + symbolic_parity_descriptor)",
+      "input_types": [
+        "PatchGluingCompatibilityRecord",
+        "CurvatureParityDescriptor"
+      ],
+      "kind": "symbolic_mechanics_expression",
+      "source_content_features": [
+        {
+          "artifact_id": "art-2657fef5a8ad408f9919cb8ed653af78",
+          "artifact_type": "PatchGluingCompatibilityRecord",
+          "checks_passed": true,
+          "data_status": "formal_descriptor_only",
+          "descriptor_type": "",
+          "emitted_need_types": [
+            "EnergyFunctional"
+          ],
+          "formal_result_fields": [
+            "checks",
+            "kind",
+            "validated_parent_content",
+            "validated_parent_types"
+          ],
+          "formal_result_kind": "formal_validation_record",
+          "morphism": "check_patch_gluing",
+          "payload_keys": [
+            "data_status",
+            "execution_backend",
+            "formal",
+            "formal_result",
+            "input_count",
+            "invariants",
+            "morphism",
+            "needs",
+            "parents",
+            "query",
+            "result_classification",
+            "scienceclaw",
+            "scienceclaw_skill_attempted",
+            "source_content_features",
+            "source_parent_ids",
+            "summary",
+            "symmetry",
+            "valid_result_basis"
+          ],
+          "result_classification": "formal_symbolic_result"
+        },
+        {
+          "artifact_id": "art-1d4642ac944743a4893e5e968932a572",
+          "artifact_type": "CurvatureParityDescriptor",
+          "data_status": "formal_descriptor_only",
+          "descriptor_type": "CurvatureParityDescriptor",
+          "emitted_need_types": [],
+          "formal_result_fields": [
+            "graph_invariants",
+            "invariance_statement",
+            "kind",
+            "parity_domain",
+            "parity_value",
+            "source_content_features"
+          ],
+          "formal_result_kind": "symbolic_parity_descriptor",
+          "morphism": "compute_curvature_parity",
+          "parity_value": "even",
+          "payload_keys": [
+            "data_status",
+            "descriptor_type",
+            "execution_backend",
+            "formal",
+            "formal_result",
+            "input_count",
+            "invariants",
+            "morphism",
+            "parents",
+            "query",
+            "result_classification",
+            "scienceclaw",
+            "scienceclaw_skill_attempted",
+            "source_content_features",
+            "source_parent_ids",
+            "summary",
+            "symmetry",
+            "valid_result_basis"
+          ],
+          "result_classification": "formal_symbolic_result"
+        }
+      ],
+      "symbols": [
+        "formal_validation_record",
+        "symbolic_parity_descriptor"
+      ]
+    },
+    "input_count": 2,
+    "invariants": [
+      "type_preserving",
+      "provenance_preserving",
+      "composition_auditable"
+    ],
+    "morphism": "derive_energy_functional",
+    "needs": [
+      {
+        "allowed_morphisms": [
+          "validate_energy_assumptions"
+        ],
+        "query": "validate symbolic energy assumptions",
+        "rationale": "Need EnergyAssumptionValidationRecord via validate_energy_assumptions.",
+        "required_type": "EnergyAssumptionValidationRecord"
+      }
+    ],
+    "parents": [
+      {
+        "content_hash": "c39656acb25d3bed58126d4ad8f9d6122d8f45e23c2c1e29a25af891f5efe3e4",
+        "id": "art-2657fef5a8ad408f9919cb8ed653af78",
+        "type": "PatchGluingCompatibilityRecord"
+      },
+      {
+        "content_hash": "c6ef2f006db9f898205136ad3446ce78a1257189559204a30da16573296cd14d",
+        "id": "art-1d4642ac944743a4893e5e968932a572",
+        "type": "CurvatureParityDescriptor"
+      }
+    ],
+    "query": "derive symbolic energy functional",
+    "result_classification": "formal_symbolic_result",
+    "scienceclaw": {
+      "accepted_as_substantive": false,
+      "execution_backend": "scienceclaw",
+      "rejected_placeholder_summary": {
+        "rejection_reason": "ScienceClaw attempt returned a demo, scaffold, availability, or query-only concept result rather than an analysis of parent artifact data.",
+        "skill_name": "sympy"
+      },
+      "result_summary": {},
+      "skill_name": "sympy",
+      "status": "success"
+    },
+    "scienceclaw_skill_attempted": "sympy",
+    "source_content_features": [
+      {
+        "artifact_id": "art-2657fef5a8ad408f9919cb8ed653af78",
+        "artifact_type": "PatchGluingCompatibilityRecord",
+        "checks_passed": true,
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "",
+        "emitted_need_types": [
+          "EnergyFunctional"
+        ],
+        "formal_result_fields": [
+          "checks",
+          "kind",
+          "validated_parent_content",
+          "validated_parent_types"
+        ],
+        "formal_result_kind": "formal_validation_record",
+        "morphism": "check_patch_gluing",
+        "payload_keys": [
+          "data_status",
+          "execution_backend",
+          "formal",
+          "formal_result",
+          "input_count",
+          "invariants",
+          "morphism",
+          "needs",
+          "parents",
+          "query",
+          "result_classification",
+          "scienceclaw",
+          "scienceclaw_skill_attempted",
+          "source_content_features",
+          "source_parent_ids",
+          "summary",
+          "symmetry",
+          "valid_result_basis"
+        ],
+        "result_classification": "formal_symbolic_result"
+      },
+      {
+        "artifact_id": "art-1d4642ac944743a4893e5e968932a572",
+        "artifact_type": "CurvatureParityDescriptor",
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "CurvatureParityDescriptor",
+        "emitted_need_types": [],
+        "formal_result_fields": [
+          "graph_invariants",
+          "invariance_statement",
+          "kind",
+          "parity_domain",
+          "parity_value",
+          "source_content_features"
+        ],
+        "formal_result_kind": "symbolic_parity_descriptor",
+        "morphism": "compute_curvature_parity",
+        "parity_value": "even",
+        "payload_keys": [
+          "data_status",
+          "descriptor_type",
+          "execution_backend",
+          "formal",
+          "formal_result",
+          "input_count",
+          "invariants",
+          "morphism",
+          "parents",
+          "query",
+          "result_classification",
+          "scienceclaw",
+          "scienceclaw_skill_attempted",
+          "source_content_features",
+          "source_parent_ids",
+          "summary",
+          "symmetry",
+          "valid_result_basis"
+        ],
+        "result_classification": "formal_symbolic_result"
+      }
+    ],
+    "source_parent_ids": [
+      "art-2657fef5a8ad408f9919cb8ed653af78",
+      "art-1d4642ac944743a4893e5e968932a572"
+    ],
+    "summary": "MechanicsBuilderAgent executed derive_energy_functional via ScienceClaw skill sympy for derive symbolic energy functional",
+    "symmetry": [
+      "formal_equivariance_checked_where_applicable"
+    ],
+    "valid_result_basis": "deterministic formal computation over parent artifact payload fields, formal result kinds, declared morphism, and query; hashes retained only as provenance"
+  },
+  "producer_agent": "MechanicsBuilderAgent",
+  "schema_version": "categoryscienceclaw.v1",
+  "timestamp": "2026-05-29T00:04:57.707807+00:00",
+  "type": "EnergyFunctional"
+}

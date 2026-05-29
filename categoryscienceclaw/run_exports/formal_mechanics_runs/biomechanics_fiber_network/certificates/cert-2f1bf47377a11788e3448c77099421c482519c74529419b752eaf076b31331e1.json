@@ -1,0 +1,85 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-2f1bf47377a11788e3448c77099421c482519c74529419b752eaf076b31331e1",
+  "kind": "execution",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "NetworkMechanicsModel",
+      "actual": "NetworkMechanicsModel",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "PatchCompositionReplicationRecord",
+      "actual": "PatchCompositionReplicationRecord",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "art-bd20b7aca3a34f5885f36ef66aab2c6b"
+      ],
+      "actual_parent_ids": [
+        "art-bd20b7aca3a34f5885f36ef66aab2c6b"
+      ],
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "art-bd20b7aca3a34f5885f36ef66aab2c6b",
+      "expected": "5fedc7b451867f6cb4a1da99c01690c1944a89c4d0afde15b5af20bc10cd8e6d",
+      "actual": "5fedc7b451867f6cb4a1da99c01690c1944a89c4d0afde15b5af20bc10cd8e6d",
+      "ok": true
+    },
+    {
+      "name": "output_hash_matches",
+      "artifact_id": "art-6eafd301b60e4e87a4196f126494eb26",
+      "ok": true
+    },
+    {
+      "name": "formal_metadata_present",
+      "ok": true
+    },
+    {
+      "name": "invariants_present",
+      "ok": true
+    },
+    {
+      "name": "symmetry_or_parity_present",
+      "expected": false,
+      "ok": true
+    },
+    {
+      "name": "source_parent_ids_present",
+      "ok": true
+    },
+    {
+      "name": "symbolic_status_declared_when_no_real_data",
+      "ok": true
+    },
+    {
+      "name": "composition_path_valid",
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "replicate_patch_composition",
+    "input_artifact_ids": [
+      "art-bd20b7aca3a34f5885f36ef66aab2c6b"
+    ],
+    "output_artifact_id": "art-6eafd301b60e4e87a4196f126494eb26",
+    "output_content_hash": "9a064014b3b225b926a304f00f0ee542d75efbc76d24e60c3e89c4bef31180ef",
+    "claim_id": "claim:need:art-bd20b7aca3a34f5885f36ef66aab2c6b:1:ReplicationAgent"
+  },
+  "errors": [],
+  "metadata": {}
+}

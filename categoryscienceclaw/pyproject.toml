@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "categoryscienceclaw"
+version = "0.1.0"
+description = "Proof-carrying categorical execution runtime for decentralized ScienceClaw agents"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+categoryscienceclaw = "categoryscienceclaw.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

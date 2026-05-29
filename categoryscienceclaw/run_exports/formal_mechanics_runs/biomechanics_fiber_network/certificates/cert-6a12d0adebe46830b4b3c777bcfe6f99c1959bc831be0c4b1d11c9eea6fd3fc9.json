@@ -1,0 +1,85 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-6a12d0adebe46830b4b3c777bcfe6f99c1959bc831be0c4b1d11c9eea6fd3fc9",
+  "kind": "execution",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 1,
+      "actual": 1,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "TissueImageOrGeometry",
+      "actual": "TissueImageOrGeometry",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "FiberNetworkGraph",
+      "actual": "FiberNetworkGraph",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "art-9d80f08e1a274a2a8dc5c3b90a4ffe4c"
+      ],
+      "actual_parent_ids": [
+        "art-9d80f08e1a274a2a8dc5c3b90a4ffe4c"
+      ],
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "art-9d80f08e1a274a2a8dc5c3b90a4ffe4c",
+      "expected": "c73b430123ee0a89f834cec4e35a4d626d38e42d2a2b04d3dc2da93910e53cce",
+      "actual": "c73b430123ee0a89f834cec4e35a4d626d38e42d2a2b04d3dc2da93910e53cce",
+      "ok": true
+    },
+    {
+      "name": "output_hash_matches",
+      "artifact_id": "art-6ee234cc170748fe80c4af134bb1acc0",
+      "ok": true
+    },
+    {
+      "name": "formal_metadata_present",
+      "ok": true
+    },
+    {
+      "name": "invariants_present",
+      "ok": true
+    },
+    {
+      "name": "symmetry_or_parity_present",
+      "expected": false,
+      "ok": true
+    },
+    {
+      "name": "source_parent_ids_present",
+      "ok": true
+    },
+    {
+      "name": "symbolic_status_declared_when_no_real_data",
+      "ok": true
+    },
+    {
+      "name": "composition_path_valid",
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "extract_fiber_network",
+    "input_artifact_ids": [
+      "art-9d80f08e1a274a2a8dc5c3b90a4ffe4c"
+    ],
+    "output_artifact_id": "art-6ee234cc170748fe80c4af134bb1acc0",
+    "output_content_hash": "f3cd6b2d7db48ba0dc15131c916d2f3ba915d43f544bc3f467cc4b18852ace25",
+    "claim_id": "claim:need:art-9d80f08e1a274a2a8dc5c3b90a4ffe4c:0:StructureBreakerAgent"
+  },
+  "errors": [],
+  "metadata": {}
+}

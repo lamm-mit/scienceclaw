@@ -1,0 +1,919 @@
+{
+  "computational_input_needs": [],
+  "discovery_report": {
+    "candidate_model_registry": [
+      {
+        "diagnostics": {
+          "aic": 263.809505,
+          "bic": 265.028381,
+          "k": 1,
+          "mean": 472.527012,
+          "n": 25,
+          "r_squared": 0.0,
+          "rss": 883155.017413
+        },
+        "formal_type": "ConstantForceDescriptor",
+        "free_parameters": [
+          "mean_force_pN"
+        ],
+        "input_artifacts": [
+          "force_extension_7T10.json"
+        ],
+        "mechanical_commitment": "Force is summarized without extension dependence.",
+        "model_id": "7t10_M0_mean_force_null",
+        "name": "mean-force null model",
+        "reason": "It ignores extension-dependent tensile loading.",
+        "status": "rejected"
+      },
+      {
+        "diagnostics": {
+          "aic": 194.313107,
+          "bic": 196.750858,
+          "intercept": 168.844286,
+          "k": 2,
+          "n": 25,
+          "r_squared": 0.942723,
+          "rss": 50584.480455,
+          "slope": 253.068938
+        },
+        "formal_type": "AffineTensileResponseModel",
+        "free_parameters": [
+          "stiffness_pN_per_nm",
+          "force_intercept_pN"
+        ],
+        "input_artifacts": [
+          "7T10.pdb",
+          "force_extension_7T10.csv",
+          "force_extension_7T10.json"
+        ],
+        "mechanical_commitment": "Tensile force varies with extension and can be linked to contact-localized anchoring.",
+        "model_id": "7t10_M1_linear_tensile_response",
+        "name": "linear force-extension model",
+        "reason": "It explains the force trace with lower AIC and high R^2.",
+        "status": "accepted"
+      }
+    ],
+    "candidate_models": [
+      {
+        "diagnostics": {
+          "aic": 263.809505,
+          "bic": 265.028381,
+          "k": 1,
+          "mean": 472.527012,
+          "n": 25,
+          "r_squared": 0.0,
+          "rss": 883155.017413
+        },
+        "name": "mean-force null model",
+        "reason": "It ignores extension-dependent tensile loading.",
+        "status": "rejected"
+      },
+      {
+        "diagnostics": {
+          "aic": 194.313107,
+          "bic": 196.750858,
+          "intercept": 168.844286,
+          "k": 2,
+          "n": 25,
+          "r_squared": 0.942723,
+          "rss": 50584.480455,
+          "slope": 253.068938
+        },
+        "name": "linear force-extension model",
+        "reason": "It explains the force trace with lower AIC and high R^2.",
+        "status": "accepted"
+      }
+    ],
+    "categorical_provenance": {
+      "artifacts": [
+        {
+          "content_hash": "7d88702b22f971b9223d10aba240720b58cb3c7b7025414859b9e91d0ba34fab",
+          "id": "catdisc:7t10_formal_extension:candidate_models",
+          "morphism": "instantiate_mechanics_candidate_models",
+          "parent_ids": [],
+          "type": "MechanicsCandidateModelSet"
+        },
+        {
+          "content_hash": "e5e87345a228b58c825f2cb96278f365ff6bab1ab7c83a7d6b1764c0cb4b528c",
+          "id": "catdisc:7t10_formal_extension:accepted_model",
+          "morphism": "accept_mechanics_model",
+          "parent_ids": [
+            "catdisc:7t10_formal_extension:candidate_models"
+          ],
+          "type": "MechanicsAcceptedModel"
+        },
+        {
+          "content_hash": "6308ea0742b2b277a1611e98771912411169eb1452b231b13d29e4e1a6b7152a",
+          "id": "catdisc:7t10_formal_extension:rejected_models",
+          "morphism": "reject_mechanics_model",
+          "parent_ids": [
+            "catdisc:7t10_formal_extension:candidate_models"
+          ],
+          "type": "MechanicsRejectedModel"
+        },
+        {
+          "content_hash": "19ae9f26fc5571bceb6d64efd99b94cbad40dd1b9c52e5f44f12a3974a930a27",
+          "id": "catdisc:7t10_formal_extension:gate",
+          "morphism": "apply_model_selection_gate",
+          "parent_ids": [
+            "catdisc:7t10_formal_extension:candidate_models",
+            "catdisc:7t10_formal_extension:accepted_model",
+            "catdisc:7t10_formal_extension:rejected_models"
+          ],
+          "type": "MechanicsModelSelectionGate"
+        },
+        {
+          "content_hash": "15d95d441a1a101d310bacdde5f40bf8da63053cd31af5127a7cdf44479c4fad",
+          "id": "catdisc:7t10_formal_extension:stress_test",
+          "morphism": "run_mechanics_stress_test",
+          "parent_ids": [
+            "catdisc:7t10_formal_extension:accepted_model",
+            "catdisc:7t10_formal_extension:rejected_models"
+          ],
+          "type": "MechanicsStressTest"
+        },
+        {
+          "content_hash": "82d58276bd8bc363c4dd4dd64b47f4270a90f16773e9c4eceb99070b08069d60",
+          "id": "catdisc:7t10_formal_extension:regime_transition",
+          "morphism": "audit_mechanics_regime_transition",
+          "parent_ids": [
+            "catdisc:7t10_formal_extension:gate",
+            "catdisc:7t10_formal_extension:stress_test"
+          ],
+          "type": "MechanicsRegimeTransition"
+        },
+        {
+          "content_hash": "adc4aaba62d287b05a2fb132713ac9f3c1a8ef4ecc539a82714f1561efcdb447",
+          "id": "catdisc:7t10_formal_extension:claim",
+          "morphism": "synthesize_categorical_mechanics_claim",
+          "parent_ids": [
+            "catdisc:7t10_formal_extension:gate",
+            "catdisc:7t10_formal_extension:stress_test",
+            "catdisc:7t10_formal_extension:regime_transition"
+          ],
+          "type": "MechanicsDiscoveryClaim"
+        }
+      ],
+      "candidate_model_registry": [
+        {
+          "diagnostics": {
+            "aic": 263.809505,
+            "bic": 265.028381,
+            "k": 1,
+            "mean": 472.527012,
+            "n": 25,
+            "r_squared": 0.0,
+            "rss": 883155.017413
+          },
+          "formal_type": "ConstantForceDescriptor",
+          "free_parameters": [
+            "mean_force_pN"
+          ],
+          "input_artifacts": [
+            "force_extension_7T10.json"
+          ],
+          "mechanical_commitment": "Force is summarized without extension dependence.",
+          "model_id": "7t10_M0_mean_force_null",
+          "name": "mean-force null model",
+          "reason": "It ignores extension-dependent tensile loading.",
+          "status": "rejected"
+        },
+        {
+          "diagnostics": {
+            "aic": 194.313107,
+            "bic": 196.750858,
+            "intercept": 168.844286,
+            "k": 2,
+            "n": 25,
+            "r_squared": 0.942723,
+            "rss": 50584.480455,
+            "slope": 253.068938
+          },
+          "formal_type": "AffineTensileResponseModel",
+          "free_parameters": [
+            "stiffness_pN_per_nm",
+            "force_intercept_pN"
+          ],
+          "input_artifacts": [
+            "7T10.pdb",
+            "force_extension_7T10.csv",
+            "force_extension_7T10.json"
+          ],
+          "mechanical_commitment": "Tensile force varies with extension and can be linked to contact-localized anchoring.",
+          "model_id": "7t10_M1_linear_tensile_response",
+          "name": "linear force-extension model",
+          "reason": "It explains the force trace with lower AIC and high R^2.",
+          "status": "accepted"
+        }
+      ],
+      "commutative_reading": {
+        "candidate_to_gate": "Candidate models are preserved as a typed set; the gate morphism maps them to accept/reject decision artifacts.",
+        "gate_to_claim": "The accepted model alone is insufficient; the claim is composed from gate, stress-test, and regime-transition artifacts.",
+        "rejected_paths": "Rejected alternatives remain in the provenance category as explicit failed explanatory paths."
+      },
+      "graph_file": "run_exports/formal_mechanics_runs/7t10_formal_extension/presentable_results/categorical_discovery_graph.json",
+      "graph_type": "categorical_mechanics_discovery_subgraph",
+      "morphisms": [
+        {
+          "description": "Assemble accepted and rejected candidate models from computational mechanics evidence.",
+          "name": "instantiate_mechanics_candidate_models",
+          "source": "categorical_discovery_context",
+          "target": "MechanicsCandidateModelSet"
+        },
+        {
+          "description": "Preserve the gate-selected explanatory model as a typed accepted model artifact.",
+          "name": "accept_mechanics_model",
+          "source": "categorical_discovery_context",
+          "target": "MechanicsAcceptedModel"
+        },
+        {
+          "description": "Preserve a failed alternative as a typed rejected model artifact rather than deleting it.",
+          "name": "reject_mechanics_model",
+          "source": "categorical_discovery_context",
+          "target": "MechanicsRejectedModel"
+        },
+        {
+          "description": "Map candidate models to accepted/rejected decisions using AIC, BIC, or an explicit mechanics criterion.",
+          "name": "apply_model_selection_gate",
+          "source": "categorical_discovery_context",
+          "target": "MechanicsModelSelectionGate"
+        },
+        {
+          "description": "Apply an ablation or perturbation showing what the accepted model explains beyond a simpler descriptor.",
+          "name": "run_mechanics_stress_test",
+          "source": "categorical_discovery_context",
+          "target": "MechanicsStressTest"
+        },
+        {
+          "description": "Record old regime, transported artifacts, richer regime, and residual content.",
+          "name": "audit_mechanics_regime_transition",
+          "source": "categorical_discovery_context",
+          "target": "MechanicsRegimeTransition"
+        },
+        {
+          "description": "Compose gate, stress-test, and regime-transition artifacts into a mechanics claim.",
+          "name": "synthesize_categorical_mechanics_claim",
+          "source": "categorical_discovery_context",
+          "target": "MechanicsDiscoveryClaim"
+        }
+      ],
+      "objects": [
+        {
+          "description": "Finite set of competing mechanics model artifacts considered for a run.",
+          "kind": "artifact",
+          "name": "MechanicsCandidateModelSet"
+        },
+        {
+          "description": "Model artifact accepted by a deterministic mechanics gate.",
+          "kind": "artifact",
+          "name": "MechanicsAcceptedModel"
+        },
+        {
+          "description": "Model artifact rejected but preserved as residual provenance.",
+          "kind": "artifact",
+          "name": "MechanicsRejectedModel"
+        },
+        {
+          "description": "Typed gate artifact mapping candidate models to accept/reject decisions.",
+          "kind": "artifact",
+          "name": "MechanicsModelSelectionGate"
+        },
+        {
+          "description": "Ablation or perturbation artifact testing accepted-model informativeness.",
+          "kind": "artifact",
+          "name": "MechanicsStressTest"
+        },
+        {
+          "description": "Artifact recording transport from a simple descriptor regime to a richer mechanics regime.",
+          "kind": "artifact",
+          "name": "MechanicsRegimeTransition"
+        },
+        {
+          "description": "Mechanics-language claim derived from gate, stress test, and regime transition artifacts.",
+          "kind": "artifact",
+          "name": "MechanicsDiscoveryClaim"
+        }
+      ],
+      "problem_scope": {
+        "candidate_scope": [
+          "mean-force null model",
+          "linear force-extension model"
+        ],
+        "input_scope": [
+          "7T10.pdb",
+          "force_extension_7T10.csv",
+          "force_extension_7T10.json"
+        ],
+        "observable_scope": [
+          "residue contact counts",
+          "contact entropy/Gini",
+          "peak force",
+          "pulling work",
+          "linear stiffness",
+          "AIC delta"
+        ],
+        "out_of_scope": [
+          "new SMD ensemble",
+          "mutation prediction",
+          "experimental binding mechanics",
+          "atomistic uncertainty quantification"
+        ],
+        "specific_question": "Does the imported 7T10 peptide-receptor contact graph plus one coarse-grained force-extension trace support a contact-localized tensile mechanics claim?",
+        "system_boundary": "PDB 7T10 peptide chain P against receptor chain R; hotspot residues [8, 9, 6, 7, 1, 11]; force-extension trace from 0.0 to 2.4 nm."
+      },
+      "run_name": "7t10_formal_extension"
+    },
+    "deeper_analysis": {
+      "contact_entropy_nats": 1.777069,
+      "contact_gini": 0.094595,
+      "hotspot_load_anchor_index": 1.0,
+      "peak_extension_nm": 2.4,
+      "peak_force_pN": 766.98959,
+      "pulling_work_pN_nm": 1141.29171,
+      "stiffness_pN_per_nm": 253.068938
+    },
+    "evidence_label": "imported_computational_surrogate, imported_real_structure",
+    "limitations": "The force trace is a single imported computational surrogate, not a measured ensemble or validated atomistic uncertainty estimate.",
+    "mechanics_equations_or_formal_descriptors": [
+      "Contact entropy: H = -sum_i p_i log(p_i), where p_i = c_i / sum_j c_j.",
+      "Contact Gini: G = sum_i sum_j |c_i - c_j| / (2 n sum_i c_i).",
+      "Force-extension gate: F(x) = k x + F0 compared against F(x) = mean(F).",
+      "Work diagnostic: W = integral F dx, recorded from the imported computational surrogate trace."
+    ],
+    "model_selection_gate": {
+      "accepted_model": "linear force-extension model",
+      "decision": "accepted",
+      "decision_rule": "Accept the model with lower AIC; require positive improvement over the simpler descriptor.",
+      "gate_type": "AIC model-selection gate",
+      "rejected_model": "mean-force null model",
+      "scores": {
+        "delta_rejected_minus_accepted": 69.496398,
+        "linear force-extension model": 194.313107,
+        "mean-force null model": 263.809505
+      }
+    },
+    "problem_scope": {
+      "candidate_scope": [
+        "mean-force null model",
+        "linear force-extension model"
+      ],
+      "input_scope": [
+        "7T10.pdb",
+        "force_extension_7T10.csv",
+        "force_extension_7T10.json"
+      ],
+      "observable_scope": [
+        "residue contact counts",
+        "contact entropy/Gini",
+        "peak force",
+        "pulling work",
+        "linear stiffness",
+        "AIC delta"
+      ],
+      "out_of_scope": [
+        "new SMD ensemble",
+        "mutation prediction",
+        "experimental binding mechanics",
+        "atomistic uncertainty quantification"
+      ],
+      "specific_question": "Does the imported 7T10 peptide-receptor contact graph plus one coarse-grained force-extension trace support a contact-localized tensile mechanics claim?",
+      "system_boundary": "PDB 7T10 peptide chain P against receptor chain R; hotspot residues [8, 9, 6, 7, 1, 11]; force-extension trace from 0.0 to 2.4 nm."
+    },
+    "regime_transition_audit": {
+      "audit_claim": "The richer regime preserves the old descriptor artifacts and adds explanatory mechanics content that was not present in the simple regime.",
+      "old_simple_descriptor_regime": "hotspot list plus force-trace summary",
+      "residual_content_added_by_new_regime": [
+        "entropy/Gini concentration",
+        "load-anchor index",
+        "AIC-gated tensile descriptor"
+      ],
+      "richer_explanatory_mechanics_regime": "contact concentration plus tensile model-selection regime",
+      "transported_preserved_artifacts": [
+        "PDB/contact artifact",
+        "force-extension trace",
+        "hotspot positions"
+      ]
+    },
+    "rejected_alternatives": [
+      {
+        "name": "contact-count-only claim",
+        "why_rejected": "Contact hotspots localize anchors but cannot by themselves predict tensile slope, peak force, or work."
+      },
+      {
+        "name": "mean-force descriptor",
+        "why_rejected": "It discards extension ordering and fails the AIC gate against the linear tensile descriptor."
+      }
+    ],
+    "run_name": "7t10_formal_extension",
+    "scientific_claim": "7T10 supports a contact-localized tensile mechanics interpretation: a small hotspot set concentrates structural anchoring while the force trace passes a linear tensile-response gate with measurable stiffness, work, and peak force.",
+    "scientific_hypothesis": "A localized 7T10 contact hotspot pattern acts as a structural load anchor for a coarse-grained tensile response.",
+    "stress_test_or_ablation": {
+      "accepted_model_advantage": "The accepted model couples structural anchoring to tensile-response diagnostics.",
+      "name": "contact-only ablation",
+      "result": "Removing the force-extension trace leaves hotspot localization but no stiffness/work/peak-force mechanics claim."
+    },
+    "title": "7T10 structure-contact tensile mechanics",
+    "typed_artifact_schema": {
+      "claims": [
+        "mechanics-language interpretation with stated limits"
+      ],
+      "diagnostics": [
+        "AIC/BIC-style gate or ablation score",
+        "R^2/RSS where applicable",
+        "robustness check"
+      ],
+      "inputs": [
+        "structured artifact payloads",
+        "computational input files",
+        "mechanics sidecar"
+      ],
+      "models": [
+        "simple descriptor",
+        "richer explanatory mechanics model"
+      ],
+      "observables": [
+        "computed mechanics values",
+        "diagnostics",
+        "formal descriptors"
+      ],
+      "transforms": [
+        "deterministic mechanics descriptor extraction",
+        "model comparison",
+        "stress test or ablation"
+      ]
+    }
+  },
+  "evidence_plan": {
+    "required_evidence": [
+      "PDB/contact graph or local structure file",
+      "force-extension trace with force and extension units",
+      "mechanics claim tying contacts to force-extension behavior",
+      "atomistic or coarse-grained simulation ensemble for stronger quantitative claims"
+    ],
+    "skill_routing": [
+      {
+        "purpose": "derive peptide-protein contact hotspots from PDB/contact data",
+        "skill": "structure-contact-analysis",
+        "status": "eligible"
+      },
+      {
+        "purpose": "inspect force-extension CSV tables when present",
+        "skill": "csv-read",
+        "status": "eligible"
+      },
+      {
+        "purpose": "fit force-extension trends and diagnostics when replicate traces exist",
+        "skill": "statsmodels",
+        "status": "eligible"
+      },
+      {
+        "purpose": "plot force-extension curves when tabular data exists",
+        "skill": "datavis",
+        "status": "eligible"
+      },
+      {
+        "purpose": "retrieve/verify PDB structure metadata when structure identifiers are present",
+        "skill": "pdb-database",
+        "status": "eligible"
+      }
+    ]
+  },
+  "formal_symbolic_result_summary": [
+    {
+      "artifact_id": "art-aa190b6d7dc046bb88fcb8a1e79aa99b",
+      "artifact_type": "ContactParityDescriptor",
+      "formal_result_kind": "symbolic_parity_descriptor",
+      "morphism": "compute_7t10_contact_parity"
+    },
+    {
+      "artifact_id": "art-470351c53c11461099002ccbcfccc3cf",
+      "artifact_type": "RupturePathwayFormalization",
+      "formal_result_kind": "symbolic_mechanics_expression",
+      "morphism": "formalize_rupture_need"
+    },
+    {
+      "artifact_id": "art-f74cc6873b5b490092fcd85e8a1cad93",
+      "artifact_type": "OpenNeedDependencyGraph",
+      "formal_result_kind": "typed_provenance_graph",
+      "morphism": "build_open_need_dependency_graph"
+    },
+    {
+      "artifact_id": "art-e27d3f5180d94f36a921614560d7dea5",
+      "artifact_type": "CompositionAuditRecord",
+      "formal_result_kind": "formal_validation_record",
+      "morphism": "audit_mechanics_composition"
+    },
+    {
+      "artifact_id": "art-30898c4f51324e53b9284dbec8c01d05",
+      "artifact_type": "MechanicsFunctorDescriptor",
+      "formal_result_kind": "symbolic_mechanics_expression",
+      "morphism": "derive_mechanics_functor_descriptor"
+    },
+    {
+      "artifact_id": "art-91fc3930c58b45bcb62911e7a6df4f83",
+      "artifact_type": "NeedClassificationRecord",
+      "formal_result_kind": "formal_artifact_record",
+      "morphism": "classify_7t10_needs"
+    },
+    {
+      "artifact_id": "art-4c5272bbf8734a419bc13b8896eebdb6",
+      "artifact_type": "DescriptorInvarianceCheck",
+      "formal_result_kind": "formal_validation_record",
+      "morphism": "verify_contact_parity_invariance"
+    },
+    {
+      "artifact_id": "art-fee8625446634bd1b587428a1cc60d18",
+      "artifact_type": "FormalMechanicsExtensionClaim",
+      "formal_result_kind": "formal_claim_synthesis",
+      "morphism": "synthesize_7t10_formal_claim"
+    }
+  ],
+  "investigator_principle": "Act like a mechanics investigator, not a generic data analyzer.",
+  "mechanical_hypothesis": "7T10 peptide-receptor contact topology can be connected to load-bearing force-extension behavior.",
+  "mechanical_question": "Which contact-supported peptide positions and coarse-grained force-extension features support a mechanics interpretation of PDB 7T10?",
+  "quantitative_computational_mechanics_results": [
+    {
+      "computed_values": {
+        "binding_hotspots": [
+          {
+            "aa": "W",
+            "contacts": 8,
+            "interacting_protein_residues": [
+              "R:119MET",
+              "R:177ILE",
+              "R:208PHE",
+              "R:212THR",
+              "R:272PHE",
+              "R:276ASN",
+              "R:294PHE",
+              "R:298VAL"
+            ],
+            "position": 8
+          },
+          {
+            "aa": "K",
+            "contacts": 7,
+            "interacting_protein_residues": [
+              "R:92PHE",
+              "R:99LEU",
+              "R:122ASP",
+              "R:272PHE",
+              "R:294PHE",
+              "R:298VAL",
+              "R:302TYR"
+            ],
+            "position": 9
+          },
+          {
+            "aa": "F",
+            "contacts": 6,
+            "interacting_protein_residues": [
+              "R:275PHE",
+              "R:279SER",
+              "R:286PRO",
+              "R:290LEU",
+              "R:291LYS",
+              "R:294PHE"
+            ],
+            "position": 6
+          },
+          {
+            "aa": "F",
+            "contacts": 6,
+            "interacting_protein_residues": [
+              "R:197TRP",
+              "R:205TYR",
+              "R:208PHE",
+              "R:209ILE",
+              "R:276ASN",
+              "R:294PHE"
+            ],
+            "position": 7
+          },
+          {
+            "aa": "A",
+            "contacts": 5,
+            "interacting_protein_residues": [
+              "R:184ARG",
+              "R:196ASN",
+              "R:197TRP",
+              "R:200GLU",
+              "R:205TYR"
+            ],
+            "position": 1
+          },
+          {
+            "aa": "F",
+            "contacts": 5,
+            "interacting_protein_residues": [
+              "R:102GLN",
+              "R:192SER",
+              "R:286PRO",
+              "R:291LYS",
+              "R:294PHE"
+            ],
+            "position": 11
+          }
+        ],
+        "cutoff_angstrom": 4.5,
+        "hotspot_positions": [
+          8,
+          9,
+          6,
+          7,
+          1,
+          11
+        ],
+        "peptide_chain": "P",
+        "peptide_sequence": "AGCKNFFWKTFTSC",
+        "protein_chain": "R"
+      },
+      "diagnostic": {
+        "hotspot_count": 6,
+        "matches_imported_contact_claim": true,
+        "protein_length": 287
+      },
+      "evidence_class": "structural_computational",
+      "input_artifact": "contact_graph_7T10",
+      "input_file": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/7T10.pdb",
+      "input_origin": "imported_real_structure",
+      "method_or_skill_used": "ScienceClaw structure-contact-analysis on local 7T10 PDB file",
+      "name": "7T10 peptide-receptor contact hotspot mechanics anchor",
+      "scienceclaw_skill_execution_ids": [
+        "structure-contact-analysis:7T10.pdb"
+      ],
+      "scientific_interpretation": "The contact graph identifies a localized mechanical anchoring motif on the peptide: positions 8, 9, 6, 7, 1, and 11 carry the largest contact counts under the cutoff and are therefore the residues most plausibly coupled to load transfer in this structural model.",
+      "uncertainty_or_limitation": "Contact counts identify structural anchoring positions under a 4.5 angstrom cutoff; they do not assign residue-resolved force without a validated mechanics model.",
+      "units": {
+        "contact_count": "residue contacts",
+        "distance_cutoff": "angstrom"
+      }
+    },
+    {
+      "computed_values": {
+        "linear_force_extension_intercept_pN": 168.844286,
+        "linear_force_extension_slope_pN_per_nm": 253.068938,
+        "max_force_pN": 766.98959,
+        "mean_force_pN": 472.52701,
+        "min_force_pN": 33.52676,
+        "peak_extension_nm": 2.4,
+        "peak_force_pN": 766.98959,
+        "point_count": 25,
+        "pulling_work_pN_nm": 1141.29171
+      },
+      "diagnostic": {
+        "candidate_files_used": [
+          "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/force_extension_7T10.csv",
+          "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/force_extension_7T10.json"
+        ],
+        "extension_monotonic": true,
+        "has_point_series": true,
+        "has_units": true,
+        "linear_fit_r_squared": 0.942723,
+        "linear_fit_slope_p_value": 8.808244777987513e-16
+      },
+      "evidence_class": "computational_surrogate",
+      "input_artifact": "force_extension_7T10",
+      "input_file": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/force_extension_7T10.json",
+      "input_origin": "imported_computational_surrogate",
+      "method_or_skill_used": "ScienceClaw csv-read on force_extension_7T10.csv plus deterministic force-extension extraction from ScienceClaw-generated JSON",
+      "name": "7T10 coarse-grained force-extension descriptor",
+      "scienceclaw_skill_execution_ids": [
+        "csv-read:force_extension_7T10.csv",
+        "statsmodels:force_extension_7T10.csv"
+      ],
+      "scientific_interpretation": "The monotonic force-extension trace and positive linear slope provide a coarse-grained tensile mechanics descriptor for the 7T10 model: the imported surrogate behaves as a load-bearing extension response with a high peak force, but not as a replicated experimental or atomistic stiffness estimate.",
+      "uncertainty_or_limitation": "Single coarse-grained OpenMM surrogate trace; no replicate simulation ensemble, confidence interval, or atomistic validation is present.",
+      "units": {
+        "energy": "kJ/mol",
+        "extension": "nm",
+        "force": "pN"
+      }
+    }
+  ],
+  "quantitative_input_search": {
+    "artifact_payload_evidence": [
+      "force_extension_trace",
+      "pdb_or_contact"
+    ],
+    "available_input_kinds": [
+      "force_extension_trace",
+      "pdb_or_contact",
+      "table"
+    ],
+    "candidate_files": [
+      {
+        "artifact_type": "ContactGraph",
+        "path": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/contact_graph_7T10.json",
+        "source": "imported_artifact:contact_graph_7T10"
+      },
+      {
+        "artifact_type": "ForceExtensionTrace",
+        "path": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/force_extension_7T10.csv",
+        "source": "paired_csv_for:force_extension_7T10"
+      },
+      {
+        "artifact_type": "ForceExtensionTrace",
+        "path": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/force_extension_7T10.json",
+        "source": "imported_artifact:force_extension_7T10"
+      },
+      {
+        "artifact_type": "MechanicsClaim",
+        "path": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/mechanics_claim_7T10.json",
+        "source": "imported_artifact:mechanics_claim_7T10"
+      }
+    ],
+    "generated_computational_inputs": [],
+    "searched_artifact_count": 12
+  },
+  "run_name": "7t10_formal_extension",
+  "scienceclaw_skill_executions": [
+    {
+      "execution_id": "structure-contact-analysis:7T10.pdb",
+      "input_file": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/7T10.pdb",
+      "result_summary": {
+        "binding_hotspots": [
+          {
+            "aa": "W",
+            "contacts": 8,
+            "interacting_protein_residues": [
+              "R:119MET",
+              "R:177ILE",
+              "R:208PHE",
+              "R:212THR",
+              "R:272PHE",
+              "R:276ASN",
+              "R:294PHE",
+              "R:298VAL"
+            ],
+            "position": 8
+          },
+          {
+            "aa": "K",
+            "contacts": 7,
+            "interacting_protein_residues": [
+              "R:92PHE",
+              "R:99LEU",
+              "R:122ASP",
+              "R:272PHE",
+              "R:294PHE",
+              "R:298VAL",
+              "R:302TYR"
+            ],
+            "position": 9
+          },
+          {
+            "aa": "F",
+            "contacts": 6,
+            "interacting_protein_residues": [
+              "R:275PHE",
+              "R:279SER",
+              "R:286PRO",
+              "R:290LEU",
+              "R:291LYS",
+              "R:294PHE"
+            ],
+            "position": 6
+          },
+          {
+            "aa": "F",
+            "contacts": 6,
+            "interacting_protein_residues": [
+              "R:197TRP",
+              "R:205TYR",
+              "R:208PHE",
+              "R:209ILE",
+              "R:276ASN",
+              "R:294PHE"
+            ],
+            "position": 7
+          },
+          {
+            "aa": "A",
+            "contacts": 5,
+            "interacting_protein_residues": [
+              "R:184ARG",
+              "R:196ASN",
+              "R:197TRP",
+              "R:200GLU",
+              "R:205TYR"
+            ],
+            "position": 1
+          },
+          {
+            "aa": "F",
+            "contacts": 5,
+            "interacting_protein_residues": [
+              "R:102GLN",
+              "R:192SER",
+              "R:286PRO",
+              "R:291LYS",
+              "R:294PHE"
+            ],
+            "position": 11
+          }
+        ],
+        "cutoff_angstrom": 4.5,
+        "hotspot_positions": [
+          8,
+          9,
+          6,
+          7,
+          1,
+          11
+        ],
+        "peptide_chain": "P",
+        "peptide_sequence": "AGCKNFFWKTFTSC",
+        "protein_chain": "R",
+        "protein_length": 287
+      },
+      "skill": "structure-contact-analysis",
+      "status": "success"
+    },
+    {
+      "execution_id": "csv-read:force_extension_7T10.csv",
+      "input_file": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/force_extension_7T10.csv",
+      "result_summary": {
+        "columns": [
+          "extension_nm",
+          "target_x_nm",
+          "observed_terminal_x_nm",
+          "force_pN",
+          "potential_energy_kJ_mol"
+        ],
+        "dtypes": {
+          "extension_nm": "float64",
+          "force_pN": "float64",
+          "observed_terminal_x_nm": "float64",
+          "potential_energy_kJ_mol": "float64",
+          "target_x_nm": "float64"
+        },
+        "first_rows": [
+          [
+            0.0,
+            4.94,
+            4.90894,
+            33.52676,
+            17.57816
+          ],
+          [
+            0.1,
+            5.04,
+            4.92325,
+            126.00951,
+            36.29666
+          ],
+          [
+            0.2,
+            5.14,
+            4.94209,
+            213.61207,
+            42.09287
+          ],
+          [
+            0.3,
+            5.24,
+            4.99028,
+            269.53902,
+            52.14936
+          ],
+          [
+            0.4,
+            5.34,
+            5.05728,
+            305.15379,
+            58.0091
+          ]
+        ],
+        "shape": [
+          25,
+          5
+        ]
+      },
+      "skill": "csv-read",
+      "status": "success"
+    },
+    {
+      "execution_id": "statsmodels:force_extension_7T10.csv",
+      "input_file": "/home/fiona/LAMM/scienceclaw_category_interface/examples/actual_runs/structure_contact_7T10/force_extension_7T10.csv",
+      "result_summary": {
+        "intercept": 168.844286,
+        "nobs": 25,
+        "p_value_slope": 8.808244777987513e-16,
+        "r_squared": 0.942723,
+        "slope": 253.068938,
+        "x_column": "extension_nm",
+        "y_column": "force_pN"
+      },
+      "skill": "statsmodels",
+      "status": "success"
+    }
+  ],
+  "validation_and_diagnostics": {
+    "accepted_source_data_scienceclaw_count": 2,
+    "computational_input_need_count": 0,
+    "formal_result_count": 8,
+    "quantitative_result_count": 2,
+    "unsupported_quantitative_claims_blocked": false
+  }
+}

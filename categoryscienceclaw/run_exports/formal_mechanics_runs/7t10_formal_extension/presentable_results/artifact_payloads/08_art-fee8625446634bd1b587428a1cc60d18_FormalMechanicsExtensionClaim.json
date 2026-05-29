@@ -1,0 +1,256 @@
+{
+  "content_hash": "9ab07c2000bee385766f8733dd0c7ee538e9271577372f7f0ae9f0c9b0ad4327",
+  "id": "art-fee8625446634bd1b587428a1cc60d18",
+  "metadata": {
+    "certificate_id": "cert-d3f285bd1bd0d47c4a759b5397374561cd52760553a48a2765b0d01d159d5198",
+    "claim_id": "claim:need:art-470351c53c11461099002ccbcfccc3cf:0:ClaimSynthesisAgent",
+    "fulfilled_need_id": "need:art-470351c53c11461099002ccbcfccc3cf:0"
+  },
+  "morphism": "synthesize_7t10_formal_claim",
+  "needs": [],
+  "parent_ids": [
+    "art-470351c53c11461099002ccbcfccc3cf",
+    "art-91fc3930c58b45bcb62911e7a6df4f83"
+  ],
+  "payload": {
+    "claim": "Provisional formal claim synthesized from 2 parent artifact(s): synthesize formal-only 7T10 extension claim. No unsupported numeric scientific values are asserted.",
+    "data_status": "formal_descriptor_only",
+    "evidence_coverage": {
+      "parent_count": 2,
+      "status": "formal_workflow_demonstration"
+    },
+    "execution_backend": "scienceclaw",
+    "formal": {
+      "categorical_role": "need_fulfillment_morphism",
+      "invariants": [
+        "type_preserving",
+        "provenance_preserving",
+        "composition_auditable"
+      ],
+      "proof_obligations": [
+        "source_parent_ids_present",
+        "invariants_present"
+      ],
+      "symmetry": [
+        "formal_equivariance_checked_where_applicable"
+      ]
+    },
+    "formal_result": {
+      "claim_scope": "formal workflow demonstration",
+      "claim_text": "FormalMechanicsExtensionClaim is supported only as a formal composition of RupturePathwayFormalization, NeedClassificationRecord via synthesize_7t10_formal_claim; no biological or mechanical measurement is asserted.",
+      "evidence_parent_content": [
+        {
+          "artifact_id": "art-470351c53c11461099002ccbcfccc3cf",
+          "artifact_type": "RupturePathwayFormalization",
+          "data_status": "formal_descriptor_only",
+          "descriptor_type": "RupturePathwayFormalization",
+          "emitted_need_types": [
+            "FormalMechanicsExtensionClaim"
+          ],
+          "expression": "RupturePathwayFormalization := formalize_rupture_need(openneedrecord)",
+          "formal_result_fields": [
+            "assumptions",
+            "expression",
+            "input_types",
+            "kind",
+            "source_content_features",
+            "symbols"
+          ],
+          "formal_result_kind": "symbolic_mechanics_expression",
+          "morphism": "formalize_rupture_need",
+          "payload_keys": [
+            "data_status",
+            "descriptor_type",
+            "execution_backend",
+            "formal",
+            "formal_result",
+            "input_count",
+            "invariants",
+            "morphism",
+            "needs",
+            "parents",
+            "query",
+            "result_classification",
+            "scienceclaw",
+            "scienceclaw_skill_attempted",
+            "source_content_features",
+            "source_parent_ids",
+            "summary",
+            "symmetry",
+            "valid_result_basis"
+          ],
+          "result_classification": "formal_symbolic_result"
+        },
+        {
+          "artifact_id": "art-91fc3930c58b45bcb62911e7a6df4f83",
+          "artifact_type": "NeedClassificationRecord",
+          "data_status": "formal_descriptor_only",
+          "descriptor_type": "NeedClassificationRecord",
+          "emitted_need_types": [],
+          "formal_result_fields": [
+            "input_types",
+            "kind",
+            "output_type",
+            "query",
+            "source_content_features"
+          ],
+          "formal_result_kind": "formal_artifact_record",
+          "morphism": "classify_7t10_needs",
+          "payload_keys": [
+            "data_status",
+            "descriptor_type",
+            "execution_backend",
+            "formal",
+            "formal_result",
+            "input_count",
+            "invariants",
+            "morphism",
+            "parents",
+            "query",
+            "result_classification",
+            "scienceclaw",
+            "scienceclaw_skill_attempted",
+            "source_content_features",
+            "source_parent_ids",
+            "summary",
+            "symmetry",
+            "valid_result_basis"
+          ],
+          "result_classification": "formal_symbolic_result"
+        }
+      ],
+      "evidence_parent_ids": [
+        "art-470351c53c11461099002ccbcfccc3cf",
+        "art-91fc3930c58b45bcb62911e7a6df4f83"
+      ],
+      "kind": "formal_claim_synthesis"
+    },
+    "input_count": 2,
+    "invariants": [
+      "type_preserving",
+      "provenance_preserving",
+      "composition_auditable"
+    ],
+    "morphism": "synthesize_7t10_formal_claim",
+    "parents": [
+      {
+        "content_hash": "166561b9eec55d64e8727de818eb1347915a07554af4d4b769eae50b34d326f7",
+        "id": "art-470351c53c11461099002ccbcfccc3cf",
+        "type": "RupturePathwayFormalization"
+      },
+      {
+        "content_hash": "f2b04d79501685e86967bd28488773a9e6ed479d716d5683b90758b1b2dafbf3",
+        "id": "art-91fc3930c58b45bcb62911e7a6df4f83",
+        "type": "NeedClassificationRecord"
+      }
+    ],
+    "query": "synthesize formal-only 7T10 extension claim",
+    "result_classification": "formal_symbolic_result",
+    "scienceclaw": {
+      "accepted_as_substantive": false,
+      "execution_backend": "scienceclaw",
+      "rejected_placeholder_summary": {
+        "rejection_reason": "ScienceClaw attempt returned a demo, scaffold, availability, or query-only concept result rather than an analysis of parent artifact data.",
+        "skill_name": "scientific-writing"
+      },
+      "result_summary": {},
+      "skill_name": "scientific-writing",
+      "status": "success"
+    },
+    "scienceclaw_skill_attempted": "scientific-writing",
+    "source_content_features": [
+      {
+        "artifact_id": "art-470351c53c11461099002ccbcfccc3cf",
+        "artifact_type": "RupturePathwayFormalization",
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "RupturePathwayFormalization",
+        "emitted_need_types": [
+          "FormalMechanicsExtensionClaim"
+        ],
+        "expression": "RupturePathwayFormalization := formalize_rupture_need(openneedrecord)",
+        "formal_result_fields": [
+          "assumptions",
+          "expression",
+          "input_types",
+          "kind",
+          "source_content_features",
+          "symbols"
+        ],
+        "formal_result_kind": "symbolic_mechanics_expression",
+        "morphism": "formalize_rupture_need",
+        "payload_keys": [
+          "data_status",
+          "descriptor_type",
+          "execution_backend",
+          "formal",
+          "formal_result",
+          "input_count",
+          "invariants",
+          "morphism",
+          "needs",
+          "parents",
+          "query",
+          "result_classification",
+          "scienceclaw",
+          "scienceclaw_skill_attempted",
+          "source_content_features",
+          "source_parent_ids",
+          "summary",
+          "symmetry",
+          "valid_result_basis"
+        ],
+        "result_classification": "formal_symbolic_result"
+      },
+      {
+        "artifact_id": "art-91fc3930c58b45bcb62911e7a6df4f83",
+        "artifact_type": "NeedClassificationRecord",
+        "data_status": "formal_descriptor_only",
+        "descriptor_type": "NeedClassificationRecord",
+        "emitted_need_types": [],
+        "formal_result_fields": [
+          "input_types",
+          "kind",
+          "output_type",
+          "query",
+          "source_content_features"
+        ],
+        "formal_result_kind": "formal_artifact_record",
+        "morphism": "classify_7t10_needs",
+        "payload_keys": [
+          "data_status",
+          "descriptor_type",
+          "execution_backend",
+          "formal",
+          "formal_result",
+          "input_count",
+          "invariants",
+          "morphism",
+          "parents",
+          "query",
+          "result_classification",
+          "scienceclaw",
+          "scienceclaw_skill_attempted",
+          "source_content_features",
+          "source_parent_ids",
+          "summary",
+          "symmetry",
+          "valid_result_basis"
+        ],
+        "result_classification": "formal_symbolic_result"
+      }
+    ],
+    "source_parent_ids": [
+      "art-470351c53c11461099002ccbcfccc3cf",
+      "art-91fc3930c58b45bcb62911e7a6df4f83"
+    ],
+    "summary": "ClaimSynthesisAgent executed synthesize_7t10_formal_claim via ScienceClaw skill scientific-writing for synthesize formal-only 7T10 extension claim",
+    "symmetry": [
+      "formal_equivariance_checked_where_applicable"
+    ],
+    "valid_result_basis": "deterministic formal computation over parent artifact payload fields, formal result kinds, declared morphism, and query; hashes retained only as provenance"
+  },
+  "producer_agent": "ClaimSynthesisAgent",
+  "schema_version": "categoryscienceclaw.v1",
+  "timestamp": "2026-05-29T00:04:53.018501+00:00",
+  "type": "FormalMechanicsExtensionClaim"
+}

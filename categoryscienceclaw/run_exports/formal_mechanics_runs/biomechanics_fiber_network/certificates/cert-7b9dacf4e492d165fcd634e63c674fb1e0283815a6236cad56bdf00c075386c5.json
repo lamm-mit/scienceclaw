@@ -1,0 +1,102 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-7b9dacf4e492d165fcd634e63c674fb1e0283815a6236cad56bdf00c075386c5",
+  "kind": "execution",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 2,
+      "actual": 2,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "NetworkMechanicsModel",
+      "actual": "NetworkMechanicsModel",
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 1,
+      "expected": "PatchCompositionReplicationRecord",
+      "actual": "PatchCompositionReplicationRecord",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "BiomechanicsClaim",
+      "actual": "BiomechanicsClaim",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "art-bd20b7aca3a34f5885f36ef66aab2c6b",
+        "art-6eafd301b60e4e87a4196f126494eb26"
+      ],
+      "actual_parent_ids": [
+        "art-bd20b7aca3a34f5885f36ef66aab2c6b",
+        "art-6eafd301b60e4e87a4196f126494eb26"
+      ],
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "art-bd20b7aca3a34f5885f36ef66aab2c6b",
+      "expected": "5fedc7b451867f6cb4a1da99c01690c1944a89c4d0afde15b5af20bc10cd8e6d",
+      "actual": "5fedc7b451867f6cb4a1da99c01690c1944a89c4d0afde15b5af20bc10cd8e6d",
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "art-6eafd301b60e4e87a4196f126494eb26",
+      "expected": "9a064014b3b225b926a304f00f0ee542d75efbc76d24e60c3e89c4bef31180ef",
+      "actual": "9a064014b3b225b926a304f00f0ee542d75efbc76d24e60c3e89c4bef31180ef",
+      "ok": true
+    },
+    {
+      "name": "output_hash_matches",
+      "artifact_id": "art-d0c6167fc3124025b5b26015c6674006",
+      "ok": true
+    },
+    {
+      "name": "formal_metadata_present",
+      "ok": true
+    },
+    {
+      "name": "invariants_present",
+      "ok": true
+    },
+    {
+      "name": "symmetry_or_parity_present",
+      "expected": false,
+      "ok": true
+    },
+    {
+      "name": "source_parent_ids_present",
+      "ok": true
+    },
+    {
+      "name": "symbolic_status_declared_when_no_real_data",
+      "ok": true
+    },
+    {
+      "name": "composition_path_valid",
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "synthesize_biomechanics_claim",
+    "input_artifact_ids": [
+      "art-bd20b7aca3a34f5885f36ef66aab2c6b",
+      "art-6eafd301b60e4e87a4196f126494eb26"
+    ],
+    "output_artifact_id": "art-d0c6167fc3124025b5b26015c6674006",
+    "output_content_hash": "c94563b6395242862780825bd049a684ad4c0523e87aaf7f24b27ee159787b47",
+    "claim_id": "claim:need:art-bd20b7aca3a34f5885f36ef66aab2c6b:2:ClaimSynthesisAgent"
+  },
+  "errors": [],
+  "metadata": {}
+}

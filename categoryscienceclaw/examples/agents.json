@@ -1,0 +1,19 @@
+{
+  "agents": [
+    {
+      "name": "LiteratureAgent",
+      "morphisms": ["literature_search"],
+      "preferred_types": ["LiteratureEvidence"]
+    },
+    {
+      "name": "ComputationAgent",
+      "morphisms": ["computational_analysis"],
+      "preferred_types": ["ComputationalAnalysis"]
+    },
+    {
+      "name": "SynthesisAgent",
+      "morphisms": ["synthesize_claim"],
+      "preferred_types": ["Claim"]
+    }
+  ]
+}

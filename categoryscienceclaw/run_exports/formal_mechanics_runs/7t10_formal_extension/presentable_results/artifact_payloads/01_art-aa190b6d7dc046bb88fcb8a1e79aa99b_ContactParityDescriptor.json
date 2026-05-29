@@ -1,0 +1,183 @@
+{
+  "content_hash": "5a9d391181828c4f1bfc26169c68d2a7581b43ab2cef0c7318a314af3f3c1471",
+  "id": "art-aa190b6d7dc046bb88fcb8a1e79aa99b",
+  "metadata": {
+    "certificate_id": "cert-cfbe0e663da591c26e59cbb1fb0ae0282e08af31e7da33aca85641dd095d29ee",
+    "claim_id": "claim:need:contact_graph_7T10:0:ParityDescriptorAgent",
+    "fulfilled_need_id": "need:contact_graph_7T10:0"
+  },
+  "morphism": "compute_7t10_contact_parity",
+  "needs": [
+    {
+      "allowed_morphisms": [
+        "verify_contact_parity_invariance"
+      ],
+      "created_at": "2026-05-29T00:04:52.460682+00:00",
+      "id": "need:art-aa190b6d7dc046bb88fcb8a1e79aa99b:0",
+      "metadata": {},
+      "need_index": 0,
+      "parent_artifact_id": "art-aa190b6d7dc046bb88fcb8a1e79aa99b",
+      "query": "verify 7T10 contact parity invariance",
+      "rationale": "Need DescriptorInvarianceCheck via verify_contact_parity_invariance.",
+      "required_type": "DescriptorInvarianceCheck",
+      "schema_version": "categoryscienceclaw.v1",
+      "status": "open"
+    }
+  ],
+  "parent_ids": [
+    "contact_graph_7T10"
+  ],
+  "payload": {
+    "data_status": "formal_descriptor_only",
+    "descriptor_type": "ContactParityDescriptor",
+    "execution_backend": "scienceclaw",
+    "formal": {
+      "categorical_role": "need_fulfillment_morphism",
+      "invariants": [
+        "type_preserving",
+        "provenance_preserving",
+        "composition_auditable"
+      ],
+      "proof_obligations": [
+        "source_parent_ids_present",
+        "invariants_present"
+      ],
+      "symmetry": [
+        "formal_equivariance_checked_where_applicable"
+      ]
+    },
+    "formal_result": {
+      "graph_invariants": [
+        "parent_type_multiset",
+        "parent_payload_key_sets",
+        "parent_formal_result_kind_multiset",
+        "morphism_name"
+      ],
+      "invariance_statement": "Descriptor is computed from sorted parent payload feature keys, parent formal-result kinds, and declared morphism; JSON field-order relabeling does not change the value.",
+      "kind": "symbolic_parity_descriptor",
+      "parity_domain": [
+        "ContactGraph"
+      ],
+      "parity_value": "odd",
+      "source_content_features": [
+        {
+          "artifact_id": "contact_graph_7T10",
+          "artifact_type": "ContactGraph",
+          "data_status": "",
+          "descriptor_type": "",
+          "emitted_need_types": [],
+          "formal_result_fields": [],
+          "formal_result_kind": "",
+          "morphism": "",
+          "payload_keys": [
+            "source_name",
+            "source_sha256",
+            "summary"
+          ],
+          "result_classification": ""
+        }
+      ]
+    },
+    "input_count": 1,
+    "invariants": [
+      "type_preserving",
+      "provenance_preserving",
+      "composition_auditable"
+    ],
+    "morphism": "compute_7t10_contact_parity",
+    "needs": [
+      {
+        "allowed_morphisms": [
+          "verify_contact_parity_invariance"
+        ],
+        "query": "verify 7T10 contact parity invariance",
+        "rationale": "Need DescriptorInvarianceCheck via verify_contact_parity_invariance.",
+        "required_type": "DescriptorInvarianceCheck"
+      }
+    ],
+    "parents": [
+      {
+        "content_hash": "deded3730b0041a044b53d8b3a6f08b1df10ee7febef4ed45765ff11b0b1298e",
+        "id": "contact_graph_7T10",
+        "type": "ContactGraph"
+      }
+    ],
+    "query": "compute 7T10 contact parity",
+    "result_classification": "formal_symbolic_result",
+    "scienceclaw": {
+      "accepted_as_substantive": true,
+      "execution_backend": "scienceclaw",
+      "rejected_placeholder_summary": {},
+      "result_summary": {
+        "avg_clustering": 0.0,
+        "communities": [
+          {
+            "id": 0,
+            "members": [
+              "contact_graph_7T10",
+              "contact_graph_7T10:field:source_name"
+            ]
+          }
+        ],
+        "data_source": "papers",
+        "density": 0.5,
+        "edges": 1,
+        "nodes": 2,
+        "source_data_analyzed": true,
+        "top_betweenness": [
+          {
+            "node": "contact_graph_7T10",
+            "score": 0.0
+          },
+          {
+            "node": "contact_graph_7T10:field:source_name",
+            "score": 0.0
+          }
+        ],
+        "top_pagerank": [
+          {
+            "node": "contact_graph_7T10:field:source_name",
+            "score": 0.64909
+          },
+          {
+            "node": "contact_graph_7T10",
+            "score": 0.35091
+          }
+        ]
+      },
+      "skill_name": "networkx",
+      "status": "success"
+    },
+    "scienceclaw_skill_attempted": "networkx",
+    "source_content_features": [
+      {
+        "artifact_id": "contact_graph_7T10",
+        "artifact_type": "ContactGraph",
+        "data_status": "",
+        "descriptor_type": "",
+        "emitted_need_types": [],
+        "formal_result_fields": [],
+        "formal_result_kind": "",
+        "morphism": "",
+        "payload_keys": [
+          "source_name",
+          "source_sha256",
+          "summary"
+        ],
+        "result_classification": ""
+      }
+    ],
+    "source_parent_ids": [
+      "contact_graph_7T10"
+    ],
+    "summary": "ParityDescriptorAgent executed compute_7t10_contact_parity via ScienceClaw skill networkx for compute 7T10 contact parity",
+    "symmetry": [
+      "formal_equivariance_checked_where_applicable"
+    ],
+    "valid_result_basis": "deterministic formal computation over parent artifact payload fields, formal result kinds, declared morphism, and query; hashes retained only as provenance"
+  },
+  "producer_agent": "ParityDescriptorAgent",
+  "schema_version": "categoryscienceclaw.v1",
+  "timestamp": "2026-05-29T00:04:52.460652+00:00",
+  "type": "ContactParityDescriptor"
+}

@@ -1,0 +1,102 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-c0c8a75d7df72353ab090602304ba815b4b2c4e418e7e418081ef401bdba38b9",
+  "kind": "execution",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 2,
+      "actual": 2,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "PathParityValidationRecord",
+      "actual": "PathParityValidationRecord",
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 1,
+      "expected": "ForcePathDescriptor",
+      "actual": "ForcePathDescriptor",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "MechanotransductionModel",
+      "actual": "MechanotransductionModel",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "art-fa4ced7c368249d6936d8b10f3e19ca5",
+        "art-aa6ba65b9e1e4b08bc31152761026f51"
+      ],
+      "actual_parent_ids": [
+        "art-fa4ced7c368249d6936d8b10f3e19ca5",
+        "art-aa6ba65b9e1e4b08bc31152761026f51"
+      ],
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "art-fa4ced7c368249d6936d8b10f3e19ca5",
+      "expected": "e2fb57fb9f5144c9e97a7d861453eb64bd2cf42e996330f7c9fb77a4c30ee2b4",
+      "actual": "e2fb57fb9f5144c9e97a7d861453eb64bd2cf42e996330f7c9fb77a4c30ee2b4",
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "art-aa6ba65b9e1e4b08bc31152761026f51",
+      "expected": "3b67b641a0e2d353ad031b09ffa81877eae3415c7e7b8df7373caa58a325ddeb",
+      "actual": "3b67b641a0e2d353ad031b09ffa81877eae3415c7e7b8df7373caa58a325ddeb",
+      "ok": true
+    },
+    {
+      "name": "output_hash_matches",
+      "artifact_id": "art-63d470a3ab0b417992ee36ee76d9101b",
+      "ok": true
+    },
+    {
+      "name": "formal_metadata_present",
+      "ok": true
+    },
+    {
+      "name": "invariants_present",
+      "ok": true
+    },
+    {
+      "name": "symmetry_or_parity_present",
+      "expected": false,
+      "ok": true
+    },
+    {
+      "name": "source_parent_ids_present",
+      "ok": true
+    },
+    {
+      "name": "symbolic_status_declared_when_no_real_data",
+      "ok": true
+    },
+    {
+      "name": "composition_path_valid",
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "build_mechanotransduction_model",
+    "input_artifact_ids": [
+      "art-fa4ced7c368249d6936d8b10f3e19ca5",
+      "art-aa6ba65b9e1e4b08bc31152761026f51"
+    ],
+    "output_artifact_id": "art-63d470a3ab0b417992ee36ee76d9101b",
+    "output_content_hash": "cf12506d308962f72863e4a04ed52b2392100e5624b04403676ee975175966cf",
+    "claim_id": "claim:need:art-fa4ced7c368249d6936d8b10f3e19ca5:0:MechanicsBuilderAgent"
+  },
+  "errors": [],
+  "metadata": {}
+}

@@ -1,0 +1,102 @@
+{
+  "schema_version": "categoryscienceclaw.v1",
+  "id": "cert-b8337d1ebf9a31646f87f074d2d66c3d917e95800054f179814e8cad9a49ebe1",
+  "kind": "execution",
+  "ok": true,
+  "obligations": [
+    {
+      "name": "arity",
+      "expected": 2,
+      "actual": 2,
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 0,
+      "expected": "ShapeTransitionModel",
+      "actual": "ShapeTransitionModel",
+      "ok": true
+    },
+    {
+      "name": "input_type",
+      "index": 1,
+      "expected": "CurvatureContradictionCheck",
+      "actual": "CurvatureContradictionCheck",
+      "ok": true
+    },
+    {
+      "name": "output_type",
+      "expected": "BiophysicsClaim",
+      "actual": "BiophysicsClaim",
+      "ok": true
+    },
+    {
+      "name": "provenance",
+      "expected_parent_ids": [
+        "art-16c97823e6fb4639adc0d12ee85db8d6",
+        "art-deda0ba1aa644b3daafbecc307df1e76"
+      ],
+      "actual_parent_ids": [
+        "art-16c97823e6fb4639adc0d12ee85db8d6",
+        "art-deda0ba1aa644b3daafbecc307df1e76"
+      ],
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "art-16c97823e6fb4639adc0d12ee85db8d6",
+      "expected": "67c283beb989b272adf1a6e7d014d7652ffe278663dc93b7f03a6dbabfc9d773",
+      "actual": "67c283beb989b272adf1a6e7d014d7652ffe278663dc93b7f03a6dbabfc9d773",
+      "ok": true
+    },
+    {
+      "name": "input_hash_matches",
+      "artifact_id": "art-deda0ba1aa644b3daafbecc307df1e76",
+      "expected": "c161b79b5f1dfe705a0d471ef787384234f6c3777df84e10bff1be64069ed10b",
+      "actual": "c161b79b5f1dfe705a0d471ef787384234f6c3777df84e10bff1be64069ed10b",
+      "ok": true
+    },
+    {
+      "name": "output_hash_matches",
+      "artifact_id": "art-f1f6cc783d9e436b86d2a2bcd9221820",
+      "ok": true
+    },
+    {
+      "name": "formal_metadata_present",
+      "ok": true
+    },
+    {
+      "name": "invariants_present",
+      "ok": true
+    },
+    {
+      "name": "symmetry_or_parity_present",
+      "expected": false,
+      "ok": true
+    },
+    {
+      "name": "source_parent_ids_present",
+      "ok": true
+    },
+    {
+      "name": "symbolic_status_declared_when_no_real_data",
+      "ok": true
+    },
+    {
+      "name": "composition_path_valid",
+      "ok": true
+    }
+  ],
+  "conclusion": {
+    "morphism": "synthesize_biophysics_claim",
+    "input_artifact_ids": [
+      "art-16c97823e6fb4639adc0d12ee85db8d6",
+      "art-deda0ba1aa644b3daafbecc307df1e76"
+    ],
+    "output_artifact_id": "art-f1f6cc783d9e436b86d2a2bcd9221820",
+    "output_content_hash": "35be12a2ca2fa90e0a0757af34510b0e2e255c8986146893e40507e61aa2cc54",
+    "claim_id": "claim:need:art-16c97823e6fb4639adc0d12ee85db8d6:1:ClaimSynthesisAgent"
+  },
+  "errors": [],
+  "metadata": {}
+}

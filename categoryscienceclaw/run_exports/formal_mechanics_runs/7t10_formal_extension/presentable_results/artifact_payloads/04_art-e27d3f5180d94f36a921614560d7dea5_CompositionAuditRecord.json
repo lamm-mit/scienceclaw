@@ -1,0 +1,218 @@
+{
+  "content_hash": "ba353383dc1b2c9267681e765ff63c5bcb4bdc18fbf1530beace086c0baa80e6",
+  "id": "art-e27d3f5180d94f36a921614560d7dea5",
+  "metadata": {
+    "certificate_id": "cert-aed9e5ceb08899142556823df9d98e812f148d7b11b68ffe82a59bbb187e2838",
+    "claim_id": "claim:need:mechanics_claim_7T10:0:FormalValidatorAgent",
+    "fulfilled_need_id": "need:mechanics_claim_7T10:0"
+  },
+  "morphism": "audit_mechanics_composition",
+  "needs": [],
+  "parent_ids": [
+    "mechanics_claim_7T10",
+    "contact_graph_7T10",
+    "force_extension_7T10"
+  ],
+  "payload": {
+    "data_status": "formal_descriptor_only",
+    "descriptor_type": "CompositionAuditRecord",
+    "execution_backend": "scienceclaw",
+    "formal": {
+      "categorical_role": "need_fulfillment_morphism",
+      "invariants": [
+        "type_preserving",
+        "provenance_preserving",
+        "composition_auditable"
+      ],
+      "proof_obligations": [
+        "source_parent_ids_present",
+        "invariants_present"
+      ],
+      "symmetry": [
+        "formal_equivariance_checked_where_applicable"
+      ]
+    },
+    "formal_result": {
+      "checks": [
+        {
+          "name": "parents_present",
+          "ok": true
+        },
+        {
+          "name": "parent_payload_content_extracted",
+          "ok": true
+        },
+        {
+          "name": "formal_result_kinds_present",
+          "ok": false
+        },
+        {
+          "name": "formal_only_status_declared",
+          "ok": true
+        },
+        {
+          "name": "no_empirical_numeric_claim_added",
+          "ok": true
+        }
+      ],
+      "kind": "formal_validation_record",
+      "validated_parent_content": [
+        {
+          "artifact_id": "mechanics_claim_7T10",
+          "artifact_type": "MechanicsClaim",
+          "data_status": "",
+          "descriptor_type": "",
+          "emitted_need_types": [],
+          "formal_result_fields": [],
+          "formal_result_kind": "",
+          "morphism": "",
+          "payload_keys": [
+            "source_name",
+            "source_sha256",
+            "summary"
+          ],
+          "result_classification": ""
+        },
+        {
+          "artifact_id": "contact_graph_7T10",
+          "artifact_type": "ContactGraph",
+          "data_status": "",
+          "descriptor_type": "",
+          "emitted_need_types": [],
+          "formal_result_fields": [],
+          "formal_result_kind": "",
+          "morphism": "",
+          "payload_keys": [
+            "source_name",
+            "source_sha256",
+            "summary"
+          ],
+          "result_classification": ""
+        },
+        {
+          "artifact_id": "force_extension_7T10",
+          "artifact_type": "ForceExtensionTrace",
+          "data_status": "",
+          "descriptor_type": "",
+          "emitted_need_types": [],
+          "formal_result_fields": [],
+          "formal_result_kind": "",
+          "morphism": "",
+          "payload_keys": [
+            "source_name",
+            "source_sha256",
+            "summary"
+          ],
+          "result_classification": ""
+        }
+      ],
+      "validated_parent_types": [
+        "MechanicsClaim",
+        "ContactGraph",
+        "ForceExtensionTrace"
+      ]
+    },
+    "input_count": 3,
+    "invariants": [
+      "type_preserving",
+      "provenance_preserving",
+      "composition_auditable"
+    ],
+    "morphism": "audit_mechanics_composition",
+    "parents": [
+      {
+        "content_hash": "7d624bf38b1791820bc6e342dae860a0a26466a2cf0eeec13adee51ccc8421ce",
+        "id": "mechanics_claim_7T10",
+        "type": "MechanicsClaim"
+      },
+      {
+        "content_hash": "deded3730b0041a044b53d8b3a6f08b1df10ee7febef4ed45765ff11b0b1298e",
+        "id": "contact_graph_7T10",
+        "type": "ContactGraph"
+      },
+      {
+        "content_hash": "dbbd85d543897ef01d6f37600cd9a3e7b9d6afd738f71abc0f854d242f1ee00e",
+        "id": "force_extension_7T10",
+        "type": "ForceExtensionTrace"
+      }
+    ],
+    "query": "audit 7T10 mechanics composition",
+    "result_classification": "formal_symbolic_result",
+    "scienceclaw": {
+      "accepted_as_substantive": false,
+      "execution_backend": "scienceclaw",
+      "rejected_placeholder_summary": {
+        "rejection_reason": "ScienceClaw attempt returned a demo, scaffold, availability, or query-only concept result rather than an analysis of parent artifact data.",
+        "skill_name": "scientific-critical-thinking"
+      },
+      "result_summary": {},
+      "skill_name": "scientific-critical-thinking",
+      "status": "success"
+    },
+    "scienceclaw_skill_attempted": "scientific-critical-thinking",
+    "source_content_features": [
+      {
+        "artifact_id": "mechanics_claim_7T10",
+        "artifact_type": "MechanicsClaim",
+        "data_status": "",
+        "descriptor_type": "",
+        "emitted_need_types": [],
+        "formal_result_fields": [],
+        "formal_result_kind": "",
+        "morphism": "",
+        "payload_keys": [
+          "source_name",
+          "source_sha256",
+          "summary"
+        ],
+        "result_classification": ""
+      },
+      {
+        "artifact_id": "contact_graph_7T10",
+        "artifact_type": "ContactGraph",
+        "data_status": "",
+        "descriptor_type": "",
+        "emitted_need_types": [],
+        "formal_result_fields": [],
+        "formal_result_kind": "",
+        "morphism": "",
+        "payload_keys": [
+          "source_name",
+          "source_sha256",
+          "summary"
+        ],
+        "result_classification": ""
+      },
+      {
+        "artifact_id": "force_extension_7T10",
+        "artifact_type": "ForceExtensionTrace",
+        "data_status": "",
+        "descriptor_type": "",
+        "emitted_need_types": [],
+        "formal_result_fields": [],
+        "formal_result_kind": "",
+        "morphism": "",
+        "payload_keys": [
+          "source_name",
+          "source_sha256",
+          "summary"
+        ],
+        "result_classification": ""
+      }
+    ],
+    "source_parent_ids": [
+      "mechanics_claim_7T10",
+      "contact_graph_7T10",
+      "force_extension_7T10"
+    ],
+    "summary": "FormalValidatorAgent executed audit_mechanics_composition via ScienceClaw skill scientific-critical-thinking for audit 7T10 mechanics composition",
+    "symmetry": [
+      "formal_equivariance_checked_where_applicable"
+    ],
+    "valid_result_basis": "deterministic formal computation over parent artifact payload fields, formal result kinds, declared morphism, and query; hashes retained only as provenance"
+  },
+  "producer_agent": "FormalValidatorAgent",
+  "schema_version": "categoryscienceclaw.v1",
+  "timestamp": "2026-05-29T00:04:52.822355+00:00",
+  "type": "CompositionAuditRecord"
+}

@@ -1,0 +1,12 @@
+{
+  "bending_modulus_kbt": 20.0,
+  "energy_model": "0.5 * kappa * mean_curvature^2 per grid point",
+  "input_origin": "synthetic_computational",
+  "seed_rule": "deterministic sinusoidal curvature field on 7x7 grid",
+  "tension_pN_per_nm": 0.015,
+  "units": {
+    "bending_modulus": "kBT",
+    "curvature": "1/um",
+    "tension": "pN/nm"
+  }
+}
