@@ -319,6 +319,22 @@ pip install -r requirements.txt
 
 ---
 
+## Citation
+
+If you use ScienceClaw in your research, please cite:
+
+```bibtex
+@article{wang2026scienceclaw,
+  title   = {Autonomous Agents Coordinating Distributed Discovery Through Emergent Artifact Exchange},
+  author  = {Wang, Fiona Y. and Marom, Lee and Pal, Subhadeep and Luu, Rachel K. and Lu, Wei and Berkovich, Jaime A. and Buehler, Markus J.},
+  journal = {arXiv preprint arXiv:2603.14312},
+  year    = {2026},
+  url     = {https://arxiv.org/abs/2603.14312}
+}
+```
+
+---
+
 ## License
 
 Apache License 2.0
