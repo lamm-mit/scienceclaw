@@ -1,0 +1,45 @@
+{
+  "benchmark_id": "T25",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "single_agent_with_tools",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [
+    "rdkit",
+    "tdc",
+    "pubmed",
+    "python-exec"
+  ],
+  "seed": 42,
+  "started_at": "2026-04-01T06:11:07.657376+00:00",
+  "finished_at": "2026-04-01T06:11:45.136767+00:00",
+  "wall_seconds": 37.479,
+  "llm_calls": 7,
+  "tool_calls": 10,
+  "raw_output": "## RDKit physicochemical descriptors + Lipinski Ro5 flags (from the provided SMILES)\n\nLipinski violation criteria flagged if: **MW>500, LogP>5, HBD>5, HBA>10**.\n\n| Compound | SMILES | MW (Da) | LogP | HBD | HBA | Lipinski Ro5 violations |\n|---|---|---:|---:|---:|---:|---|\n| **Imatinib** | Cc1ccc(NC(=O)c2ccc(CN3CCN(C)CC3)cc2)cc1Nc1nccc(-c2cccnc2)n1 | **493.615** | **4.590** | **2** | **7** | **None** |\n| **Dasatinib** | Cc1nc(Nc2ncc(C(=O)Nc3c(C)cccc3Cl)s2)cc(N2CCN(CCO)CC2)n1 | **488.017** | **3.314** | **3** | **9** | **None** |\n| **Bosutinib** | COc1cc(Nc2c(C#N)cnc3cc(OCCCN4CCN(C)CC4)c(OC)cc23)c(Cl)cc1Cl | **530.456** | **5.190** | **1** | **8** | **MW>500; LogP>5** |\n\n**Which inhibitor violates Lipinski?** **Bosutinib** (2 violations: MW and LogP). Imatinib and dasatinib have **no** Ro5 violations by these four rules.\n\n---\n\n## BBB penetration prediction using TDC (Martins / AttentiveFP)\nThe available `tdc_predict` tool in this environment only exposes **oracles** (qed/logp/sa/drd2/gsk3b/jnk3) and does **not** provide the requested **BBB_Martins-AttentiveFP** model interface. So, **BBB penetration cannot be computed from TDC here** with the current tool capabilities/results.\n\n**Best BBB penetration (based on TDC here):** **Not available / cannot be determined**.\n\n---\n\n## PubMed: primary kinase target + one reported IC50 (PMIDs from tool output)\n\nAll three are BCR-ABL (ABL1 fusion) inhibitors used in **CML (BCR-ABL\u2013positive)**. However, with the PubMed results retrieved so far, only **dasatinib** had an explicit BCR-ABL potency statement in the abstract; for **imatinib** and **bosutinib**, the retrieved abstracts did not clearly provide a primary BCR-ABL biochemical IC50 for the drug itself (they often discuss mutants, cellular IC50s, transporters, or other compounds).\n\n### Imatinib\n- **Primary kinase target:** BCR-ABL (CML)\n- **Retrieved IC50 (from current PubMed hits):**  \n  PMID **15475456** reports **cell proliferation IC50** in BCR-ABL+ lines: **0.47 \u00b5M (K562)** and **0.69 \u00b5M (CML\u2011T1)** (cellular antiproliferative, not a biochemical kinase IC50).\n\n### Dasatinib\n- **Primary kinase target:** BCR-ABL (also SRC-family kinases; CML)\n- **Retrieved IC50 (from current PubMed hits):**  \n  PMID **19779040** mentions dasatinib \u201cmedian inhibitory concentration (IC50) > 3 nM\u201d for certain BCR\u2011ABL mutants, and states higher potency vs imatinib for unmutated BCR\u2011ABL (the abstract does not give a single exact WT biochemical IC50 value, but does explicitly reference IC50 values in nM range).\n\n### Bosutinib\n- **Primary kinase target:** BCR-ABL / SRC (CML)\n- **Retrieved IC50 (from current PubMed hits):**  \n  The bosutinib PubMed results returned (e.g., PMID **27432881**) provide **IC50 values for nucleoside transporter inhibition (hENT1)**, not a kinase IC50 for BCR-ABL; thus **a bosutinib BCR\u2011ABL IC50 is not extractable from the current retrieved abstracts**.\n\n---\n\n## Imatinib selectivity ratio (primary_IC50 / best_off_target_IC50)\nThis requires:\n1) a **primary (BCR-ABL) IC50** for imatinib from literature, and  \n2) the **best (lowest) off-target IC50** from literature.\n\nFrom the tool output so far, we only have **cellular proliferation IC50s** (PMID 15475456) and no **off-target IC50** values for imatinib in the retrieved set. Therefore:\n\n**Imatinib selectivity ratio:** **Not computable from the provided tool results so far** (missing required primary biochemical IC50 and best off-target IC50).\n\n---\n\n# Requested structured summary (limited to what is supported by tool results)\n\n- **LIPINSKI_VIOLATION:** **bosutinib** (MW>500 and LogP>5); **imatinib = none; dasatinib = none**\n- **BBB_PENETRANT:** **N/A (TDC BBB model not available in tool here)**\n- **PRIMARY_TARGETS:** **BCR-ABL / BCR-ABL / BCR-ABL**\n- **IMATINIB_IC50_nM:** not available from the retrieved abstracts; nearest retrieved value is **0.47 \u00b5M = 470 nM (cellular, K562)** from PMID **15475456**\n- **SELECTIVITY_RATIO (imatinib):** **N/A (insufficient IC50 data in current PubMed extracts)**",
+  "task_success": null,
+  "success_details": {},
+  "product_quality_score": 2.5,
+  "product_quality_subscores": {
+    "ar_synthesis": 0,
+    "coord_depth": 0,
+    "structured_bbb": 0,
+    "lipinski_check": 1,
+    "primary_targets": 1,
+    "ic50_values": 1
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "rubric_checks_passed": 3
+}

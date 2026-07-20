@@ -1,0 +1,44 @@
+{
+  "benchmark_id": "T35",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model",
+  "benchmark_mode": "single_model_direct",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [],
+  "seed": 42,
+  "started_at": "2026-03-30T16:40:10.697296+00:00",
+  "finished_at": "2026-03-30T16:40:15.409835+00:00",
+  "wall_seconds": 4.713,
+  "llm_calls": 1,
+  "tool_calls": 0,
+  "raw_output": "Approximate descriptor values (from memory; RDKit-like):\n\n- **Acetaminophen**: MW ~151.2 Da; LogP ~0.5; TPSA ~49 \u00c5\u00b2; HBD ~2; HBA ~2  \n  - RO5 violations (MW>500, LogP>5, HBD>5, HBA>10): **0**\n\n- **Metformin**: MW ~129.2 Da; LogP ~\u22121.4; TPSA ~91 \u00c5\u00b2; HBD ~3; HBA ~5  \n  - RO5 violations: **0**\n\n- **Warfarin**: MW ~308.3 Da; LogP ~3.2; TPSA ~56 \u00c5\u00b2; HBD ~1; HBA ~4  \n  - RO5 violations: **0**\n\nMean LogP \u2248 (0.5 + (\u22121.4) + 3.2) / 3 = **0.77**.  \nHighest TPSA: **Metformin**.\n\nACETAMINOPHEN_VIOLATIONS: 0, METFORMIN_VIOLATIONS: 0, WARFARIN_VIOLATIONS: 0, MEAN_LOGP: 0.77, HIGHEST_TPSA: METFORMIN",
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 4.17,
+  "product_quality_subscores": {
+    "rdkit_descriptors_retrieved": 1.0,
+    "lipinski_violations_computed": 1.0,
+    "mean_logp_computed": 1.0,
+    "highest_tpsa_identified": 1.0,
+    "literature_pmid": 0.0,
+    "synthesis_coherence": 1.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 4.17,
+  "wall_budget_fraction": 0.0157
+}

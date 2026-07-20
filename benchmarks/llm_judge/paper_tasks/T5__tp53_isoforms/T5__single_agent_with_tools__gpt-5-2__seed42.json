@@ -1,0 +1,48 @@
+{
+  "benchmark_id": "T23",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "single_agent_with_tools",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [
+    "uniprot",
+    "pubmed",
+    "python-exec"
+  ],
+  "seed": 42,
+  "started_at": "2026-03-30T06:22:25.012703+00:00",
+  "finished_at": "2026-03-30T06:22:33.193222+00:00",
+  "wall_seconds": 8.181,
+  "llm_calls": 5,
+  "tool_calls": 5,
+  "raw_output": "ISOFORMS: 9, RATIO: 2.290, RECENT_PMID: 41871246, TA_DOMAIN_PCT: 17.0",
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 1.67,
+  "product_quality_subscores": {
+    "uniprot_isoform_count": 0.0,
+    "canonical_length_correct": 0.0,
+    "ratio_computed": 1.0,
+    "pmid_real": 0.0,
+    "ta_domain_pct": 1.0,
+    "output_format": 0.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 0.334,
+  "wall_budget_fraction": 0.0273
+}

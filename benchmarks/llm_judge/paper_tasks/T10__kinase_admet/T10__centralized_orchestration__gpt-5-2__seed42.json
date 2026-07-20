@@ -1,0 +1,90 @@
+{
+  "benchmark_id": "T25",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "centralized_orchestration",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 4,
+  "skills_used": [
+    "python-exec",
+    "tdc",
+    "pubmed"
+  ],
+  "seed": 42,
+  "started_at": "2026-04-01T06:14:37.818300+00:00",
+  "finished_at": "2026-04-01T06:16:23.439681+00:00",
+  "wall_seconds": 105.621,
+  "llm_calls": 9,
+  "tool_calls": 11,
+  "raw_output": "## 1) RDKit physicochemical descriptors + Lipinski Ro5 flags\n\n(Computed from the provided SMILES using RDKit: `Descriptors.MolWt`, `Crippen.MolLogP`, `Lipinski.NumHDonors`, `Lipinski.NumHAcceptors`; Ro5 violation thresholds: MW>500, LogP>5, HBD>5, HBA>10.)\n\n| Compound | MW | LogP | HBD | HBA | Ro5 violations |\n|---|---:|---:|---:|---:|---|\n| **Imatinib** | **552.68** | 4.37 | 3 | 9 | **MW>500 (violates)** |\n| **Dasatinib** | 445.91 | 4.84 | 3 | 7 | none |\n| **Bosutinib** | 362.43 | 3.00 | 2 | 5 | none |\n\n**Which inhibitor violates Lipinski?** **Imatinib** (MW > 500).\n\n---\n\n## 2) BBB penetration prediction (TDC)\n\nNo TDC BBB results were returned by the worker (subtask_2 output is missing), so I **cannot** truthfully report BBB labels/scores, the dataset/model used, or \u201cbest BBB penetration\u201d from TDC.\n\n**Needed to complete this section:** for each compound, the TDC run output (task/dataset/model + predicted label/score/probability). Once provided, I can rank \u201cbest BBB penetration\u201d accordingly.\n\n---\n\n## 3) PubMed mining: primary kinase target + one IC50 each; imatinib selectivity ratio\n\nNo PubMed mining results were returned by the worker (subtask_3 output is missing), so I **cannot** provide PMIDs, primary targets with citations, IC50 values, or compute imatinib\u2019s selectivity ratio from literature-derived on-/off-target IC50 values.\n\n**Needed to complete this section:**\n- For **imatinib**, a primary-target IC50 (with PMID) and the **best (lowest) off-target kinase IC50** (with PMID), in consistent units, to compute  \n  **selectivity ratio = primary_IC50 / best_off_target_IC50**.\n- For **dasatinib** and **bosutinib**, one primary-target IC50 each (with PMIDs).\n\n---\n\n## Requested structured comparison (with what can be concluded from available data)\n\n- **Which inhibitor violates Lipinski?** **Imatinib** (MW>500).\n- **Which has best BBB penetration (TDC)?** **Unavailable** (TDC outputs not provided).\n- **What is imatinib\u2019s selectivity ratio?** **Unavailable** (PubMed IC50s not provided).\n\nIf you paste the missing worker outputs for subtask_2 and subtask_3 (or let me run them), I\u2019ll finalize BBB ranking and the imatinib selectivity ratio with full citations and unit-consistent calculations.",
+  "subtasks": [
+    {
+      "id": "subtask_1",
+      "description": "Use RDKit to compute physicochemical descriptors for imatinib, dasatinib, and bosutinib from the provided SMILES: MW (Descriptors.MolWt), LogP (Crippen.MolLogP), HBD (Lipinski.NumHDonors), HBA (Lipinski.NumHAcceptors). For each compound, flag Lipinski Rule-of-5 violations using thresholds: MW>500, LogP>5, HBD>5, HBA>10. Return a structured table with all values and violation flags per rule and overall."
+    },
+    {
+      "id": "subtask_2",
+      "description": "Using TDC (Therapeutics Data Commons), run a BBB penetration prediction for each compound (imatinib, dasatinib, bosutinib) from SMILES. Specify the exact TDC task/dataset/model used (e.g., ADMET/BBB), output per-compound predicted BBB label/score/probability as available, and identify which inhibitor has the best BBB penetration according to the model output."
+    },
+    {
+      "id": "subtask_3",
+      "description": "Literature mining via PubMed: for each inhibitor (imatinib, dasatinib, bosutinib), find the primary kinase target and extract one reported IC50 value with citation (PMID, assay context if available). Additionally for imatinib, find the best (lowest) reported off-target IC50 among kinases (non-primary) from PubMed, and compute selectivity ratio = primary_IC50 / best_off_target_IC50 (ensure consistent units). Provide the PMIDs and the IC50 values used in the calculation."
+    }
+  ],
+  "worker_results": [
+    {
+      "subtask_id": "subtask_1",
+      "subtask_description": "Use RDKit to compute physicochemical descriptors for imatinib, dasatinib, and bosutinib from the provided SMILES: MW (Descriptors.MolWt), LogP (Crippen.MolLogP), HBD (Lipinski.NumHDonors), HBA (Lipinski.NumHAcceptors). For each compound, flag Lipinski Rule-of-5 violations using thresholds: MW>500, LogP>5, HBD>5, HBA>10. Return a structured table with all values and violation flags per rule and overall.",
+      "output": "Physicochemical descriptors computed with RDKit (Descriptors.MolWt, Crippen.MolLogP, Lipinski.NumHDonors, Lipinski.NumHAcceptors). Lipinski Rule-of-5 (Ro5) violation thresholds used: **MW>500**, **LogP>5**, **HBD>5**, **HBA>10**.\n\n| compound | SMILES | MW | LogP | HBD | HBA | MW>500 | LogP>5 | HBD>5 | HBA>10 | Any_Ro5_violation |\n|---|---|---:|---:|---:|---:|---|---|---|---|---|\n| imatinib | CC1=NC(=CC=C1NC2=NC=CC(=N2)N3CCN(CC3)CCOC)NC4=CC=C(C=C4)C(=O)NCC5=CC=CC=C5 | 552.68 | 4.37 | 3 | 9 | True | False | False | False | True |\n| dasatinib | CC1=NC(=NC(=N1)NC2=CC(=C(C=C2)Cl)C(=O)NC3=CC=CC=C3)NCC4=CN=CC=C4 | 445.91 | 4.84 | 3 | 7 | False | False | False | False | False |\n| bosutinib | COC1=CC2=C(C=C1)N=C(N2)NC3=CC(=CC=C3)C#CCN4CCOCC4 | 362.43 | 3.00 | 2 | 5 | False | False | False | False | False |\n\nOnly **imatinib** violates Ro5 (due to **MW>500**).",
+      "llm_calls": 2,
+      "tool_calls": 1,
+      "skills_used": [
+        "python-exec"
+      ]
+    },
+    {
+      "subtask_id": "subtask_2",
+      "subtask_description": "Using TDC (Therapeutics Data Commons), run a BBB penetration prediction for each compound (imatinib, dasatinib, bosutinib) from SMILES. Specify the exact TDC task/dataset/model used (e.g., ADMET/BBB), output per-compound predicted BBB label/score/probability as available, and identify which inhibitor has the best BBB penetration according to the model output.",
+      "output": "",
+      "llm_calls": 3,
+      "tool_calls": 5,
+      "skills_used": [
+        "tdc"
+      ]
+    },
+    {
+      "subtask_id": "subtask_3",
+      "subtask_description": "Literature mining via PubMed: for each inhibitor (imatinib, dasatinib, bosutinib), find the primary kinase target and extract one reported IC50 value with citation (PMID, assay context if available). Additionally for imatinib, find the best (lowest) reported off-target IC50 among kinases (non-primary) from PubMed, and compute selectivity ratio = primary_IC50 / best_off_target_IC50 (ensure consistent units). Provide the PMIDs and the IC50 values used in the calculation.",
+      "output": "",
+      "llm_calls": 2,
+      "tool_calls": 5,
+      "skills_used": [
+        "pubmed"
+      ]
+    }
+  ],
+  "task_success": null,
+  "success_details": {},
+  "product_quality_score": 1.67,
+  "product_quality_subscores": {
+    "ar_synthesis": 0,
+    "coord_depth": 0,
+    "structured_bbb": 0,
+    "lipinski_check": 1,
+    "primary_targets": 1,
+    "ic50_values": 0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "rubric_checks_passed": 2
+}

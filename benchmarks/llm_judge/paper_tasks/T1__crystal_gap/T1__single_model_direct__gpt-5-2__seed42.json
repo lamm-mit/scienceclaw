@@ -1,0 +1,44 @@
+{
+  "benchmark_id": "T31",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model",
+  "benchmark_mode": "single_model_direct",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [],
+  "seed": 42,
+  "started_at": "2026-03-30T14:40:28.678787+00:00",
+  "finished_at": "2026-03-30T14:40:48.757794+00:00",
+  "wall_seconds": 20.079,
+  "llm_calls": 1,
+  "tool_calls": 0,
+  "raw_output": "### 1) SrTiO\u2083 (strontium titanate)\n- **Experimentally reported band gap (Eg):** ~**3.2 eV** (wide-gap oxide; commonly reported as an indirect gap around this value)\n- **Crystal structure / space group:** **Cubic perovskite** at room temperature, **Pm-3m**\n- **Photovoltaic potential (qualitative):**  \n  Wide band gap means it absorbs only UV photons, so it is intrinsically poorly matched to the solar spectrum for single-junction PV. It is more often used as a substrate, electron-transport/oxide layer, or in oxide heterostructures rather than as the primary absorber.\n\n**Shockley\u2013Queisser-like PCE upper bound (given formula):**  \n\\[\n\\text{PCE} \\approx 0.95 \\times \\max\\left(0, 1-\\frac{1.5}{E_g}\\right)\\times 0.85 \\times 100\n\\]  \nFor **Eg = 3.2 eV**:  \n- \\(1 - 1.5/3.2 = 1 - 0.46875 = 0.53125\\)  \n- PCE \u2248 \\(0.95 \\times 0.53125 \\times 0.85 \\times 100 \\approx \\mathbf{42.9\\%}\\)\n\n---\n\n### 2) BaTiO\u2083 (barium titanate)\n- **Experimentally reported band gap (Eg):** ~**3.2 eV** (often reported in the ~3.1\u20133.3 eV range)\n- **Crystal structure / space group:** **Tetragonal ferroelectric perovskite** at room temperature, **P4mm** (cubic Pm-3m above its Curie temperature)\n- **Photovoltaic potential (qualitative):**  \n  Like SrTiO\u2083, the gap is too wide for efficient solar absorption. However, BaTiO\u2083 is strongly **ferroelectric**, which can support photovoltaic effects driven by polarization fields (e.g., bulk photovoltaic effect), potentially useful for niche devices (photodetectors, ferro-photovoltaics), but still fundamentally limited by weak visible absorption for conventional PV.\n\n**PCE upper bound (given formula):**  \nFor **Eg = 3.2 eV** (same arithmetic as above):  \n- PCE \u2248 **42.9%**\n\n---\n\n### 3) LaMnO\u2083 (lanthanum manganite)\n- **Experimentally reported band gap (Eg):** commonly reported ~**1.1 eV** (values vary with stoichiometry, strain, and temperature; often described as a narrow-gap correlated oxide/charge-transfer system)\n- **Crystal structure / space group:** **Orthorhombically distorted perovskite**, **Pnma** (often also given as Pbnm setting)\n- **Photovoltaic potential (qualitative):**  \n  Its **near-optimal band gap** for solar harvesting makes it much more attractive *by band-gap matching* than SrTiO\u2083 or BaTiO\u2083. Practical challenges are that LaMnO\u2083 is a correlated transition-metal oxide where defects, polaronic transport, recombination, and achieving good junction quality can be difficult. Still, among these three, it is the only one with an absorber-like gap for visible/near-IR solar photons.\n\n**PCE upper bound (given formula):**  \nFor **Eg = 1.1 eV**:  \n- \\(1 - 1.5/1.1 = 1 - 1.3636 = -0.3636 \\Rightarrow \\max(0,\\cdot)=0\\)  \n- PCE \u2248 **0%** (by this specific formula)\n\n---\n\n## Ranking by the *computed* theoretical PCE limit (using the provided formula)\n1. **SrTiO\u2083** \u2248 **42.9%** (Eg \u2248 3.2 eV)  \n1. **BaTiO\u2083** \u2248 **42.9%** (Eg \u2248 3.2 eV)  \n3. **LaMnO\u2083** \u2248 **0%** (Eg \u2248 1.1 eV)\n\n*(SrTiO\u2083 and BaTiO\u2083 tie under the assumed identical Eg.)*\n\n---\n\n## Which is most promising for photovoltaic applications (physics-based reasoning)\n- **Most promising absorber by band-gap suitability:** **LaMnO\u2083**, because ~1.1 eV is close to the optimum range for single-junction solar absorption (where the real Shockley\u2013Queisser limit peaks near ~1.3 eV).  \n- **However, using the *provided PCE formula* strictly:** it predicts **0%** for LaMnO\u2083 and high values for the wide-gap titanates, which is counter to the usual SQ trend; this happens because the formula\u2019s cutoff term \\((1 - 1.5/E_g)\\) becomes negative for \\(E_g < 1.5\\) eV and is forced to zero.\n\nSo:\n- **By the computed limits you requested:** **SrTiO\u2083 \u2248 BaTiO\u2083 > LaMnO\u2083**.  \n- **By realistic photovoltaic absorber logic:** **LaMnO\u2083** is the only one of the three with a solar-relevant band gap, while **SrTiO\u2083/BaTiO\u2083** are generally too wide-gap to be good single-junction absorbers (despite potential ferroelectric-related effects in BaTiO\u2083).",
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 3.33,
+  "product_quality_subscores": {
+    "correct_materials": 1.0,
+    "band_gap_values": 1.0,
+    "computed_pce_limit": 1.0,
+    "literature_pmid": 0.0,
+    "ranking_recommendation": 0.0,
+    "synthesis_coherence": 1.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 3.33,
+  "wall_budget_fraction": 0.0669
+}

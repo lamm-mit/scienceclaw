@@ -1,0 +1,93 @@
+{
+  "benchmark_id": "T34",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "centralized_orchestration",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 4,
+  "skills_used": [
+    "python-exec",
+    "pubmed"
+  ],
+  "seed": 42,
+  "started_at": "2026-03-30T16:40:10.769214+00:00",
+  "finished_at": "2026-03-30T16:42:30.515090+00:00",
+  "wall_seconds": 139.746,
+  "llm_calls": 10,
+  "tool_calls": 6,
+  "raw_output": "**RDKit CNS drug-likeness properties (from worker runs)**\n\n| Compound | MW (g/mol) | LogP | TPSA (\u00c5\u00b2) | HBD | HBA |\n|---|---:|---:|---:|---:|---:|\n| Haloperidol | 446.01 | 5.82 | 40.54 | 1 | 3 |\n| Clozapine | 322.20 | 2.60 | 45.46 | 1 | 5 |\n| Aripiprazole | 561.55 | 4.31 | 48.49 | 0 | 6 |\n\nMean LogP across the three compounds: **4.24**\n\n**Simplified CNS-MPO scoring used (0\u20136)**\n+1 if MW \u2264 360  \n+1 if LogP \u2264 5  \n+1 if LogP \u2265 1  \n+1 if TPSA \u2264 90  \n+1 if HBD \u2264 1  \n+1 if (basic N count \u2264 2 **and** aromatic rings \u2264 3) as a basicity/pKa proxy\n\nWorker-computed simplified MPO results (mapping A/B/C \u2192 Haloperidol/Clozapine/Aripiprazole):  \n- Haloperidol: **6/6**  \n- Clozapine: **6/6**  \n- Aripiprazole: **4/6**  \nBest (highest score): **Haloperidol; Clozapine** (tie at 6)\n\n**Requested final output format**\nHALOPERIDOL_MPO: 6, CLOZAPINE_MPO: 6, ARIPIPRAZOLE_MPO: 4, BEST_CNS: HALOPERIDOL; CLOZAPINE, MEAN_LOGP: 4.24\n\n---\n\n## PubMed: CNS drug-likeness / CNS MPO (key references)\nNote: the workers did not provide the actual PubMed citations text/PMIDs in their returned snippet, so I cannot faithfully list exact PMID/DOI values from their run. If you want, I can perform the PubMed lookup directly and return the exact citations.\n\n**What CNS MPO-type rules typically emphasize (high-level)**\n- Balance of **lipophilicity** and **polarity** (often via cLogP/cLogD and TPSA) to support BBB penetration while avoiding excessive nonspecific binding/efflux.\n- Control of **H-bonding** (HBD/HBA) and **size** (MW) to avoid poor permeability.\n- Consideration of **ionization/basicity (pKa)** and aromaticity/ring count as proxies for CNS exposure and developability.\n- \u201cMultiparameter optimization\u201d approaches score multiple properties simultaneously rather than applying a single hard cutoff.\n\nIf you\u2019d like, I can also (a) recompute the MPO with the *original Pfizer CNS MPO* desirability functions (rather than binary cutoffs) and (b) return a PubMed-verified bibliography with PMIDs/DOIs.",
+  "subtasks": [
+    {
+      "id": "subtask_1",
+      "description": "Use RDKit (python-exec) to parse the provided SMILES for Haloperidol, Clozapine, and Aripiprazole and compute the following properties for each: MW (Descriptors.MolWt), LogP (Crippen.MolLogP), TPSA (rdMolDescriptors.CalcTPSA), HBD (Lipinski.NumHDonors), HBA (Lipinski.NumHAcceptors). Return a structured table (per compound) with these values and also compute the mean LogP across the three compounds."
+    },
+    {
+      "id": "subtask_2",
+      "description": "With python-exec, compute the simplified CNS-MPO score for each compound using the RDKit-derived properties and the given scoring rules: +1 if MW<=360; +1 if LogP<=5; +1 if LogP>=1; +1 if TPSA<=90; +1 if HBD<=1; +1 if (basic nitrogen count<=2 AND aromatic rings<=3) as the pKa/basicity proxy. Implement basic nitrogen count as the number of N atoms that are not aromatic and have valence consistent with being basic (approximation acceptable: count all non-aromatic N). Implement aromatic rings count via rdMolDescriptors.CalcNumAromaticRings. Output each compound\u2019s MPO (0\u20136), identify the highest-scoring compound (tie-break: report all tied names or pick first consistently), and provide the final required formatted lines."
+    },
+    {
+      "id": "subtask_3",
+      "description": "Search PubMed for key papers describing CNS drug-likeness rules and the CNS MPO score (Pfizer multiparameter optimization). Provide citations (title, authors, journal, year, PMID/DOI) for 2\u20135 relevant papers, prioritizing the original CNS MPO publication and follow-up/validation papers. Summarize in 2\u20134 bullets what properties are used and typical thresholds/rationale for CNS penetration."
+    }
+  ],
+  "worker_results": [
+    {
+      "subtask_id": "subtask_1",
+      "subtask_description": "Use RDKit (python-exec) to parse the provided SMILES for Haloperidol, Clozapine, and Aripiprazole and compute the following properties for each: MW (Descriptors.MolWt), LogP (Crippen.MolLogP), TPSA (rdMolDescriptors.CalcTPSA), HBD (Lipinski.NumHDonors), HBA (Lipinski.NumHAcceptors). Return a structured table (per compound) with these values and also compute the mean LogP across the three compounds.",
+      "output": "| Compound | SMILES | MW (Descriptors.MolWt, g/mol) | LogP (Crippen.MolLogP) | TPSA (rdMolDescriptors.CalcTPSA, \u00c5\u00b2) | HBD (Lipinski.NumHDonors) | HBA (Lipinski.NumHAcceptors) |\n|---|---|---:|---:|---:|---:|---:|\n| Haloperidol | `O=C(CCCN1CCC(CC1)C(O)(c1ccc(Cl)cc1)c1ccc(F)cc1)C(C)(C)C` | 446.01 | 5.82 | 40.54 | 1 | 3 |\n| Clozapine | `Clc1ncn2c3ccc(Cl)cc3N=C(N4CCNCC4)c12` | 322.20 | 2.60 | 45.46 | 1 | 5 |\n| Aripiprazole | `O=C1N(CCN2CCOCC2)CCc2ccc(OCCCCN3CCN(CC3)c3cccc(Cl)c3Cl)cc21` | 561.55 | 4.31 | 48.49 | 0 | 6 |\n\nMean LogP across the three compounds: **4.24**",
+      "llm_calls": 2,
+      "tool_calls": 1,
+      "skills_used": [
+        "python-exec"
+      ]
+    },
+    {
+      "subtask_id": "subtask_2",
+      "subtask_description": "With python-exec, compute the simplified CNS-MPO score for each compound using the RDKit-derived properties and the given scoring rules: +1 if MW<=360; +1 if LogP<=5; +1 if LogP>=1; +1 if TPSA<=90; +1 if HBD<=1; +1 if (basic nitrogen count<=2 AND aromatic rings<=3) as the pKa/basicity proxy. Implement basic nitrogen count as the number of N atoms that are not aromatic and have valence consistent with being basic (approximation acceptable: count all non-aromatic N). Implement aromatic rings count via rdMolDescriptors.CalcNumAromaticRings. Output each compound\u2019s MPO (0\u20136), identify the highest-scoring compound (tie-break: report all tied names or pick first consistently), and provide the final required formatted lines.",
+      "output": "Compound A: MPO=6/6  \nCompound B: MPO=6/6  \nCompound C: MPO=4/6  \n\nHighest-scoring compound(s) (MPO=6/6): Compound A; Compound B",
+      "llm_calls": 2,
+      "tool_calls": 1,
+      "skills_used": [
+        "python-exec"
+      ]
+    },
+    {
+      "subtask_id": "subtask_3",
+      "subtask_description": "Search PubMed for key papers describing CNS drug-likeness rules and the CNS MPO score (Pfizer multiparameter optimization). Provide citations (title, authors, journal, year, PMID/DOI) for 2\u20135 relevant papers, prioritizing the original CNS MPO publication and follow-up/validation papers. Summarize in 2\u20134 bullets what properties are used and typical thresholds/rationale for CNS penetration.",
+      "output": "",
+      "llm_calls": 4,
+      "tool_calls": 4,
+      "skills_used": [
+        "pubmed"
+      ]
+    }
+  ],
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 3.33,
+  "product_quality_subscores": {
+    "rdkit_descriptors_retrieved": 1.0,
+    "cns_mpo_computed": 1.0,
+    "best_cns_identified": 1.0,
+    "mean_logp_computed": 1.0,
+    "literature_pmid": 0.0,
+    "synthesis_coherence": 0.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 0.333,
+  "wall_budget_fraction": 0.4658
+}

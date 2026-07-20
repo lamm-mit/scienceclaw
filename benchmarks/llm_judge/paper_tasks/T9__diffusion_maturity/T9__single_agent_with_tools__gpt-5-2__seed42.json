@@ -1,0 +1,48 @@
+{
+  "benchmark_id": "T34",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "single_agent_with_tools",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [
+    "rdkit",
+    "pubmed",
+    "python-exec"
+  ],
+  "seed": 42,
+  "started_at": "2026-03-30T16:41:48.703655+00:00",
+  "finished_at": "2026-03-30T16:41:59.074451+00:00",
+  "wall_seconds": 10.371,
+  "llm_calls": 3,
+  "tool_calls": 3,
+  "raw_output": "HALOPERIDOL_MPO: 6, CLOZAPINE_MPO: 5, ARIPIPRAZOLE_MPO: 5, BEST_CNS: HALOPERIDOL, MEAN_LOGP: 3.06\n\nPubMed CNS-MPO reference PMID: 26991242 (Wager TT et al., *ACS Chem Neurosci*, 2016).",
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 4.17,
+  "product_quality_subscores": {
+    "rdkit_descriptors_retrieved": 1.0,
+    "cns_mpo_computed": 1.0,
+    "best_cns_identified": 1.0,
+    "mean_logp_computed": 1.0,
+    "literature_pmid": 1.0,
+    "synthesis_coherence": 0.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 1.39,
+  "wall_budget_fraction": 0.0346
+}

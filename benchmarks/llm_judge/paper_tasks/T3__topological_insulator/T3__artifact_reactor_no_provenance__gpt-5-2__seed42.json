@@ -1,0 +1,49 @@
+{
+  "benchmark_id": "T33",
+  "system_name": "scienceclaw_ar_no_provenance",
+  "system_class": "scienceclaw_ar_no_provenance",
+  "benchmark_mode": "artifact_reactor_no_provenance",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 7,
+  "skills_used": [
+    "pubmed",
+    "materials",
+    "python-exec"
+  ],
+  "seed": 42,
+  "started_at": "2026-03-30T15:03:14.741908+00:00",
+  "finished_at": "2026-03-30T15:03:17.318917+00:00",
+  "wall_seconds": 2.577,
+  "llm_calls": 0,
+  "tool_calls": 5,
+  "raw_output": "[HeterostructurePubMed]\nSearching PubMed: MoS2 WSe2 van der Waals heterostructure type-II band alignment charge separation\nMax results: 5, Sort: relevance\n\nFound 0 total results, returning 0\n\n[]\n\n---\n\n[MoSe2Fetcher]\n{'material_id': 'mp-7581', 'formula': 'MoSe2', 'band_gap': 1.361999999999999, 'density': 6.4371, 'volume': 65.48672248842118, 'spacegroup': 'R3m'}\n\n---\n\n[WSe2Fetcher]\n{'material_id': 'mp-1023933', 'formula': 'WSe2', 'band_gap': 1.5241, 'density': 4.9466, 'volume': 229.45326404845736, 'spacegroup': 'P-3m1'}\n\n---\n\n[MoS2Fetcher]\n{'material_id': 'mp-1042086', 'formula': 'MoS2', 'band_gap': 0.041800000000000004, 'density': 3.2711, 'volume': 162.51394406646963, 'spacegroup': 'I-42d'}\n\n---\n\n[BandOffsetAnalyzer]\nMoS2: Eg=0.041800000000000004 eV\nWSe2: Eg=1.5241 eV\nMoSe2: Eg=1.361999999999999 eV\nPAIR MoS2/WSe2: delta_Eg=1.482 eV (TYPE2_CANDIDATE)\nPAIR MoS2/MoSe2: delta_Eg=1.32 eV (TYPE2_CANDIDATE)\nPAIR WSe2/MoSe2: delta_Eg=0.162 eV (INSUFFICIENT_OFFSET)\nTYPE2_CANDIDATE_PAIRS=MoS2/WSe2|MoS2/MoSe2",
+  "orchestrator_result": {},
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 3.33,
+  "product_quality_subscores": {
+    "correct_materials": 1.0,
+    "band_gap_values": 1.0,
+    "computed_delta_eg": 1.0,
+    "literature_pmid": 0.0,
+    "type2_pair_identification": 1.0,
+    "synthesis_coherence": 0.0
+  },
+  "artifacts": [],
+  "needs_emitted": 1,
+  "needs_fulfilled": 5,
+  "artifact_reuse_rate": null,
+  "lineage_depth": 3,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 3.33,
+  "wall_budget_fraction": 0.0086
+}

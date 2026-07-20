@@ -1,0 +1,44 @@
+{
+  "benchmark_id": "T27",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "single_agent_with_tools",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [
+    "pubmed",
+    "rdkit",
+    "python-exec"
+  ],
+  "seed": 42,
+  "started_at": "2026-04-01T06:24:34.185697+00:00",
+  "finished_at": "2026-04-01T06:25:16.297417+00:00",
+  "wall_seconds": 42.112,
+  "llm_calls": 3,
+  "tool_calls": 17,
+  "raw_output": "## RDKit physicochemical properties (computed)\n| Compound | SMILES | MW (RDKit, g/mol) | cLogP (RDKit MolLogP) |\n|---|---|---:|---:|\n| Aspirin | `CC(=O)Oc1ccccc1C(=O)O` | **180.159** | **1.310** |\n| Metformin | `CN(C)C(=N)NC(N)=N` | **129.167** | **-1.034** |\n| Rapamycin (sirolimus) | PubChem CID **5284616** | *(not computed in RDKit per task)* | *(not computed)* |\n\n---\n\n## Mechanisms / off-targets / longevity pathways (supported by the PubMed tool results obtained)\nOnly claims with PMIDs returned by the tool are included below (so this is **incomplete**, especially for aspirin NF\u2011\u03baB and several classic longevity papers).\n\n### Structured table (evidence-limited to returned PMIDs)\n\n| Compound | Primary mechanism of action (primary target) | Top 2 secondary / off-target effects (from results) | Longevity / aging pathway modulated (from results) | Polypharmacology breadth (1\u20135)* | Evidence (PMIDs from tool) |\n|---|---|---|---|---:|---|\n| **Aspirin** | **Irreversible acetylation/inhibition of platelet COX (COX\u20111)** \u2192 blocks thromboxane formation (antiplatelet) | (1) **COX\u20112 inhibition is much weaker** than COX\u20111 (dose-dependent anti-inflammatory) (2) Mechanism discussed in chemoprevention context (platelet-centric) | **Eicosanoid/prostaglandin axis** (inflammation/thrombosis biology). *(NF\u2011\u03baB not captured by tool results.)* | **3** (COX-1/2 centered; downstream eicosanoids) | **9263351**, **22893199** |\n| **Metformin** | **Mitochondrial respiratory complex I inhibition** \u2192 altered cellular energy state; linked to **AMPK activation** (reviewed/mentioned in a complex I paper) | (1) **Inhibits mitochondrial glycerophosphate dehydrogenase (mGPDH)** suppressing gluconeogenesis (2) Broader AMPK-linked pleiotropy summarized in review | **AMPK axis** (energy-sensing) via complex I/energy stress (and/or lysosomal AMPK per review, but detailed mechanistic papers not retrieved) | **4** (multiple mitochondrial/redox nodes + AMPK) | Complex I \u201csimilar to metformin\u201d context: **18285556**; mGPDH mechanism: **24847880**; review: **38409699** |\n| **Rapamycin (sirolimus)** | **FKBP12\u2013rapamycin complex inhibits mTORC1** by blocking substrate recruitment/access (mTOR FRB \u201cgatekeeper\u201d) | (1) **mTORC2 inhibition** with chronic exposure discussed as \u201coff-target\u201d driving side effects (2) FKBP12 inhibition as a mechanistic node (core binding partner; also framed as target in one paper) | **mTOR (mTORC1)** pathway (canonical longevity pathway) | **2\u20133** (highly specific complex-mediated mTORC1; some mTORC2 effects) | Structural/mechanistic: **23636326**; mTORC2 off-target framing: **37801202**; FKBP12 vs mTORC1 discussion (contextual): **40345576** |\n\n\\*Breadth scale interpretation (rough): 1 = single-target; 3 = a few tightly related targets; 5 = many distinct molecular targets across pathways.\n\n---\n\n## Selectivity indices / IC50 ratios (primary vs secondary targets)\n**Only one explicit selectivity ratio was returned by the tool results:**\n\n- **Aspirin COX-1 vs COX-2 selectivity**: reported as **~150\u2013200-fold more potent for COX\u20111 than COX\u20112** in the platelet context.  \n  - Evidence: **PMID 9263351**.\n\nFor metformin and rapamycin: the PubMed searches run **did not return** papers with explicit IC50 ratios/selectivity indices in the tool outputs, so I cannot cite numeric ratios here without adding new searches.\n\n---\n\n## Which compound has the broadest polypharmacology profile (most distinct molecular targets)?\n### **BROADEST_POLYPHARMACOLOGY: Metformin** (based on the targets that *did* appear in the tool results)\n**Reasoning from retrieved evidence:**\n- Metformin is linked to **multiple distinct molecular nodes**:\n  - **Mitochondrial complex I** (Electron Transport Chain) (mentioned as metformin-like target) (**18285556**)\n  - **Mitochondrial glycerophosphate dehydrogenase (mGPDH)** (**24847880**)\n  - Downstream/associated **AMPK pathway modulation** (review) (**38409699**)\n- By contrast:\n  - Aspirin\u2019s retrieved evidence is heavily centered on **COX-1/COX-2** (still meaningful polypharmacology via eicosanoids, but fewer *distinct direct targets* in the retrieved set).\n  - Rapamycin is comparatively **mechanistically specific** (FKBP12\u2013mTORC1) with **mTORC2** framed as an \u201coff-target\u201d with certain regimens (**37801202**).\n\n---\n\n## Longevity pathway tags (from the retrieved PMIDs)\n- **ASPIRIN_PATHWAY:** COX/eicosanoid (prostaglandin/thromboxane) axis; platelet-mediated inflammatory biology (**9263351**, **22893199**).  \n  *(NF\u2011\u03baB association not retrieved in tool results.)*\n- **METFORMIN_PATHWAY:** **AMPK** / cellular energy-sensing via mitochondrial targets (**18285556**, **38409699**; plus gluconeogenesis control via **mGPDH** **24847880**).\n- **RAPAMYCIN_PATHWAY:** **mTOR (mTORC1)** (**23636326**; geroprotection framing incl. mTORC2 off-target issue **37801202**).\n\n---\n\n## Required summary fields\n- **ASPIRIN_MW:** 180.159  \n- **METFORMIN_MW:** 129.167  \n- **BROADEST_POLYPHARMACOLOGY:** Metformin\n\n---\n\n## Evidence links (PubMed)\n- Aspirin COX-1 primary mechanism and selectivity statement: https://pubmed.ncbi.nlm.nih.gov/9263351/  \n- Aspirin chemopreventive platelet-centric MOA: https://pubmed.ncbi.nlm.nih.gov/22893199/  \n- Metformin-related complex I targeting context (metformin referenced): https://pubmed.ncbi.nlm.nih.gov/18285556/  \n- Metformin inhibits mGPDH (Nature 2014): https://pubmed.ncbi.nlm.nih.gov/24847880/  \n- Metformin review (AMPK/complex I/pleiotropy): https://pubmed.ncbi.nlm.nih.gov/38409699/  \n- Rapamycin inhibits mTOR via FKBP12\u2013rapamycin (structural mechanism): https://pubmed.ncbi.nlm.nih.gov/23636326/  \n- Rapamycin geroprotector review (mTORC1 benefit vs mTORC2 off-target): https://pubmed.ncbi.nlm.nih.gov/37801202/  \n- Rapamycin FKBP12 vs mTORC1 (contextual, 2025): https://pubmed.ncbi.nlm.nih.gov/40345576/\n\n---\n\n### Note on completeness vs your requested scope\nThe PubMed tool queries executed returned **no hits** for several classic associations you asked for (e.g., aspirin\u2192NF\u2011\u03baB/IKK; metformin\u2192glucagon/cAMP adenylate cyclase mechanism; rapamycin\u2192Harrison 2009 lifespan extension), so those cannot be cited with PMIDs *based on the tool results so far*. If you want, I can run a second round of narrower queries specifically to capture: aspirin\u2013IKK\u03b2/NF\u2011\u03baB salicylate papers, metformin\u2013adenylate cyclase/cAMP papers, and the canonical rapamycin lifespan extension studies, plus any IC50/selectivity values for rapamycin (mTORC1 vs mTORC2) and metformin (complex I vs other targets).",
+  "task_success": null,
+  "success_details": {},
+  "product_quality_score": 2.5,
+  "product_quality_subscores": {
+    "ar_synthesis": 0,
+    "coord_depth": 0,
+    "pathway_format": 0,
+    "primary_mechs": 1,
+    "longevity_path": 1,
+    "broadest_poly": 1
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "rubric_checks_passed": 3
+}

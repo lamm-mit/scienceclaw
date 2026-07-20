@@ -1,0 +1,43 @@
+{
+  "benchmark_id": "T26",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "single_agent_with_tools",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [
+    "pubmed",
+    "uniprot"
+  ],
+  "seed": 42,
+  "started_at": "2026-04-01T06:17:45.522901+00:00",
+  "finished_at": "2026-04-01T06:18:16.898004+00:00",
+  "wall_seconds": 31.375,
+  "llm_calls": 3,
+  "tool_calls": 17,
+  "raw_output": "I can only give a **partial** answer from the tool results retrieved so far (the PubMed searches for **sorafenib HCC approval**, **pazopanib RCC approval**, **VEGFR2 gatekeeper mutation**, and **kinase selectivity profiling/off-target affinity** returned **no directly usable records** in the current tool output). I\u2019m therefore **not able to support** the requested resistance mutation or \u201chighest-affinity off-target kinase\u201d assignments with PMIDs from the retrieved set, and I can\u2019t reliably extract *all* approved indications for sorafenib/pazopanib from what was returned.\n\n## Cross-validation (primary target protein)\n- **VEGFR2 (KDR), human**: UniProt **P35968** (VGFR2_HUMAN). (UniProt tool result)\n\n---\n\n## Structured comparison (supported only where PMIDs were actually retrieved)\n\n| Drug | Approved cancer indication(s) found in retrieved PubMed results | Primary target | VEGFR2 gatekeeper resistance mutation under therapy pressure (position 654/670 hint) | Highest-affinity off-target kinase from published selectivity profiling | Supporting PMIDs (from tool output) |\n|---|---|---|---|---|---|\n| **Sunitinib** | **Metastatic/advanced renal cell carcinoma (RCC)**; **Gastrointestinal stromal tumor (GIST)** after progression/intolerance to imatinib | VEGFR2/KDR | **Not found in retrieved results** | **Not found in retrieved results** | **17332278**, **17825686** |\n| **Sorafenib** | **Differentiated thyroid cancer** (FDA approval mentioned in review literature) | VEGFR2/KDR | **Not found in retrieved results** | **Not found in retrieved results** | **26335853** (review noting FDA approval) |\n| **Pazopanib** | **Advanced soft tissue sarcoma (STS)** (described as approved targeted therapy) | VEGFR2/KDR | **Not found in retrieved results** | **Not found in retrieved results** | **24840518**, **23666473** |\n\nNotes:\n- The sorafenib and pazopanib hits retrieved were **reviews** mentioning approval context, not classic \u201cFDA approval summary\u201d papers.\n- The searches intended to capture **VEGFR2 V654M / I670** resistance and **kinome profiling** did not return relevant items in the tool outputs provided, so those fields remain unsupported.\n\n---\n\n## Shared indications across all three (based only on indications actually retrieved here)\nIndications retrieved:\n- Sunitinib: RCC, GIST\n- Sorafenib: differentiated thyroid cancer\n- Pazopanib: soft tissue sarcoma\n\nIntersection = **none**.\n\n### SHARED_INDICATIONS\n**0**\n\n---\n\n## Requested summary fields (limited by retrieved evidence)\n- **SHARED_INDICATIONS:** 0  \n- **VEGFR2_RESISTANCE_MUTATION:** *Not available from retrieved tool results* (no PMID-supported V654/I670 gatekeeper mutation record retrieved)  \n- **SUNITINIB_OFFTARGET:** *Not available from retrieved tool results*  \n- **SORAFENIB_OFFTARGET:** *Not available from retrieved tool results*  \n- **PAZOPANIB_OFFTARGET:** *Not available from retrieved tool results*  \n\n---\n\nIf you want the **complete intended deliverable** (with: sorafenib HCC/RCC indication PMIDs, pazopanib RCC approval PMID, the VEGFR2 gatekeeper mutation at **V654** or **I670**, and the **highest-affinity off-target kinases** from kinome profiling papers), I need one more iteration of searching with adjusted PubMed queries (the earlier ones clearly failed to retrieve the needed primary sources).",
+  "task_success": null,
+  "success_details": {},
+  "product_quality_score": 2.5,
+  "product_quality_subscores": {
+    "ar_synthesis": 0,
+    "coord_depth": 0,
+    "indication_format": 0,
+    "approved_ind": 1,
+    "resistance_mut": 1,
+    "pubmed_citations": 1
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "rubric_checks_passed": 3
+}

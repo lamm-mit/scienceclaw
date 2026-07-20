@@ -1,0 +1,48 @@
+{
+  "benchmark_id": "T33",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "single_agent_with_tools",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [
+    "materials",
+    "pubmed",
+    "python-exec"
+  ],
+  "seed": 42,
+  "started_at": "2026-03-30T14:57:51.891524+00:00",
+  "finished_at": "2026-03-30T14:58:23.382445+00:00",
+  "wall_seconds": 31.491,
+  "llm_calls": 4,
+  "tool_calls": 10,
+  "raw_output": "## Band gaps (Materials Project tool results)\n(Values are the `band_gap` field returned by the materials lookup JSON.)\n\n| Material | MP material_id | Band gap Eg (eV) |\n|---|---:|---:|\n| MoS\u2082 | mp-1042086 | 0.0418 |\n| WSe\u2082 | mp-1023933 | 1.5241 |\n| MoSe\u2082 | mp-7581 | 1.3620 |\n\n## Pairwise band gap offsets and type-II candidacy criterion\nCriterion: \\(|\\Delta E_g| = |E_{g,1} - E_{g,2}| > 0.3\\ \\text{eV}\\) \u21d2 **TYPE2_CANDIDATE** (necessary, not sufficient, for type-II alignment).\n\n| Pair | \\(|\\Delta E_g|\\) (eV) | Classification |\n|---|---:|---|\n| MoS\u2082 / WSe\u2082 | 1.4823 | **TYPE2_CANDIDATE** |\n| MoS\u2082 / MoSe\u2082 | 1.3202 | **TYPE2_CANDIDATE** |\n| WSe\u2082 / MoSe\u2082 | 0.1621 | **NOT** type-II candidate by this criterion |\n\n## Which pairs exceed 0.3 eV offset?\n- **MoS\u2082/WSe\u2082** (1.4823 eV) \u2014 YES  \n- **MoS\u2082/MoSe\u2082** (1.3202 eV) \u2014 YES  \n- **WSe\u2082/MoSe\u2082** (0.1621 eV) \u2014 NO  \n\n## Ranking for charge-separation potential (by \\(|\\Delta E_g|\\) only)\n1. **MoS\u2082/WSe\u2082** (largest offset)\n2. **MoS\u2082/MoSe\u2082**\n3. **WSe\u2082/MoSe\u2082** (fails the >0.3 eV offset screen)\n\n## Literature context (PubMed tool)\nAt least one real PMID supporting type-II / charge-transfer in TMD heterostructures:\n- **PMID: 34520661** \u2014 *Ultrafast Charge-Transfer Dynamics in Twisted MoS\u2082/WSe\u2082 Heterostructures* (discusses typical type-II alignment and interfacial charge transfer).\n(Also returned by the tool: **PMID: 39602879** on **MoSe\u2082/WSe\u2082** type-II vdW heterostructure engineering.)",
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 1.67,
+  "product_quality_subscores": {
+    "correct_materials": 0.0,
+    "band_gap_values": 0.0,
+    "computed_delta_eg": 0.0,
+    "literature_pmid": 1.0,
+    "type2_pair_identification": 0.0,
+    "synthesis_coherence": 1.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 0.4175,
+  "wall_budget_fraction": 0.105
+}

@@ -1,0 +1,44 @@
+{
+  "benchmark_id": "T33",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model",
+  "benchmark_mode": "single_model_direct",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [],
+  "seed": 42,
+  "started_at": "2026-03-30T14:56:25.718962+00:00",
+  "finished_at": "2026-03-30T14:56:51.368457+00:00",
+  "wall_seconds": 25.649,
+  "llm_calls": 1,
+  "tool_calls": 0,
+  "raw_output": "## 1) Candidate monolayers: gaps, gap type, and device suitability (parametric/typical experimental values)\n\n### **MoS\u2082 (monolayer)**\n- **Experimentally reported band gap (typical):** ~**1.8\u20131.9 eV** (optical/PL \u201cA-exciton\u201d near 1.85 eV; quasiparticle gap is larger, but for band-offset heuristics people often compare optical-like values).\n- **Band gap type / electronic character:** **Direct-gap** in the monolayer at **K/K\u2032** (bulk MoS\u2082 is indirect ~1.2\u20131.3 eV). Strong excitonic effects; n-type tendency is common depending on substrate/defects.\n- **Suitability in vdW photovoltaics:** Good as a **higher-gap absorber** and/or electron-accepting layer in type-II stacks; strong light\u2013matter interaction for a monolayer and well-studied interlayer charge transfer. The relatively larger gap can help create offsets versus selenides.\n\n### **WSe\u2082 (monolayer)**\n- **Experimentally reported band gap (typical):** ~**1.60\u20131.70 eV** (PL typically ~1.65 eV).\n- **Band gap type / electronic character:** **Direct-gap** at **K/K\u2032** in the monolayer (bulk becomes indirect). Often shows ambipolar behavior; can be tuned p-type with contacts/doping; strong spin\u2013orbit splitting in the valence band.\n- **Suitability in vdW photovoltaics:** Excellent **visible absorber** with strong excitons; commonly used as a hole-transporting or ambipolar layer in heterostructures. Band edges often favor charge transfer when paired with MoS\u2082 (canonical type-II example in the literature).\n\n### **MoSe\u2082 (monolayer)**\n- **Experimentally reported band gap (typical):** ~**1.50\u20131.60 eV** (PL typically ~1.55 eV).\n- **Band gap type / electronic character:** **Direct-gap** at **K/K\u2032** in the monolayer (bulk indirect). Frequently closer to intrinsic/ambipolar than MoS\u2082, but behavior is device- and contact-dependent.\n- **Suitability in vdW photovoltaics:** Another strong visible absorber; useful for forming heterojunctions with MoS\u2082 and (to a lesser extent) WSe\u2082. Because its gap is close to WSe\u2082, it can produce smaller gap offsets (potentially weaker driving force for charge separation by the \u201c\u0394Eg > 0.3 eV\u201d heuristic).\n\n---\n\n## 2) Pairwise band-gap offsets and \u201cnecessary indicator\u201d check for type-II alignment\n\nUsing representative monolayer gaps:\n- **Eg(MoS\u2082) \u2248 1.85 eV**\n- **Eg(WSe\u2082) \u2248 1.65 eV**\n- **Eg(MoSe\u2082) \u2248 1.55 eV**\n\n### **(A) MoS\u2082 / WSe\u2082**\n- **Estimated |\u0394Eg|:** |1.85 \u2212 1.65| \u2248 **0.20 eV**\n- **Meets necessary indicator (|\u0394Eg| > 0.3 eV)?** **No** (by the stated criterion).\n- **Type-II suitability based on this criterion:** **Not indicated** by the band-gap-offset-only test.\n- **Comment (important nuance):** Even if |\u0394Eg| is modest, **type-II alignment can still occur** because type-II depends on *conduction- and valence-band edge offsets*, not just total gaps. In practice, MoS\u2082/WSe\u2082 is widely discussed as a type-II-like charge-transfer heterostructure, but **your required condition is not satisfied** using typical monolayer optical gaps.\n\n### **(B) MoS\u2082 / MoSe\u2082**\n- **Estimated |\u0394Eg|:** |1.85 \u2212 1.55| \u2248 **0.30 eV**\n- **Meets necessary indicator (|\u0394Eg| > 0.3 eV)?** **Borderline / effectively no** as stated (it is ~0.30 eV, not clearly **greater** than 0.3 eV; within experimental spread it might be slightly above or below).\n- **Type-II suitability based on this criterion:** **Borderline** (weak pass at best; not robust).\n- **Implication:** If the actual gaps in a given experiment shift (strain, dielectric screening, doping), this pair could sometimes clear 0.3 eV, but it\u2019s not a strong, reliable margin by the band-gap-offset-only rule.\n\n### **(C) WSe\u2082 / MoSe\u2082**\n- **Estimated |\u0394Eg|:** |1.65 \u2212 1.55| \u2248 **0.10 eV**\n- **Meets necessary indicator (|\u0394Eg| > 0.3 eV)?** **No**\n- **Type-II suitability based on this criterion:** **Not indicated**; expected to provide the weakest gap-driven separation among these three pairings.\n\n---\n\n## 3) Which pairs have |\u0394Eg| > 0.3 eV?\nWith typical monolayer experimental gaps:\n- **None** of the three pairings **clearly** exceed **0.3 eV**.\n- **MoS\u2082/MoSe\u2082** is the **closest** and may be **borderline** depending on the exact reported gaps (and whether one uses optical vs quasiparticle gaps), but it is not an unambiguous \u201c> 0.3 eV\u201d case under typical PL-gap numbers.\n\n---\n\n## 4) Structured comparison and ranking for charge-separating heterostructure PV (under the stated heuristic)\n\n| Pair | Eg values used (eV) | \\|\u0394Eg\\| (eV) | Passes \\|\u0394Eg\\| > 0.3 eV? | Relative promise for charge separation (by this heuristic) |\n|---|---:|---:|---|---|\n| **MoS\u2082 / MoSe\u2082** | 1.85 vs 1.55 | **0.30** | **Borderline** | **Highest** among the three (largest gap offset, closest to criterion) |\n| **MoS\u2082 / WSe\u2082** | 1.85 vs 1.65 | **0.20** | **No** | Medium (better than WSe\u2082/MoSe\u2082 by \u0394Eg, but fails criterion) |\n| **WSe\u2082 / MoSe\u2082** | 1.65 vs 1.55 | **0.10** | **No** | Lowest (smallest gap offset) |\n\n### Ranking (most promising \u2192 least), **using only |\u0394Eg| as the screening metric**\n1. **MoS\u2082 / MoSe\u2082** (largest \\|\u0394Eg\\|; borderline to the 0.3 eV threshold)\n2. **MoS\u2082 / WSe\u2082**\n3. **WSe\u2082 / MoSe\u2082**\n\n### Bottom-line conclusion (per your rule)\n- **No pairing is a clean \u201cyes\u201d** for **\\|\u0394Eg\\| > 0.3 eV** using commonly cited monolayer experimental gaps; **MoS\u2082/MoSe\u2082** is the only one that comes close and is the **most plausible** to meet the threshold under favorable reported values/conditions.\n\nIf you want, I can also give a second ranking based on the more physically relevant expectation of *band-edge* offsets (CBM/VBM) rather than total gap differences\u2014but that would go beyond your specified \u201c\u0394Eg-only necessary indicator\u201d test.",
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 2.5,
+  "product_quality_subscores": {
+    "correct_materials": 1.0,
+    "band_gap_values": 1.0,
+    "computed_delta_eg": 0.0,
+    "literature_pmid": 0.0,
+    "type2_pair_identification": 0.0,
+    "synthesis_coherence": 1.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 2.5,
+  "wall_budget_fraction": 0.0855
+}

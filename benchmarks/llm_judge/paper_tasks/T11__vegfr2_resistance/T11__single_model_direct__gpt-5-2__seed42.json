@@ -1,0 +1,40 @@
+{
+  "benchmark_id": "T26",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model",
+  "benchmark_mode": "single_model_direct",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [],
+  "seed": 42,
+  "started_at": "2026-04-01T06:16:27.011374+00:00",
+  "finished_at": "2026-04-01T06:16:47.628176+00:00",
+  "wall_seconds": 20.617,
+  "llm_calls": 1,
+  "tool_calls": 0,
+  "raw_output": "### Approved cancer indications, targets, resistance mutation, and off-targets (from internal/parametric knowledge; no live PubMed/tool lookups)\n\n**Common primary target (all three):** VEGFR2 (KDR) is a key intended target for sunitinib, sorafenib, and pazopanib (each is a multi-kinase TKI, not VEGFR2-only).\n\n#### VEGFR2 \u201cgatekeeper\u201d resistance mutation under TKI pressure\n- The **canonical VEGFR2 gatekeeper site is T670** (analogous to EGFR T790 / ABL T315 / KIT T670, etc.).\n- A frequently cited resistance substitution is **VEGFR2 (KDR) T670I**.  \n- Some discussions also mention mutations around **V654**; however, the best-known \u201cgatekeeper\u201d framing for VEGFR2 is **T670I**.\n\n---\n\n## Structured comparison table\n\n| Drug (PubChem CID) | Approved cancer indication(s) (known) | Primary kinase target | Highest-affinity off-target kinase (example from typical profiling knowledge) | VEGFR2 resistance mutation (gatekeeper) | Resistance risk (relative, qualitative) |\n|---|---|---|---|---|---|\n| **Sunitinib** (5329102) | **Renal cell carcinoma (RCC)**; **Gastrointestinal stromal tumor (GIST)** (post-imatinib) | VEGFR2 (also hits PDGFRs, KIT) | **KIT** (very strong secondary target; also PDGFR\u03b2) | **KDR/VEGFR2 T670I** (gatekeeper) | **Medium** (multi-target; resistance common esp. via pathway bypass/angiogenic redundancy rather than single KDR mutation) |\n| **Sorafenib** (216239) | **Hepatocellular carcinoma (HCC)**; **Renal cell carcinoma (RCC)**; **Differentiated thyroid carcinoma** (radioiodine-refractory) | VEGFR2 (also RAF kinases, PDGFR, FLT3) | **RAF (CRAF/BRAF)** (signature off-target classically associated with sorafenib) | **KDR/VEGFR2 T670I** (gatekeeper) | **Medium\u2013High** (clinical resistance frequent in HCC; often non\u2013gatekeeper mechanisms) |\n| **Pazopanib** (10113978) | **Renal cell carcinoma (RCC)**; **Soft tissue sarcoma (STS)** | VEGFR2 (also VEGFR1/3, PDGFRs, KIT) | **PDGFR\u03b2** (commonly a high-potency off-target; also KIT) | **KDR/VEGFR2 T670I** (gatekeeper) | **Medium** (resistance occurs; often angiogenic escape rather than single KDR mutation) |\n\n> Note on \u201chighest-affinity off-target kinase\u201d: true \u201chighest affinity\u201d depends on the exact profiling dataset (assay format, ATP, concentration, panel). The off-targets listed are the **most widely recognized high-potency secondary targets** for each agent (KIT for sunitinib; RAF for sorafenib; PDGFR\u03b2 for pazopanib).\n\n---\n\n## Cross-drug questions\n\n### 1) How many cancer indications are shared across **all three** drugs?\nKnown indications listed above:\n- Sunitinib: RCC, GIST  \n- Sorafenib: RCC, HCC, thyroid carcinoma  \n- Pazopanib: RCC, STS  \n\n**Shared across all three = RCC only \u2192 SHARED_INDICATIONS count = 1.**\n\n### 2) Which compound has the broadest approved indication set?\nFrom the sets above:\n- Sunitinib: 2\n- Sorafenib: 3\n- Pazopanib: 2\n\n**Sorafenib** has the broadest approved cancer indication set (among these three, as listed).\n\n### 3) Is the resistance mutation the same gatekeeper position across VEGFR inhibitors?\n**Yes in concept:** the commonly cited **VEGFR2 gatekeeper position is T670**, and **T670I** is a prototypical gatekeeper resistance mutation discussed for VEGFR2-targeted TKIs. (Other nearby positions can contribute, but \u201cgatekeeper\u201d usually points to T670.)\n\n### 4) Rank the three drugs by expected clinical resistance rate (qualitative)\nThis is inherently context-dependent (tumor type, line of therapy, combination use, exposure, tumor heterogeneity). If forced to rank by **typical clinical experience of acquired resistance/limited durability** in their major uses:\n\n**Sorafenib (highest)** > **pazopanib** \u2248 **sunitinib (lower)**\n\nRationale (high level): sorafenib\u2019s major settings (e.g., HCC) often show modest durability and frequent progression; sunitinib/pazopanib in RCC also develop resistance but sometimes with longer initial disease control depending on risk group and sequence. This is not a mechanistic certainty and should be treated as a rough expectation, not a quantified fact.\n\n---\n\n## Requested summary fields (explicit)\n\n- **SHARED_INDICATIONS (all three):** **1** (Renal cell carcinoma)\n- **VEGFR2_RESISTANCE_MUTATION (primary gatekeeper):** **KDR/VEGFR2 T670I**\n- **Off-target kinases (one each):**\n  - Sunitinib: **KIT**\n  - Sorafenib: **CRAF/BRAF (RAF kinases)**\n  - Pazopanib: **PDGFR\u03b2**\n\nIf you want, I can also list additional well-known secondary targets per drug (FLT3/RET/CSF1R etc. where applicable) and provide alternative reported VEGFR2 substitutions near **V654** vs **T670** in a separate column.",
+  "task_success": null,
+  "success_details": {},
+  "product_quality_score": 2.5,
+  "product_quality_subscores": {
+    "ar_synthesis": 0,
+    "coord_depth": 0,
+    "indication_format": 0,
+    "approved_ind": 1,
+    "resistance_mut": 1,
+    "pubmed_citations": 1
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "rubric_checks_passed": 3
+}

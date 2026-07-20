@@ -1,0 +1,40 @@
+{
+  "benchmark_id": "T25",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model",
+  "benchmark_mode": "single_model_direct",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [],
+  "seed": 42,
+  "started_at": "2026-04-01T06:09:40.953430+00:00",
+  "finished_at": "2026-04-01T06:09:59.471088+00:00",
+  "wall_seconds": 18.518,
+  "llm_calls": 1,
+  "tool_calls": 0,
+  "raw_output": "I can\u2019t actually **compute RDKit descriptors**, **run TDC BBB models**, or **search PubMed** from parametric knowledge alone, and I also don\u2019t have reliable, tool-free access to \u201cone reported IC50\u201d values with traceable provenance. What I *can* do is give **approximate, commonly reported** physicochemical properties and high-level BBB/target knowledge, and clearly label anything that is uncertain.\n\n## Approximate properties (from general domain knowledge; not RDKit-computed)\n\nAssumptions for Lipinski flags: violation if **MW > 500**, **LogP > 5**, **HBD > 5**, **HBA > 10**.\n\n| Drug | MW (Da, approx) | cLogP (approx) | HBD (approx) | HBA (approx) | Lipinski Ro5 violations (approx) | Primary kinase target (clinically) | BBB penetration (qualitative) | Selectivity estimate |\n|---|---:|---:|---:|---:|---|---|---|---|\n| **Imatinib** | ~493 | ~2\u20133 | ~2 | ~7\u20139 | **None likely** (borderline MW but <500) | **BCR\u2011ABL1** (also KIT, PDGFR) | **Low / poor** (limited CNS exposure; substrate for efflux transporters) | **Selectivity ratio:** not reliably computable here (needs validated primary and best off-target IC50) |\n| **Dasatinib** | ~488 | ~2\u20133 (often reported ~2.0) | ~2 | ~7\u20138 | **None likely** (MW <500; others below cutoffs) | **BCR\u2011ABL1** (also SRC-family kinases) | **Yes / higher than imatinib** (clinically more CNS activity reported than imatinib) | N/A |\n| **Bosutinib** | ~530 | ~3\u20134 (often reported ~3) | ~1 | ~7\u20139 | **MW > 500** \u2192 **violates** | **BCR\u2011ABL1** (also SRC-family) | **Uncertain to low** (generally not considered strongly CNS-penetrant) | N/A |\n\n### Notes on the approximations\n- **Imatinib** free base MW is commonly cited around **493.6 Da**; many sources list cLogP around **~2.1\u20132.6**; HBD generally **2**; HBA typically **~8** (depends on counting conventions).\n- **Dasatinib** free base MW is commonly cited around **488 Da**; cLogP often near **~2**; HBD **~2**; HBA **~8**.\n- **Bosutinib** free base MW is commonly cited around **530 Da**; cLogP often **~3**; HBD typically **~1**; HBA **~8**.\n\nThese are **not** RDKit outputs for the SMILES you provided; they\u2019re **rough literature-style property recollections**.\n\n---\n\n## Requested determinations\n\n### 1) Which compound(s) violate Lipinski Rule-of-5?\n- **Bosutinib**: **Yes** (MW **> 500**).\n- **Imatinib**: **No likely** (MW just under 500; other parameters usually within limits).\n- **Dasatinib**: **No likely** (generally within limits).\n\n### 2) Which has highest MW? Which lowest?\n- **Highest MW:** **Bosutinib** (~530 Da).\n- **Lowest MW:** **Dasatinib** (~488 Da) (slightly lower than imatinib).\n\n### 3) Primary kinase target (all three)\n- Primary clinical target: **BCR\u2011ABL1** (Philadelphia chromosome fusion kinase) for **imatinib, dasatinib, bosutinib**.\n\n### 4) Predict BBB penetration (yes/no/uncertain)\n(qualitative, from general pharmacology knowledge rather than TDC)\n- **Dasatinib:** **Yes / better BBB penetration** relative to imatinib (more CNS activity has been reported clinically).\n- **Imatinib:** **No / poor** BBB penetration (limited CNS levels; efflux transporters implicated).\n- **Bosutinib:** **Uncertain to low** (not generally highlighted as CNS-penetrant; I would not label it \u201cyes\u201d confidently).\n\n### 5) Imatinib selectivity ratio = primary_IC50 / best_off_target_IC50\n- I **cannot** provide a defensible numeric selectivity ratio from parametric knowledge only, because it requires:\n  1) a specific **primary IC50** value for ABL1 (assay-dependent), and  \n  2) the **best (lowest) off-target IC50** across many kinases (also assay- and panel-dependent),  \n  3) plus a consistent dataset to avoid mixing incomparable measurements.\n  \nIf you want, I can give a **qualitative statement**: imatinib is generally considered **more selective** than dasatinib (which is broader, especially across SRC-family kinases), but a numeric \u201cprimary/off-target\u201d ratio needs a defined dataset.\n\n---\n\n## Summary answers (as asked)\n- **Lipinski violator(s):** **Bosutinib** (MW > 500).\n- **Best BBB penetration:** **Dasatinib** (relative best among these three; imatinib poor; bosutinib uncertain/low).\n- **Imatinib selectivity ratio:** **Not reliably available** from parametric knowledge alone (needs a specified IC50 dataset/panel).",
+  "task_success": null,
+  "success_details": {},
+  "product_quality_score": 1.67,
+  "product_quality_subscores": {
+    "ar_synthesis": 0,
+    "coord_depth": 0,
+    "structured_bbb": 0,
+    "lipinski_check": 1,
+    "primary_targets": 1,
+    "ic50_values": 0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "rubric_checks_passed": 2
+}

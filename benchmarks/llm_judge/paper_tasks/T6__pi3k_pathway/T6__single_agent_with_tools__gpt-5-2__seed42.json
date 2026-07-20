@@ -1,0 +1,48 @@
+{
+  "benchmark_id": "T24",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "single_agent_with_tools",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [
+    "uniprot",
+    "pubmed",
+    "python-exec"
+  ],
+  "seed": 42,
+  "started_at": "2026-03-30T06:22:29.033663+00:00",
+  "finished_at": "2026-03-30T06:22:41.268862+00:00",
+  "wall_seconds": 12.235,
+  "llm_calls": 4,
+  "tool_calls": 6,
+  "raw_output": "VARIANTS: ERROR, AVG_LENGTH: ERROR, CROSS_MENTION_RATE: ERROR, PATHWAY_PROTEINS: PTEN/PIK3CA/AKT1",
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 0.0,
+  "product_quality_subscores": {
+    "variant_counts_retrieved": 0.0,
+    "total_variants_summed": 0.0,
+    "avg_length_computed": 0.0,
+    "cross_mention_rate": 0.0,
+    "subcellular_locations": 0.0,
+    "output_format_complete": 0.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 0.0,
+  "wall_budget_fraction": 0.0408
+}

@@ -1,0 +1,156 @@
+{
+  "benchmark_id": "T36",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "non_signaling_multi_agent",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 3,
+  "n_agents": 3,
+  "skills_used": [
+    "pubmed",
+    "python-exec"
+  ],
+  "seed": 42,
+  "started_at": "2026-03-30T17:16:48.961369+00:00",
+  "finished_at": "2026-03-30T17:18:26.126681+00:00",
+  "wall_seconds": 97.165,
+  "llm_calls": 9,
+  "tool_calls": 12,
+  "raw_output": "TRANSFORMER_COUNT: 5, GNN_COUNT: 5, DIFFUSION_COUNT: 5, LEADING_TOPIC: TRANSFORMER, MATURITY_SLOPE: 0.00",
+  "sub_records": [
+    {
+      "benchmark_id": "T36",
+      "system_name": "gpt-5.2",
+      "system_class": "frontier_model_with_tools",
+      "benchmark_mode": "single_agent_with_tools",
+      "models_used": [
+        "gpt-5.2"
+      ],
+      "agents_used": 1,
+      "skills_used": [
+        "pubmed",
+        "python-exec"
+      ],
+      "seed": 42,
+      "started_at": "2026-03-30T17:17:48.568880+00:00",
+      "finished_at": "2026-03-30T17:17:59.638229+00:00",
+      "wall_seconds": 11.069,
+      "llm_calls": 3,
+      "tool_calls": 4,
+      "raw_output": "TRANSFORMER_COUNT: 5, GNN_COUNT: 5, DIFFUSION_COUNT: 5, LEADING_TOPIC: TRANSFORMER, MATURITY_SLOPE: 0.00",
+      "task_success": null,
+      "success_details": {},
+      "product_quality_score": null,
+      "product_quality_subscores": {},
+      "artifacts": [],
+      "needs_emitted": 0,
+      "needs_fulfilled": 0,
+      "artifact_reuse_rate": null,
+      "lineage_depth": null,
+      "validation_events": 0,
+      "error": null,
+      "collaboration_uplift": null,
+      "emergence_uplift": null,
+      "product_quality_uplift": null
+    },
+    {
+      "benchmark_id": "T36",
+      "system_name": "gpt-5.2",
+      "system_class": "frontier_model_with_tools",
+      "benchmark_mode": "single_agent_with_tools",
+      "models_used": [
+        "gpt-5.2"
+      ],
+      "agents_used": 1,
+      "skills_used": [
+        "pubmed",
+        "python-exec"
+      ],
+      "seed": 43,
+      "started_at": "2026-03-30T17:17:59.639109+00:00",
+      "finished_at": "2026-03-30T17:18:12.892787+00:00",
+      "wall_seconds": 13.254,
+      "llm_calls": 3,
+      "tool_calls": 4,
+      "raw_output": "TRANSFORMER_COUNT: 5, GNN_COUNT: 5, DIFFUSION_COUNT: 5, LEADING_TOPIC: TRANSFORMER, MATURITY_SLOPE: -0.30",
+      "task_success": null,
+      "success_details": {},
+      "product_quality_score": null,
+      "product_quality_subscores": {},
+      "artifacts": [],
+      "needs_emitted": 0,
+      "needs_fulfilled": 0,
+      "artifact_reuse_rate": null,
+      "lineage_depth": null,
+      "validation_events": 0,
+      "error": null,
+      "collaboration_uplift": null,
+      "emergence_uplift": null,
+      "product_quality_uplift": null
+    },
+    {
+      "benchmark_id": "T36",
+      "system_name": "gpt-5.2",
+      "system_class": "frontier_model_with_tools",
+      "benchmark_mode": "single_agent_with_tools",
+      "models_used": [
+        "gpt-5.2"
+      ],
+      "agents_used": 1,
+      "skills_used": [
+        "pubmed",
+        "python-exec"
+      ],
+      "seed": 44,
+      "started_at": "2026-03-30T17:18:12.893341+00:00",
+      "finished_at": "2026-03-30T17:18:25.081944+00:00",
+      "wall_seconds": 12.189,
+      "llm_calls": 3,
+      "tool_calls": 4,
+      "raw_output": "TRANSFORMER_COUNT: 5, GNN_COUNT: 5, DIFFUSION_COUNT: 5, LEADING_TOPIC: TRANSFORMER, MATURITY_SLOPE: 0.00",
+      "task_success": null,
+      "success_details": {},
+      "product_quality_score": null,
+      "product_quality_subscores": {},
+      "artifacts": [],
+      "needs_emitted": 0,
+      "needs_fulfilled": 0,
+      "artifact_reuse_rate": null,
+      "lineage_depth": null,
+      "validation_events": 0,
+      "error": null,
+      "collaboration_uplift": null,
+      "emergence_uplift": null,
+      "product_quality_uplift": null
+    }
+  ],
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 3.57,
+  "product_quality_subscores": {
+    "pubmed_counts_retrieved": 1.0,
+    "mean_year_computed": 0.0,
+    "maturity_score_computed": 1.0,
+    "leading_topic_identified": 1.0,
+    "slope_computed": 1.0,
+    "synthesis_coherence": 1.0,
+    "literature_pmid": 0.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 0.3967,
+  "wall_budget_fraction": 0.3239
+}

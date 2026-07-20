@@ -1,0 +1,44 @@
+{
+  "benchmark_id": "T24",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model",
+  "benchmark_mode": "single_model_direct",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [],
+  "seed": 42,
+  "started_at": "2026-03-30T06:10:24.108221+00:00",
+  "finished_at": "2026-03-30T06:10:28.906522+00:00",
+  "wall_seconds": 4.798,
+  "llm_calls": 1,
+  "tool_calls": 0,
+  "raw_output": "I can\u2019t reliably retrieve UniProt \u201cnatural variant\u201d counts, exact protein lengths, or subcellular-location annotations for specific accessions (P60484/PTEN, P42336/PIK3CA, P31749/AKT1), nor can I enumerate the first 5 PubMed results for the specified query, using parametric knowledge alone. Those fields are frequently updated and require live lookup to be accurate; guessing would be misleading.\n\nWhat I *can* provide from general knowledge (non-authoritative, may be incomplete):\n\n- **PTEN (P60484)**: length ~403 aa; mainly **cytoplasm and nucleus**, also **plasma membrane** association (via PIP binding); variants: *unknown without lookup*.\n- **PIK3CA (P42336)**: length ~1068 aa; largely **cytoplasmic**, recruited to **plasma membrane** via receptor signaling; variants: *unknown without lookup*.\n- **AKT1 (P31749)**: length ~480 aa; **cytoplasmic** and **nuclear**; translocates to **plasma membrane** upon activation; variants: *unknown without lookup*.\n\nBecause the required UniProt \u201cnatural variant count\u201d values and the PubMed first-5 cross-mentions cannot be determined accurately without external access, I cannot compute the requested numeric summary in the mandated format without fabricating data.",
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 0.83,
+  "product_quality_subscores": {
+    "variant_counts_retrieved": 0.0,
+    "total_variants_summed": 0.0,
+    "avg_length_computed": 0.0,
+    "cross_mention_rate": 0.0,
+    "subcellular_locations": 1.0,
+    "output_format_complete": 0.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 0.83,
+  "wall_budget_fraction": 0.016
+}

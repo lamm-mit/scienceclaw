@@ -1,0 +1,49 @@
+{
+  "benchmark_id": "T34",
+  "system_name": "scienceclaw_ar_no_provenance",
+  "system_class": "scienceclaw_ar_no_provenance",
+  "benchmark_mode": "artifact_reactor_no_provenance",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 7,
+  "skills_used": [
+    "python-exec",
+    "rdkit",
+    "pubmed"
+  ],
+  "seed": 42,
+  "started_at": "2026-03-30T17:06:57.636545+00:00",
+  "finished_at": "2026-03-30T17:06:58.006152+00:00",
+  "wall_seconds": 0.37,
+  "llm_calls": 0,
+  "tool_calls": 5,
+  "raw_output": "[ClozapineRDKit]\n{'SMILES': 'CN1CCn2c(nc3ccccc3c2=O)N1', 'Molecular_Formula': 'C11H12N4O', 'MW': 216.244, 'ExactMW': 216.101111004, 'LogP': 0.6687999999999998, 'MR': 62.25570000000002, 'TPSA': 50.160000000000004, 'LabuteASA': 92.29268426347127, 'HBD': 1, 'HBA': 5, 'Heavy_Atoms': 16, 'Heteroatoms': 5, 'Valence_Electrons': 82, 'Rings': 3, 'Aromatic_Rings': 2, 'Saturated_Rings': 0, 'Aliphatic_Rings': 1, 'Aromatic_Heterocycles': 1, 'Rotatable_Bonds': 0, 'Fraction_Csp3': 0.2727272727272727, 'BertzCT': 604.4463188683685, 'QED': 0.7028498762075887, 'Lipinski_Pass': True, 'Lead-like': False}\n\n---\n\n[HaloperidolRDKit]\n{'SMILES': 'O=C(CCCc1cccc(Cl)c1)c1ccc(F)cc1', 'Molecular_Formula': 'C16H14ClFO', 'MW': 276.738, 'ExactMW': 276.07172096799997, 'LogP': 4.684700000000003, 'MR': 75.12050000000004, 'TPSA': 17.07, 'LabuteASA': 116.57858951299913, 'HBD': 0, 'HBA': 1, 'Heavy_Atoms': 19, 'Heteroatoms': 3, 'Valence_Electrons': 98, 'Rings': 2, 'Aromatic_Rings': 2, 'Saturated_Rings': 0, 'Aliphatic_Rings': 0, 'Aromatic_Heterocycles': 0, 'Rotatable_Bonds': 5, 'Fraction_Csp3': 0.1875, 'BertzCT': 563.2165458095296, 'QED': 0.7245242515456347, 'Lipinski_Pass': True, 'Lead-like': False}\n\n---\n\n[AripiprazoleRDKit]\n{'SMILES': 'O=C1NCc2c(OCCCN3CCN(c4ccc(Cl)c(Cl)c4)CC3)cccc21', 'Molecular_Formula': 'C21H23Cl2N3O2', 'MW': 420.34000000000003, 'ExactMW': 419.11673233600004, 'LogP': 3.8279000000000023, 'MR': 112.83920000000006, 'TPSA': 44.81, 'LabuteASA': 174.71244335540078, 'HBD': 1, 'HBA': 4, 'Heavy_Atoms': 28, 'Heteroatoms': 7, 'Valence_Electrons': 148, 'Rings': 4, 'Aromatic_Rings': 2, 'Saturated_Rings': 1, 'Aliphatic_Rings': 2, 'Aromatic_Heterocycles': 0, 'Rotatable_Bonds': 6, 'Fraction_Csp3': 0.38095238095238093, 'BertzCT': 866.7243542912364, 'QED': 0.722087930895495, 'Lipinski_Pass': True, 'Lead-like': False}\n\n---\n\n[CNSPubMed]\nSearching PubMed: CNS drug-likeness multiparameter optimization blood-brain barrier\nMax results: 5, Sort: relevance\n\nFound 1 total results, returning 1\n\n[\n  {\n    \"pmid\": \"32288696\",\n    \"title\": \"Capter 11 Filtering in Drug Discovery.\",\n    \"abstract\": \"This chapter discusses the concept of filtering in drug discovery. Multiple \\ufb01lters may be incorporated into a de\\ufb01nition of drug-likeness and this leads to tradeoffs among compound properties in compounds intended for screening. The optimization of compound properties may require some type of multiparameter optimization scheme in library design. Fingerprint algorithms can be used to guide diversity. Filters also need to be employed in the chemistry synthesis planning process so that good quality compounds are made. Differences in property ranges between oral and injectable drugs are summarized in the chapter. Oral drugs are lower in MWT and have fewer H-bond donors, acceptors, and rotatable bonds. A scheme for separating central nervous system (CNS)- from non-CNS-active drugs in the WDI allowed the discovery of simple parameters relating to passive blood brain barrier (BBB) permeability and the prediction of p-glycoprotein (PGP) af\\ufb01nity. The PGP transporter is a major barrier to the entry of compounds to the CNS. Appropriately determined PGP ef\\ufb02ux ratios can be used as a measure of compound af\\ufb01nity to PGP.\",\n    \"authors\": [\n      \"Lipinski CA\"\n    ],\n    \"journal\": \"Annual reports in computational chemistry\",\n    \"journal_abbrev\": \"Annu Rep Comput Chem\",\n    \"year\": \"2005\",\n    \"month\": \"\",\n    \"volume\": \"1\",\n    \"issue\": \"\",\n    \"pages\": \"155-168\",\n    \"doi\": \"10.1016/S1574-1400(05)01011-X\",\n    \"mesh_terms\": [],\n    \"keywords\": []\n  }\n]\n\n---\n\n[CNSMPOAnalyzer]\nHALOPERIDOL_MPO: 6 (MW=276.738 LogP=4.684700000000003 TPSA=17.07 HBD=0\nCLOZAPINE_MPO: 5 (MW=216.244 LogP=0.6687999999999998 TPSA=50.160000000000004 HBD=1\nARIPIPRAZOLE_MPO: 5 (MW=420.34000000000003 LogP=3.8279000000000023 TPSA=44.81 HBD=1\nBEST_CNS: HALOPERIDOL\nMEAN_LOGP: 3.06",
+  "orchestrator_result": {},
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 4.17,
+  "product_quality_subscores": {
+    "rdkit_descriptors_retrieved": 1.0,
+    "cns_mpo_computed": 1.0,
+    "best_cns_identified": 1.0,
+    "mean_logp_computed": 1.0,
+    "literature_pmid": 1.0,
+    "synthesis_coherence": 0.0
+  },
+  "artifacts": [],
+  "needs_emitted": 1,
+  "needs_fulfilled": 5,
+  "artifact_reuse_rate": null,
+  "lineage_depth": 3,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 4.17,
+  "wall_budget_fraction": 0.0012
+}

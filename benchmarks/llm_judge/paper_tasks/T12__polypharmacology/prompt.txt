@@ -1,0 +1,19 @@
+Task: {question}
+
+Background: {background}
+
+Answer from your parametric knowledge only. Do not use any tools or external APIs.
+
+For aspirin (CC(=O)Oc1ccccc1C(=O)O), metformin (CN(C)C(=N)NC(N)=N), and rapamycin (PubChem CID 5284616):
+- State primary mechanism of action
+- Estimate molecular weight
+- List 1-2 secondary targets or off-target effects
+- Identify the aging/longevity pathway each modulates (mTOR, AMPK, NF-κB, sirtuins, etc.)
+
+Then identify:
+- Which compound has the broadest polypharmacology profile (most distinct targets)?
+- Which has the most direct longevity pathway connection?
+- Which compound is used most clinically for anti-aging?
+- Estimate selectivity indices based on primary vs secondary IC50s
+
+Produce a structured table showing primary mechanism, molecular weight estimate, secondary targets, longevity pathway modulation, and polypharmacology breadth score (1-5) for each compound.

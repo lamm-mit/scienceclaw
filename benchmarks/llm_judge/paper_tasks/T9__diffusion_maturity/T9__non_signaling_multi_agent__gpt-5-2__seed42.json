@@ -1,0 +1,159 @@
+{
+  "benchmark_id": "T34",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "non_signaling_multi_agent",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 3,
+  "n_agents": 3,
+  "skills_used": [
+    "rdkit",
+    "pubmed",
+    "python-exec"
+  ],
+  "seed": 42,
+  "started_at": "2026-03-30T16:40:10.518823+00:00",
+  "finished_at": "2026-03-30T16:42:22.988637+00:00",
+  "wall_seconds": 132.47,
+  "llm_calls": 13,
+  "tool_calls": 13,
+  "raw_output": "PMID (CNS MPO methodology example): **22778837** (Wager TT et al., *ACS Chem Neurosci*, 2010) \u2014 \u201cMoving beyond rules: the development of a central nervous system multiparameter optimization (CNS MPO) approach\u2026\u201d\n\nHALOPERIDOL_MPO: 6  \nCLOZAPINE_MPO: 5  \nARIPIPRAZOLE_MPO: 5  \nBEST_CNS: HALOPERIDOL  \nMEAN_LOGP: 3.06",
+  "sub_records": [
+    {
+      "benchmark_id": "T34",
+      "system_name": "gpt-5.2",
+      "system_class": "frontier_model_with_tools",
+      "benchmark_mode": "single_agent_with_tools",
+      "models_used": [
+        "gpt-5.2"
+      ],
+      "agents_used": 1,
+      "skills_used": [
+        "rdkit",
+        "pubmed",
+        "python-exec"
+      ],
+      "seed": 42,
+      "started_at": "2026-03-30T16:41:47.703535+00:00",
+      "finished_at": "2026-03-30T16:42:01.610084+00:00",
+      "wall_seconds": 13.907,
+      "llm_calls": 7,
+      "tool_calls": 7,
+      "raw_output": "PMID (CNS MPO methodology): **22778837** (Wager et al., 2010, *ACS Chem Neurosci*), also **26991242** (Wager et al., 2016).\n\nHALOPERIDOL_MPO: 6  \nCLOZAPINE_MPO: 5  \nARIPIPRAZOLE_MPO: 5  \nBEST_CNS: HALOPERIDOL  \nMEAN_LOGP: 3.06",
+      "task_success": null,
+      "success_details": {},
+      "product_quality_score": null,
+      "product_quality_subscores": {},
+      "artifacts": [],
+      "needs_emitted": 0,
+      "needs_fulfilled": 0,
+      "artifact_reuse_rate": null,
+      "lineage_depth": null,
+      "validation_events": 0,
+      "error": null,
+      "collaboration_uplift": null,
+      "emergence_uplift": null,
+      "product_quality_uplift": null
+    },
+    {
+      "benchmark_id": "T34",
+      "system_name": "gpt-5.2",
+      "system_class": "frontier_model_with_tools",
+      "benchmark_mode": "single_agent_with_tools",
+      "models_used": [
+        "gpt-5.2"
+      ],
+      "agents_used": 1,
+      "skills_used": [
+        "rdkit",
+        "pubmed",
+        "python-exec"
+      ],
+      "seed": 43,
+      "started_at": "2026-03-30T16:42:01.610596+00:00",
+      "finished_at": "2026-03-30T16:42:10.865779+00:00",
+      "wall_seconds": 9.255,
+      "llm_calls": 3,
+      "tool_calls": 3,
+      "raw_output": "HALOPERIDOL_MPO: 6, CLOZAPINE_MPO: 5, ARIPIPRAZOLE_MPO: 5, BEST_CNS: HALOPERIDOL, MEAN_LOGP: 3.06\n\nPubMed (CNS-MPO methodology) example PMIDs: 26991242; 34028255",
+      "task_success": null,
+      "success_details": {},
+      "product_quality_score": null,
+      "product_quality_subscores": {},
+      "artifacts": [],
+      "needs_emitted": 0,
+      "needs_fulfilled": 0,
+      "artifact_reuse_rate": null,
+      "lineage_depth": null,
+      "validation_events": 0,
+      "error": null,
+      "collaboration_uplift": null,
+      "emergence_uplift": null,
+      "product_quality_uplift": null
+    },
+    {
+      "benchmark_id": "T34",
+      "system_name": "gpt-5.2",
+      "system_class": "frontier_model_with_tools",
+      "benchmark_mode": "single_agent_with_tools",
+      "models_used": [
+        "gpt-5.2"
+      ],
+      "agents_used": 1,
+      "skills_used": [
+        "rdkit",
+        "pubmed",
+        "python-exec"
+      ],
+      "seed": 44,
+      "started_at": "2026-03-30T16:42:10.866286+00:00",
+      "finished_at": "2026-03-30T16:42:21.325902+00:00",
+      "wall_seconds": 10.46,
+      "llm_calls": 3,
+      "tool_calls": 3,
+      "raw_output": "PMID (CNS MPO methodology example): **22778837** (Wager TT et al., *ACS Chem Neurosci*, 2010) \u2014 \u201cMoving beyond rules: the development of a central nervous system multiparameter optimization (CNS MPO) approach\u2026\u201d\n\nHALOPERIDOL_MPO: 6  \nCLOZAPINE_MPO: 5  \nARIPIPRAZOLE_MPO: 5  \nBEST_CNS: HALOPERIDOL  \nMEAN_LOGP: 3.06",
+      "task_success": null,
+      "success_details": {},
+      "product_quality_score": null,
+      "product_quality_subscores": {},
+      "artifacts": [],
+      "needs_emitted": 0,
+      "needs_fulfilled": 0,
+      "artifact_reuse_rate": null,
+      "lineage_depth": null,
+      "validation_events": 0,
+      "error": null,
+      "collaboration_uplift": null,
+      "emergence_uplift": null,
+      "product_quality_uplift": null
+    }
+  ],
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 3.33,
+  "product_quality_subscores": {
+    "rdkit_descriptors_retrieved": 1.0,
+    "cns_mpo_computed": 1.0,
+    "best_cns_identified": 1.0,
+    "mean_logp_computed": 1.0,
+    "literature_pmid": 0.0,
+    "synthesis_coherence": 0.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 0.2562,
+  "wall_budget_fraction": 0.4416
+}

@@ -1,0 +1,92 @@
+{
+  "benchmark_id": "T32",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "centralized_orchestration",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 4,
+  "skills_used": [
+    "pubmed"
+  ],
+  "seed": 42,
+  "started_at": "2026-03-30T14:54:09.408474+00:00",
+  "finished_at": "2026-03-30T14:56:12.037202+00:00",
+  "wall_seconds": 122.629,
+  "llm_calls": 8,
+  "tool_calls": 17,
+  "raw_output": "## 1) Optical band gaps (visible-light absorption)\n\n**Typical reported optical band gaps (room temperature; values vary with crystallinity, stoichiometry, and measurement method):**\n\n| Oxide (common phase) | Reported Eg (typical range) | Common assignment | Visible-light fit (1.8\u20132.4 eV)? | Notes |\n|---|---:|---|---|---|\n| **Fe\u2082O\u2083 (\u03b1-hematite)** | **~1.9\u20132.2 eV** | Often **indirect** fundamental (~2.0 eV) with direct transitions at higher energy (~2.2\u20132.6 eV) | **Yes (best match)** | Strongly studied photoanode; absorption onset in visible; performance limited by transport/recombination rather than absorption. |\n| **NiO** | **~3.3\u20134.0 eV** | Generally **wide-gap** (often treated as indirect/charge-transfer type) | **No (too wide; mostly UV)** | Can show sub-gap absorption from Ni vacancies/defects, but intrinsic gap is UV. Common as p-type hole-transport / protective layer more than as a visible absorber. |\n| **CoO** | **~2.3\u20132.8 eV** (often cited near **2.4\u20132.6 eV**) | Frequently treated as **indirect**/correlated oxide; optical edge can vary | **Borderline / partially** (near the upper bound; often slightly too wide) | Defects/stoichiometry can shift apparent optical edge; visible absorption weaker than hematite at equal thickness. |\n\n**Answer to \u201cwhich has Eg best suited for visible-light absorption (1.8\u20132.4 eV)?\u201d**  \n**Fe\u2082O\u2083 (hematite)** is the best match (Eg \u2248 **2.0\u20132.2 eV**). **CoO** can be near the upper edge of the target window but is often reported **>2.4 eV**. **NiO** is far too wide-gap.\n\n---\n\n## 2) Band-edge energetics vs water-splitting redox levels (thermodynamics)\n\nFor overall water splitting, the band edges must straddle **H\u207a/H\u2082 (0 V vs RHE)** and **O\u2082/H\u2082O (+1.23 V vs RHE)**. For **p-type photocathodes**, the critical requirement is a **CBM more negative than 0 V vs RHE** to reduce H\u207a.\n\n**Qualitative alignment (widely reported consensus trends):**\n\n- **Fe\u2082O\u2083 (hematite)**:  \n  - **VBM** is very positive (good for water oxidation), but the **CBM is typically not negative enough** relative to **0 V vs RHE** for H\u2082 evolution.  \n  - Thus hematite is **thermodynamically suited as an n-type photoanode** (water oxidation) rather than a p-type photocathode.\n\n- **NiO (p-type)**:  \n  - Has a **very deep valence band** (high work function / strong oxidizing valence band), but **CBM is generally too positive** for proton reduction.  \n  - As a result, NiO is **usually not a standalone photocathode absorber for H\u2082**; it is more often used as a **p-type scaffold/hole-selective layer** or in **sensitized** architectures.\n\n- **CoO (p-type)**:  \n  - Band edges reported for CoO vary with stoichiometry and surface states; in many cases the **CBM is still not sufficiently negative** for efficient H\u207a/H\u2082, and surface states/recombination are significant.  \n  - Like NiO, CoO more often appears as a **cocatalyst/overlayer** or part of heterostructures rather than an ideal single-absorber photocathode.\n\n**Bottom line on band alignment for p-type water-splitting photocathodes:**  \nNone of **Fe\u2082O\u2083, NiO, CoO** is a clean \u201ctextbook\u201d p-type photocathode that naturally provides a strongly negative CB edge for H\u2082 evolution. **Fe\u2082O\u2083** is best aligned for **photoanodic water oxidation** (despite being asked here as \u201cp-type candidates\u201d), while **NiO/CoO** are typically limited by conduction-band position (and/or surface recombination) for H\u2082 evolution unless paired in heterojunction/sensitized systems.\n\n---\n\n## 3) Ranking of electronic / photoelectrochemical quality (transport, recombination, PEC practicality)\n\nKey PEC-relevant electronic considerations include majority-carrier conductivity (p-type character), minority-carrier transport, polaron formation, and achievable photocurrent.\n\n### Fe\u2082O\u2083 (hematite)\n- **Strengths:** ideal-ish **visible Eg**, chemically robust in many aqueous conditions, massive literature and engineering toolbox (doping, nanostructuring, catalysts).\n- **Major limitations:** **very short minority-carrier (hole) diffusion length** (commonly cited on the order of **a few nm**) and strong recombination/polaronic transport \u2192 requires nanostructuring and excellent surface catalysis to approach useful currents.\n- **PEC role that works best in practice:** **photoanode** (not photocathode).\n\n### NiO\n- **Strengths:** **stable p-type oxide**, widely used as **hole-transport / protective p-type layer**; can be relatively conductive when Ni-deficient (Ni vacancies).\n- **Major limitations as a standalone photocatalyst absorber:** **too wide band gap** (mostly UV absorption), and band-edge positions generally unfavorable for H\u2082 evolution without sensitization; correlated/defect physics can add recombination centers.\n- **PEC role that works best in practice:** **p-type scaffold** in dye/quantum-dot sensitized photocathodes; interlayers in heterojunctions.\n\n### CoO\n- **Strengths:** narrower gap than NiO (closer to visible); can be p-type under certain nonstoichiometry; used in catalysis contexts.\n- **Major limitations:** **electronic transport and stability** can be problematic; band-edge control is difficult because Co oxides readily change oxidation state (CoO/Co\u2083O\u2084/CoOOH under operation), increasing surface-state recombination and complicating durable PEC behavior.\n- **PEC role that works best in practice:** often as a **cocatalyst/overlayer** or part of mixed-cobalt-oxide systems rather than a stable single-phase photocathode absorber.\n\n### Practical PEC ranking (as \u201coxide photoelectrodes,\u201d not just p-type labels)\nBecause the user asked \u201crank for photoelectrochemical applications,\u201d the most meaningful ranking is by demonstrated utility and the severity of intrinsic electronic limits:\n\n1. **Fe\u2082O\u2083 (hematite)** \u2014 best **solar absorption** and most successful as an oxide **photoanode**; still limited by short diffusion length but can deliver meaningful photocurrents with engineering.\n2. **NiO** \u2014 poor as a visible absorber, but **useful electronically as p-type layer** (hole transport/scaffold) in composite photocathodes.\n3. **CoO** \u2014 **band gap closer** than NiO but typically **less robust/less controllable** electronically and chemically under PEC conditions; often outperformed by other cobalt oxides/oxyhydroxides used as catalysts rather than absorbers.\n\n---\n\n## Final direct answers\n\n- **Best band gap for visible-light solar absorption (1.8\u20132.4 eV):** **Fe\u2082O\u2083 (hematite)** (\u2248 **2.0\u20132.2 eV**). **CoO** is borderline (often **~2.4\u20132.6 eV**); **NiO** is too wide (**~3.3\u20134.0 eV**).\n\n- **Electronic/PEC suitability ranking (overall, considering band alignment + transport + stability):**\n  - As *practical oxide photoelectrodes*: **Fe\u2082O\u2083 > NiO > CoO**.\n  - As *standalone p-type photocathode absorbers for H\u2082*: **none is ideal**; **NiO and CoO** usually require sensitization/heterojunction design, while **Fe\u2082O\u2083** is fundamentally better suited as an **n-type photoanode** (water oxidation) than a p-type photocathode.\n\nIf you want, I can reformat this into two explicit scorecards: (i) \u201cvisible absorber quality\u201d and (ii) \u201cp-type photocathode thermodynamic feasibility (CB vs RHE)\u201d with representative numerical band-edge values for a chosen pH (0 or 7).",
+  "subtasks": [
+    {
+      "id": "subtask_1",
+      "description": "Collect and tabulate reported optical band gaps (Eg) for Fe2O3 (hematite), NiO, and CoO from reputable sources (peer-reviewed papers/handbooks). Provide typical ranges and representative values; note whether gaps are direct/indirect and any dependence on defects/doping/film thickness. Determine which Eg falls closest to the ideal visible-light range 1.8\u20132.4 eV."
+    },
+    {
+      "id": "subtask_2",
+      "description": "Compile band-edge energetics for Fe2O3, NiO, and CoO relevant to water splitting: conduction band minimum (CBM) and valence band maximum (VBM) vs RHE (or NHE) at pH 0 and/or pH 7, including pH shifts where applicable. Assess thermodynamic suitability for water oxidation/reduction (VBM above O2/H2O; CBM below H+/H2). Summarize which materials meet band-alignment requirements for photoelectrochemical operation (especially as p-type photocathodes)."
+    },
+    {
+      "id": "subtask_3",
+      "description": "Rank electronic/photoelectrochemical properties beyond Eg for Fe2O3, NiO, and CoO using literature data: conductivity, hole mobility, carrier concentration (p-type character), minority-carrier diffusion length/lifetime, polaron effects, and typical photocurrent/overpotential metrics in PEC studies. Identify key limitations (e.g., recombination, poor transport, instability) and produce a comparative ranking for PEC suitability with brief quantitative support where available."
+    }
+  ],
+  "worker_results": [
+    {
+      "subtask_id": "subtask_1",
+      "subtask_description": "Collect and tabulate reported optical band gaps (Eg) for Fe2O3 (hematite), NiO, and CoO from reputable sources (peer-reviewed papers/handbooks). Provide typical ranges and representative values; note whether gaps are direct/indirect and any dependence on defects/doping/film thickness. Determine which Eg falls closest to the ideal visible-light range 1.8\u20132.4 eV.",
+      "output": "",
+      "llm_calls": 2,
+      "tool_calls": 6,
+      "skills_used": [
+        "pubmed"
+      ]
+    },
+    {
+      "subtask_id": "subtask_2",
+      "subtask_description": "Compile band-edge energetics for Fe2O3, NiO, and CoO relevant to water splitting: conduction band minimum (CBM) and valence band maximum (VBM) vs RHE (or NHE) at pH 0 and/or pH 7, including pH shifts where applicable. Assess thermodynamic suitability for water oxidation/reduction (VBM above O2/H2O; CBM below H+/H2). Summarize which materials meet band-alignment requirements for photoelectrochemical operation (especially as p-type photocathodes).",
+      "output": "",
+      "llm_calls": 1,
+      "tool_calls": 6,
+      "skills_used": [
+        "pubmed"
+      ]
+    },
+    {
+      "subtask_id": "subtask_3",
+      "subtask_description": "Rank electronic/photoelectrochemical properties beyond Eg for Fe2O3, NiO, and CoO using literature data: conductivity, hole mobility, carrier concentration (p-type character), minority-carrier diffusion length/lifetime, polaron effects, and typical photocurrent/overpotential metrics in PEC studies. Identify key limitations (e.g., recombination, poor transport, instability) and produce a comparative ranking for PEC suitability with brief quantitative support where available.",
+      "output": "",
+      "llm_calls": 3,
+      "tool_calls": 5,
+      "skills_used": [
+        "pubmed"
+      ]
+    }
+  ],
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 3.33,
+  "product_quality_subscores": {
+    "correct_materials": 1.0,
+    "band_gap_values": 1.0,
+    "computed_suitability_score": 0.0,
+    "literature_pmid": 0.0,
+    "ranking_recommendation": 1.0,
+    "synthesis_coherence": 1.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 0.4163,
+  "wall_budget_fraction": 0.4088
+}

@@ -1,0 +1,19 @@
+Task: {question}
+
+Background: {background}
+
+Answer from your parametric knowledge only. Do not use any tools or external APIs.
+
+For sunitinib (PubChem CID 5329102), sorafenib (PubChem CID 216239), and pazopanib (PubChem CID 10113978):
+- List all approved cancer indications you know for each inhibitor
+- State primary kinase target for each
+- Estimate the main VEGFR2 resistance mutation
+- Name one off-target kinase for each inhibitor
+
+Then identify:
+- How many cancer indications are shared across all three drugs?
+- Which compound has the broadest approved indication set?
+- Is the resistance mutation the same gatekeeper position across VEGFR inhibitors?
+- Rank the three drugs by expected clinical resistance rate
+
+Produce a structured table with rows for each drug and columns for approved indications, primary target, main off-target, and resistance risk.

@@ -1,0 +1,95 @@
+{
+  "benchmark_id": "T31",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "centralized_orchestration",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 4,
+  "skills_used": [
+    "pubmed",
+    "materials",
+    "python-exec"
+  ],
+  "seed": 42,
+  "started_at": "2026-03-30T14:45:49.181251+00:00",
+  "finished_at": "2026-03-30T14:48:57.547260+00:00",
+  "wall_seconds": 188.366,
+  "llm_calls": 10,
+  "tool_calls": 18,
+  "raw_output": "## 1) Room\u2011temperature band gaps (ABO\u2083 perovskites)\n\n| Material | Common phase @ RT | Band gap Eg (eV) | Direct/indirect (optical) | Typical literature notes (why it varies) |\n|---|---|---:|---|---|\n| **SrTiO\u2083** | Cubic | **~3.2\u20133.3 eV** | **Indirect ~3.2 eV**, direct transition slightly higher (~3.7\u20133.8 eV often quoted) | Eg shifts with oxygen vacancies (n\u2011type doping), strain, and measurement method (Tauc fits, ellipsometry). Wide\u2011gap UV absorber. |\n| **BaTiO\u2083** | Tetragonal (ferroelectric) | **~3.1\u20133.3 eV** | Often treated as **indirect/weakly allowed** near edge; direct transition reported at somewhat higher energy | Eg depends on phase (tetragonal vs cubic), domain structure, strain, and defect chemistry (oxygen vacancies, dopants). Also UV absorber. |\n| **LaMnO\u2083** | Orthorhombic (distorted perovskite) | **~1.1\u20131.7 eV** (often ~1.2\u20131.4 eV cited for optical onset) | Transition character is complex (correlated oxide; strong excitations/CT features); effectively **visible\u2011absorbing** | Eg is highly sensitive to stoichiometry (LaMnO\u2083\u00b1\u03b4), Mn\u00b3\u207a/Mn\u2074\u207a ratio, temperature, and polaronic/correlation effects; thin films can differ from bulk. |\n\n**Implication:** SrTiO\u2083 and BaTiO\u2083 are **wide\u2011band\u2011gap UV** materials; LaMnO\u2083 lies much closer to the **optimal single\u2011junction PV band gap**.\n\n---\n\n## 2) Theoretical Shockley\u2013Queisser (SQ) single\u2011junction PCE limits (AM1.5G, 1 sun, radiative limit)\n\nUsing standard SQ detailed\u2011balance results versus band gap (AM1.5G), the maximum efficiency peaks near **Eg \u2248 1.34 eV** at **~33%**. Approximating each oxide by its room\u2011temperature optical gap:\n\n| Material | Band gap used (eV) | SQ max PCE (%, approx.) |\n|---|---:|---:|\n| **SrTiO\u2083** | 3.2\u20133.3 | **~7\u20139%** |\n| **BaTiO\u2083** | 3.1\u20133.3 | **~8\u201310%** |\n| **LaMnO\u2083** | 1.1 | **~30\u201332%** |\n|  | 1.3\u20131.4 | **~32\u201333%** (near optimum) |\n|  | 1.7 | **~28\u201330%** |\n\nSo, **on band gap alone**, LaMnO\u2083 has a dramatically higher SQ ceiling than SrTiO\u2083 or BaTiO\u2083.\n\n---\n\n## 3) \u201cMost promising\u201d for photovoltaics (beyond SQ)\n\n### SrTiO\u2083 (STO)\n- **Pros:** Extremely stable; mature epitaxy/defect control; good as a **transparent conductive oxide / electron transport** component when doped (Nb:STO, La:STO).\n- **Cons for absorber PV:** **Too wide band gap** (mostly UV harvesting), and fundamental edge is **indirect**, which weakens near\u2011edge absorption \u2192 thick layers needed. Realistic single\u2011junction PV absorber performance is therefore limited even before transport/recombination are considered.\n\n**PV role:** better as **transport layer / substrate / UV photodetector**, not as the main solar absorber.\n\n### BaTiO\u2083 (BTO)\n- **Pros:** Strong **ferroelectric polarization** at room temperature enables \u201cbulk photovoltaic effect\u201d / shift\u2011current concepts (photovoltage can exceed Eg in some ferroelectrics).\n- **Cons for conventional PV:** Still **wide\u2011gap (~3.2 eV)**, so poor solar spectrum utilization. Also not known for high carrier mobility/diffusion lengths as an absorber.\n\n**PV role:** interesting for **ferroelectric/shift\u2011current PV physics**, niche devices, or as a functional layer; not promising for high PCE single\u2011junction solar cells.\n\n### LaMnO\u2083 (LMO)\n- **Pros:** **Visible\u2011range band gap** near the SQ optimum (depending on stoichiometry/film), so its **theoretical** single\u2011junction ceiling is high (~30%+).\n- **Cons/risks:** As a correlated transition\u2011metal oxide, it often exhibits **strong electron\u2013phonon coupling/polaronic transport**, potentially **low mobility** and short diffusion lengths; recombination via defects/nonstoichiometry can be severe. Achieving good p\u2013n junctions, long lifetimes, and defect tolerance comparable to halide perovskites is nontrivial.\n  \n**PV role:** Among the three, it is the **only plausible absorber** by band gap and SQ limit, but practical performance hinges on controlling stoichiometry/defects and improving transport.\n\n---\n\n## Overall ranking for photovoltaic absorber potential (single\u2011junction, AM1.5G)\n1. **LaMnO\u2083** \u2014 most promising **in principle** (Eg near optimal; SQ ~30\u201333%), but materials physics/defects may limit realized PCE.\n2. **BaTiO\u2083** \u2014 not promising for high\u2011PCE conventional PV (SQ ~8\u201310%), but scientifically interesting for ferroelectric PV mechanisms.\n3. **SrTiO\u2083** \u2014 least promising as an absorber (SQ ~7\u20139% and indirect/UV), though excellent as a robust functional/transport material.\n\nIf you want, I can (i) pin down specific cited Eg values (with sources per compound and measurement type) and (ii) provide a reproducible SQ calculation (numerical detailed-balance or lookup curve) with exact PCE numbers for chosen Eg values.",
+  "subtasks": [
+    {
+      "id": "subtask_1",
+      "description": "Collect reliable room-temperature band gap values (type: direct/indirect, and typical reported range) for SrTiO3, BaTiO3, and LaMnO3 from literature/databases. Output a table with Eg (eV), citation/source, and notes on variability (e.g., stoichiometry, strain, phase, measurement method)."
+    },
+    {
+      "id": "subtask_2",
+      "description": "Compute the theoretical single-junction Shockley\u2013Queisser (SQ) maximum PCE for each material using its band gap(s). Use a standard SQ model under AM1.5G, 1 sun, radiative limit assumptions. If band gap ranges exist, compute PCE for low/typical/high Eg. Provide the resulting PCE (%) and the model/code details (e.g., using published SQ curves or implementing detailed-balance calculation)."
+    },
+    {
+      "id": "subtask_3",
+      "description": "Assess photovoltaic promise beyond SQ: for SrTiO3, BaTiO3, LaMnO3 summarize key PV-relevant properties (absorption coefficient/optical transition nature, ferroelectricity/shift current potential, carrier mobility/diffusion length, defect tolerance, stability, doping feasibility) and rank them for practical PV potential. Use the SQ results plus qualitative material constraints to justify which are most promising."
+    }
+  ],
+  "worker_results": [
+    {
+      "subtask_id": "subtask_1",
+      "subtask_description": "Collect reliable room-temperature band gap values (type: direct/indirect, and typical reported range) for SrTiO3, BaTiO3, and LaMnO3 from literature/databases. Output a table with Eg (eV), citation/source, and notes on variability (e.g., stoichiometry, strain, phase, measurement method).",
+      "output": "",
+      "llm_calls": 2,
+      "tool_calls": 8,
+      "skills_used": [
+        "pubmed",
+        "materials"
+      ]
+    },
+    {
+      "subtask_id": "subtask_2",
+      "subtask_description": "Compute the theoretical single-junction Shockley\u2013Queisser (SQ) maximum PCE for each material using its band gap(s). Use a standard SQ model under AM1.5G, 1 sun, radiative limit assumptions. If band gap ranges exist, compute PCE for low/typical/high Eg. Provide the resulting PCE (%) and the model/code details (e.g., using published SQ curves or implementing detailed-balance calculation).",
+      "output": "",
+      "llm_calls": 4,
+      "tool_calls": 4,
+      "skills_used": [
+        "python-exec"
+      ]
+    },
+    {
+      "subtask_id": "subtask_3",
+      "subtask_description": "Assess photovoltaic promise beyond SQ: for SrTiO3, BaTiO3, LaMnO3 summarize key PV-relevant properties (absorption coefficient/optical transition nature, ferroelectricity/shift current potential, carrier mobility/diffusion length, defect tolerance, stability, doping feasibility) and rank them for practical PV potential. Use the SQ results plus qualitative material constraints to justify which are most promising.",
+      "output": "",
+      "llm_calls": 2,
+      "tool_calls": 6,
+      "skills_used": [
+        "materials"
+      ]
+    }
+  ],
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 3.33,
+  "product_quality_subscores": {
+    "correct_materials": 1.0,
+    "band_gap_values": 1.0,
+    "computed_pce_limit": 1.0,
+    "literature_pmid": 0.0,
+    "ranking_recommendation": 0.0,
+    "synthesis_coherence": 1.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 0.333,
+  "wall_budget_fraction": 0.6279
+}

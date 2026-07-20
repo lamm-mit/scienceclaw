@@ -1,0 +1,93 @@
+{
+  "benchmark_id": "T35",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "centralized_orchestration",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 4,
+  "skills_used": [
+    "python-exec",
+    "pubmed"
+  ],
+  "seed": 42,
+  "started_at": "2026-03-30T16:40:10.659322+00:00",
+  "finished_at": "2026-03-30T16:42:25.762301+00:00",
+  "wall_seconds": 135.103,
+  "llm_calls": 11,
+  "tool_calls": 7,
+  "raw_output": "## RDKit molecular descriptors (MW, LogP, TPSA, HBD, HBA)\n\n(Computed with RDKit: `Descriptors.MolWt`, `Crippen.MolLogP`, `rdMolDescriptors.CalcTPSA`, `CalcNumHBD`, `CalcNumHBA`.)\n\n| Molecule | SMILES | MW | LogP | TPSA | HBD | HBA |\n|---|---|---:|---:|---:|---:|---:|\n| Acetaminophen | CC(=O)Nc1ccc(O)cc1 | 151.165 | 1.351 | 49.33 | 2 | 2 |\n| Metformin | CN(C)C(=N)NC(=N)N | 129.167 | -1.034 | 88.99 | 4 | 2 |\n| Warfarin | CC(=O)CC(c1ccccc1)c2c(O)c3ccccc3c(=O)o2 | 308.333 | 3.610 | 67.51 | 1 | 4 |\n\n## PubMed: RDKit-based descriptor analysis for ADMET prediction\nThe PubMed subtask results were not included in the worker outputs you provided (subtask_3 content is missing). If you paste the worker\u2019s PubMed list (or allow me to perform the PubMed search directly), I will format 5\u201310 relevant papers with title, year, first author, journal, and PMID.\n\n## Required computed summary (Lipinski RO5, mean LogP, highest TPSA)\n\nACETAMINOPHEN_VIOLATIONS: 0, METFORMIN_VIOLATIONS: 0, WARFARIN_VIOLATIONS: 0, MEAN_LOGP: 0.77, HIGHEST_TPSA: METFORMIN",
+  "subtasks": [
+    {
+      "id": "subtask_1",
+      "description": "Using RDKit in python-exec, compute five descriptors (MW, LogP, TPSA, HBD, HBA) for Acetaminophen (CC(=O)Nc1ccc(O)cc1), Metformin (CN(C)C(=N)NC(=N)N), and Warfarin (CC(=O)CC(c1ccccc1)c2c(O)c3ccccc3c(=O)o2). Return a table/structured output with descriptor values per molecule."
+    },
+    {
+      "id": "subtask_2",
+      "description": "Using the RDKit-computed descriptors, calculate in python-exec: (1) Lipinski RO5 violation count for each molecule (violation if MW>500, LogP>5, HBD>5, HBA>10), (2) mean LogP across the three compounds (rounded to 2 decimals), and (3) identify which molecule has the highest TPSA. Provide the exact final strings needed: ACETAMINOPHEN_VIOLATIONS: N, METFORMIN_VIOLATIONS: N, WARFARIN_VIOLATIONS: N, MEAN_LOGP: X.XX, HIGHEST_TPSA: <NAME>."
+    },
+    {
+      "id": "subtask_3",
+      "description": "Search PubMed for papers on RDKit-based molecular descriptor analysis used for ADMET prediction. Compile a short list of relevant publications (e.g., 5\u201310) including title, year, first author, journal, and PubMed ID, emphasizing explicit use of RDKit descriptors/features in ADMET/toxicity/PK prediction workflows."
+    }
+  ],
+  "worker_results": [
+    {
+      "subtask_id": "subtask_1",
+      "subtask_description": "Using RDKit in python-exec, compute five descriptors (MW, LogP, TPSA, HBD, HBA) for Acetaminophen (CC(=O)Nc1ccc(O)cc1), Metformin (CN(C)C(=N)NC(=N)N), and Warfarin (CC(=O)CC(c1ccccc1)c2c(O)c3ccccc3c(=O)o2). Return a table/structured output with descriptor values per molecule.",
+      "output": "Descriptors computed with RDKit (MolWt, Crippen.MolLogP, CalcTPSA, CalcNumHBD, CalcNumHBA):\n\n| Molecule | SMILES | MW | LogP | TPSA | HBD | HBA |\n|:--|:--|--:|--:|--:|--:|--:|\n| Acetaminophen | CC(=O)Nc1ccc(O)cc1 | 151.165 | 1.351 | 49.33 | 2 | 2 |\n| Metformin | CN(C)C(=N)NC(=N)N | 129.167 | -1.034 | 88.99 | 4 | 2 |\n| Warfarin | CC(=O)CC(c1ccccc1)c2c(O)c3ccccc3c(=O)o2 | 308.333 | 3.610 | 67.51 | 1 | 4 |\n\nStructured output (JSON):\n\n```json\n[\n  {\"Molecule\":\"Acetaminophen\",\"SMILES\":\"CC(=O)Nc1ccc(O)cc1\",\"MW\":151.165,\"LogP\":1.351,\"TPSA\":49.33,\"HBD\":2,\"HBA\":2},\n  {\"Molecule\":\"Metformin\",\"SMILES\":\"CN(C)C(=N)NC(=N)N\",\"MW\":129.167,\"LogP\":-1.034,\"TPSA\":88.99,\"HBD\":4,\"HBA\":2},\n  {\"Molecule\":\"Warfarin\",\"SMILES\":\"CC(=O)CC(c1ccccc1)c2c(O)c3ccccc3c(=O)o2\",\"MW\":308.333,\"LogP\":3.61,\"TPSA\":67.51,\"HBD\":1,\"HBA\":4}\n]\n```",
+      "llm_calls": 2,
+      "tool_calls": 1,
+      "skills_used": [
+        "python-exec"
+      ]
+    },
+    {
+      "subtask_id": "subtask_2",
+      "subtask_description": "Using the RDKit-computed descriptors, calculate in python-exec: (1) Lipinski RO5 violation count for each molecule (violation if MW>500, LogP>5, HBD>5, HBA>10), (2) mean LogP across the three compounds (rounded to 2 decimals), and (3) identify which molecule has the highest TPSA. Provide the exact final strings needed: ACETAMINOPHEN_VIOLATIONS: N, METFORMIN_VIOLATIONS: N, WARFARIN_VIOLATIONS: N, MEAN_LOGP: X.XX, HIGHEST_TPSA: <NAME>.",
+      "output": "ACETAMINOPHEN_VIOLATIONS: 0, METFORMIN_VIOLATIONS: 0, WARFARIN_VIOLATIONS: 0, MEAN_LOGP: 0.77, HIGHEST_TPSA: METFORMIN.",
+      "llm_calls": 3,
+      "tool_calls": 2,
+      "skills_used": [
+        "python-exec"
+      ]
+    },
+    {
+      "subtask_id": "subtask_3",
+      "subtask_description": "Search PubMed for papers on RDKit-based molecular descriptor analysis used for ADMET prediction. Compile a short list of relevant publications (e.g., 5\u201310) including title, year, first author, journal, and PubMed ID, emphasizing explicit use of RDKit descriptors/features in ADMET/toxicity/PK prediction workflows.",
+      "output": "",
+      "llm_calls": 4,
+      "tool_calls": 4,
+      "skills_used": [
+        "pubmed"
+      ]
+    }
+  ],
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 4.17,
+  "product_quality_subscores": {
+    "rdkit_descriptors_retrieved": 1.0,
+    "lipinski_violations_computed": 1.0,
+    "mean_logp_computed": 1.0,
+    "highest_tpsa_identified": 1.0,
+    "literature_pmid": 0.0,
+    "synthesis_coherence": 1.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 0.3791,
+  "wall_budget_fraction": 0.4503
+}

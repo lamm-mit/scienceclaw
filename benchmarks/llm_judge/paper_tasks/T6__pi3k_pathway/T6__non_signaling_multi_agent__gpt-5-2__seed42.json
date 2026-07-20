@@ -1,0 +1,155 @@
+{
+  "benchmark_id": "T24",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "non_signaling_multi_agent",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 3,
+  "n_agents": 3,
+  "skills_used": [
+    "uniprot",
+    "pubmed"
+  ],
+  "seed": 42,
+  "started_at": "2026-03-30T06:20:59.449354+00:00",
+  "finished_at": "2026-03-30T06:22:56.573125+00:00",
+  "wall_seconds": 117.124,
+  "llm_calls": 12,
+  "tool_calls": 30,
+  "raw_output": "VARIANTS: N/A, AVG_LENGTH: N/A, CROSS_MENTION_RATE: N/A, PATHWAY_PROTEINS: PTEN/PIK3CA/AKT1",
+  "sub_records": [
+    {
+      "benchmark_id": "T24",
+      "system_name": "gpt-5.2",
+      "system_class": "frontier_model_with_tools",
+      "benchmark_mode": "single_agent_with_tools",
+      "models_used": [
+        "gpt-5.2"
+      ],
+      "agents_used": 1,
+      "skills_used": [
+        "uniprot",
+        "pubmed"
+      ],
+      "seed": 42,
+      "started_at": "2026-03-30T06:22:29.523460+00:00",
+      "finished_at": "2026-03-30T06:22:39.956698+00:00",
+      "wall_seconds": 10.433,
+      "llm_calls": 4,
+      "tool_calls": 10,
+      "raw_output": "Unable to compute required UniProt natural variant counts, protein lengths, subcellular locations, or PubMed cross-mention rate from the provided tool outputs because the UniProt JSON returned is truncated (missing `features`, `sequence.length`, and `SUBCELLULAR LOCATION` comment sections) and the PubMed 5-result list is also truncated after the 3rd record.\nVARIANTS: N/A, AVG_LENGTH: N/A, CROSS_MENTION_RATE: N/A, PATHWAY_PROTEINS: PTEN/PIK3CA/AKT1",
+      "task_success": null,
+      "success_details": {},
+      "product_quality_score": null,
+      "product_quality_subscores": {},
+      "artifacts": [],
+      "needs_emitted": 0,
+      "needs_fulfilled": 0,
+      "artifact_reuse_rate": null,
+      "lineage_depth": null,
+      "validation_events": 0,
+      "error": null,
+      "collaboration_uplift": null,
+      "emergence_uplift": null,
+      "product_quality_uplift": null
+    },
+    {
+      "benchmark_id": "T24",
+      "system_name": "gpt-5.2",
+      "system_class": "frontier_model_with_tools",
+      "benchmark_mode": "single_agent_with_tools",
+      "models_used": [
+        "gpt-5.2"
+      ],
+      "agents_used": 1,
+      "skills_used": [
+        "uniprot",
+        "pubmed"
+      ],
+      "seed": 43,
+      "started_at": "2026-03-30T06:22:39.957022+00:00",
+      "finished_at": "2026-03-30T06:22:46.777609+00:00",
+      "wall_seconds": 6.821,
+      "llm_calls": 4,
+      "tool_calls": 10,
+      "raw_output": "VARIANTS: 0, AVG_LENGTH: 0.0, CROSS_MENTION_RATE: 0.40, PATHWAY_PROTEINS: PTEN/PIK3CA/AKT1",
+      "task_success": null,
+      "success_details": {},
+      "product_quality_score": null,
+      "product_quality_subscores": {},
+      "artifacts": [],
+      "needs_emitted": 0,
+      "needs_fulfilled": 0,
+      "artifact_reuse_rate": null,
+      "lineage_depth": null,
+      "validation_events": 0,
+      "error": null,
+      "collaboration_uplift": null,
+      "emergence_uplift": null,
+      "product_quality_uplift": null
+    },
+    {
+      "benchmark_id": "T24",
+      "system_name": "gpt-5.2",
+      "system_class": "frontier_model_with_tools",
+      "benchmark_mode": "single_agent_with_tools",
+      "models_used": [
+        "gpt-5.2"
+      ],
+      "agents_used": 1,
+      "skills_used": [
+        "uniprot",
+        "pubmed"
+      ],
+      "seed": 44,
+      "started_at": "2026-03-30T06:22:46.778031+00:00",
+      "finished_at": "2026-03-30T06:22:55.572644+00:00",
+      "wall_seconds": 8.795,
+      "llm_calls": 4,
+      "tool_calls": 10,
+      "raw_output": "UniProt natural variant counts/lengths/subcellular locations cannot be extracted from the truncated UniProt JSON returned by the tool, and PubMed returned only 3/5 abstracts (3rd is truncated). Therefore the requested computations can\u2019t be completed from \u201ctool results so far.\u201d\nVARIANTS: N/A, AVG_LENGTH: N/A, CROSS_MENTION_RATE: N/A, PATHWAY_PROTEINS: PTEN/PIK3CA/AKT1",
+      "task_success": null,
+      "success_details": {},
+      "product_quality_score": null,
+      "product_quality_subscores": {},
+      "artifacts": [],
+      "needs_emitted": 0,
+      "needs_fulfilled": 0,
+      "artifact_reuse_rate": null,
+      "lineage_depth": null,
+      "validation_events": 0,
+      "error": null,
+      "collaboration_uplift": null,
+      "emergence_uplift": null,
+      "product_quality_uplift": null
+    }
+  ],
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 0.0,
+  "product_quality_subscores": {
+    "variant_counts_retrieved": 0.0,
+    "total_variants_summed": 0.0,
+    "avg_length_computed": 0.0,
+    "cross_mention_rate": 0.0,
+    "subcellular_locations": 0.0,
+    "output_format_complete": 0.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 0.0,
+  "wall_budget_fraction": 0.3904
+}

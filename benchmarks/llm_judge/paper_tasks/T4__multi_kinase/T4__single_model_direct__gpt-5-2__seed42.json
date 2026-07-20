@@ -1,0 +1,44 @@
+{
+  "benchmark_id": "T22",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model",
+  "benchmark_mode": "single_model_direct",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [],
+  "seed": 42,
+  "started_at": "2026-03-30T06:08:21.211903+00:00",
+  "finished_at": "2026-03-30T06:08:33.078086+00:00",
+  "wall_seconds": 11.866,
+  "llm_calls": 1,
+  "tool_calls": 0,
+  "raw_output": "I can\u2019t reliably provide UniProt-extracted **molecular weights**, **annotated active-site residue positions**, or **specific PubMed paper\u2013derived cancer types** from parametric memory alone with the accuracy you\u2019re asking for. Those are exact, record-level facts that I would normally verify directly against UniProt/PubMed.\n\nWhat I *can* provide from general domain knowledge (non-verified here) is the canonical, widely accepted cancer associations and a few commonly cited catalytic/active-site residues for these kinases\u2019 kinase domains. I\u2019ll mark any such residue lists as **approximate/common kinase-domain knowledge**, not guaranteed to match UniProt \u201cActive site\u201d feature annotations.\n\n## Comparison (parametric knowledge only; no UniProt/PubMed lookup)\n\n| Kinase (UniProt) | Molecular weight (Da) | Active-site residue positions (if known) | One cancer type commonly associated with mutations |\n|---|---:|---|---|\n| **EGFR** (P00533) | **Not reliably recallable** (exact Da unknown from memory) | Commonly cited kinase-domain catalytic residues include **Lys745** (VAIK Lys; ATP anchoring) and **Asp837** (HRD Asp; catalytic loop) *(positions may vary by isoform/numbering conventions)* | **Non\u2013small cell lung cancer (NSCLC)** (e.g., activating EGFR mutations) |\n| **BRAF** (P15056) | **Not reliably recallable** (exact Da unknown from memory) | Commonly cited kinase residues include **Lys483** (VAIK Lys) and **Asp594** (HRD Asp) *(again, numbering conventions apply)* | **Melanoma** (notably **BRAF V600E**) |\n| **CDK2** (P24941) | **Not reliably recallable** (exact Da unknown from memory) | Classic CDK2 catalytic/active-site residues often cited: **Lys33** (VAIK Lys), **Asp145** (HRD Asp), and **Asp127** (DFG Asp involved in Mg/ATP coordination) *(may not correspond 1:1 to UniProt \u201cActive site\u201d annotations)* | **Various cancers with cell-cycle dysregulation** (commonly discussed in **breast cancer** and others; CDK pathway alterations rather than frequent CDK2 point mutations) |\n\n## Structured comparisons (based only on what I can and cannot recall)\n\n- **Highest molecular weight:** **Cannot be determined** here, because I don\u2019t have the exact UniProt molecular weights in memory.\n- **Most annotated active-site residues:** **Cannot be determined** here, because UniProt\u2019s \u201cActive site\u201d feature counts are specific annotations I can\u2019t safely reproduce without lookup.\n\n## What I *can* state confidently (high-level)\n- **EGFR \u2192 NSCLC**\n- **BRAF \u2192 melanoma**\n- **CDK2 \u2192 cancers characterized by cell-cycle dysregulation (often discussed in breast cancer and other solid tumors)**\n\nIf you want, paste the relevant UniProt \u201cFunction/Active site/Mass\u201d lines (or the full entries) for **P00533, P15056, P24941**, and I can then (1) extract the **exact molecular weights**, (2) list the **exact UniProt-annotated active-site residues**, and (3) complete the \u201chighest MW\u201d and \u201cmost active-site residues\u201d comparisons precisely.",
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 0.0,
+  "product_quality_subscores": {
+    "uniprot_active_sites": 0.0,
+    "mw_comparison_table": 0.0,
+    "pubmed_cancer_links": 0.0,
+    "highest_mw_identified": 0.0,
+    "structured_output": 0.0,
+    "cross_validation": 0.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 0.0,
+  "wall_budget_fraction": 0.0396
+}

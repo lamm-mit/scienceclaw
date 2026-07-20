@@ -1,0 +1,159 @@
+{
+  "benchmark_id": "T35",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model_with_tools",
+  "benchmark_mode": "non_signaling_multi_agent",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 3,
+  "n_agents": 3,
+  "skills_used": [
+    "rdkit",
+    "pubmed",
+    "python-exec"
+  ],
+  "seed": 42,
+  "started_at": "2026-03-30T16:40:10.636239+00:00",
+  "finished_at": "2026-03-30T16:42:25.403561+00:00",
+  "wall_seconds": 134.767,
+  "llm_calls": 14,
+  "tool_calls": 18,
+  "raw_output": "ACETAMINOPHEN_VIOLATIONS: 0, METFORMIN_VIOLATIONS: 0, WARFARIN_VIOLATIONS: 0, MEAN_LOGP: 1.31, HIGHEST_TPSA: METFORMIN\n\nPubMed (RDKit descriptors for ADMET/QSAR) example PMIDs:\n- PMID: 28652195 (Predicting drug-induced liver injury; uses 2D molecular descriptors, commonly RDKit-based in such workflows)\n- PMID: 41430621 (Caco-2 permeability prediction; benchmarks RDKit descriptors among representations)\n- PMID: 26664458 (ChemDes platform integrates RDKit descriptor computation, used for ADME/T prediction workflows)",
+  "sub_records": [
+    {
+      "benchmark_id": "T35",
+      "system_name": "gpt-5.2",
+      "system_class": "frontier_model_with_tools",
+      "benchmark_mode": "single_agent_with_tools",
+      "models_used": [
+        "gpt-5.2"
+      ],
+      "agents_used": 1,
+      "skills_used": [
+        "rdkit",
+        "pubmed",
+        "python-exec"
+      ],
+      "seed": 42,
+      "started_at": "2026-03-30T16:41:47.209810+00:00",
+      "finished_at": "2026-03-30T16:42:00.376944+00:00",
+      "wall_seconds": 13.167,
+      "llm_calls": 5,
+      "tool_calls": 6,
+      "raw_output": "ACETAMINOPHEN_VIOLATIONS: 0, METFORMIN_VIOLATIONS: 0, WARFARIN_VIOLATIONS: 0, MEAN_LOGP: 1.31, HIGHEST_TPSA: METFORMIN\n\nPubMed (RDKit-descriptor/ADMET-related) example PMID: 28652195 (Kotsampasakou et al., 2017; DILI model implemented with open-source 2D RDKit descriptors).",
+      "task_success": null,
+      "success_details": {},
+      "product_quality_score": null,
+      "product_quality_subscores": {},
+      "artifacts": [],
+      "needs_emitted": 0,
+      "needs_fulfilled": 0,
+      "artifact_reuse_rate": null,
+      "lineage_depth": null,
+      "validation_events": 0,
+      "error": null,
+      "collaboration_uplift": null,
+      "emergence_uplift": null,
+      "product_quality_uplift": null
+    },
+    {
+      "benchmark_id": "T35",
+      "system_name": "gpt-5.2",
+      "system_class": "frontier_model_with_tools",
+      "benchmark_mode": "single_agent_with_tools",
+      "models_used": [
+        "gpt-5.2"
+      ],
+      "agents_used": 1,
+      "skills_used": [
+        "rdkit",
+        "pubmed",
+        "python-exec"
+      ],
+      "seed": 43,
+      "started_at": "2026-03-30T16:42:00.377503+00:00",
+      "finished_at": "2026-03-30T16:42:12.450610+00:00",
+      "wall_seconds": 12.073,
+      "llm_calls": 5,
+      "tool_calls": 8,
+      "raw_output": "ACETAMINOPHEN_VIOLATIONS: 0, METFORMIN_VIOLATIONS: 0, WARFARIN_VIOLATIONS: 0, MEAN_LOGP: 1.31, HIGHEST_TPSA: METFORMIN\n\nPubMed (RDKit descriptors + ML/ADMET-related descriptor analysis) example result/PMID:\n- PMID: **41430621** (Journal of Cheminformatics, 2025) \u201cCaliciBoost: Performance-driven evaluation of molecular representations for caco-2 permeability prediction.\u201d",
+      "task_success": null,
+      "success_details": {},
+      "product_quality_score": null,
+      "product_quality_subscores": {},
+      "artifacts": [],
+      "needs_emitted": 0,
+      "needs_fulfilled": 0,
+      "artifact_reuse_rate": null,
+      "lineage_depth": null,
+      "validation_events": 0,
+      "error": null,
+      "collaboration_uplift": null,
+      "emergence_uplift": null,
+      "product_quality_uplift": null
+    },
+    {
+      "benchmark_id": "T35",
+      "system_name": "gpt-5.2",
+      "system_class": "frontier_model_with_tools",
+      "benchmark_mode": "single_agent_with_tools",
+      "models_used": [
+        "gpt-5.2"
+      ],
+      "agents_used": 1,
+      "skills_used": [
+        "rdkit",
+        "pubmed",
+        "python-exec"
+      ],
+      "seed": 44,
+      "started_at": "2026-03-30T16:42:12.451445+00:00",
+      "finished_at": "2026-03-30T16:42:23.221603+00:00",
+      "wall_seconds": 10.77,
+      "llm_calls": 4,
+      "tool_calls": 4,
+      "raw_output": "ACETAMINOPHEN_VIOLATIONS: 0, METFORMIN_VIOLATIONS: 0, WARFARIN_VIOLATIONS: 0, MEAN_LOGP: 1.31, HIGHEST_TPSA: METFORMIN\n\nPubMed (RDKit descriptors for ADMET/QSAR) example PMIDs:\n- PMID: 28652195 (Predicting drug-induced liver injury; uses 2D molecular descriptors, commonly RDKit-based in such workflows)\n- PMID: 41430621 (Caco-2 permeability prediction; benchmarks RDKit descriptors among representations)\n- PMID: 26664458 (ChemDes platform integrates RDKit descriptor computation, used for ADME/T prediction workflows)",
+      "task_success": null,
+      "success_details": {},
+      "product_quality_score": null,
+      "product_quality_subscores": {},
+      "artifacts": [],
+      "needs_emitted": 0,
+      "needs_fulfilled": 0,
+      "artifact_reuse_rate": null,
+      "lineage_depth": null,
+      "validation_events": 0,
+      "error": null,
+      "collaboration_uplift": null,
+      "emergence_uplift": null,
+      "product_quality_uplift": null
+    }
+  ],
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 4.17,
+  "product_quality_subscores": {
+    "rdkit_descriptors_retrieved": 1.0,
+    "lipinski_violations_computed": 1.0,
+    "mean_logp_computed": 1.0,
+    "highest_tpsa_identified": 1.0,
+    "literature_pmid": 1.0,
+    "synthesis_coherence": 0.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 0.2979,
+  "wall_budget_fraction": 0.4492
+}

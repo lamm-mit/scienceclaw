@@ -1,0 +1,19 @@
+Task: {question}
+
+Background: {background}
+
+Answer from your parametric knowledge only. Do not use any tools or external APIs.
+
+For imatinib (Cc1ccc(NC(=O)c2ccc(CN3CCN(C)CC3)cc2)cc1Nc1nccc(-c2cccnc2)n1), dasatinib (Cc1nc(Nc2ncc(C(=O)Nc3c(C)cccc3Cl)s2)cc(N2CCN(CCO)CC2)n1), and bosutinib (COc1cc(Nc2c(C#N)cnc3cc(OCCCN4CCN(C)CC4)c(OC)cc23)c(Cl)cc1Cl):
+- Estimate molecular weight in Daltons
+- List Lipinski Rule-of-Five parameters you know (MW, LogP, HBD, HBA)
+- State primary kinase target
+- Predict BBB penetration (yes/no/uncertain)
+
+Then identify:
+- Which compound(s) violate Lipinski Rule-of-5?
+- Which has highest MW? Which lowest?
+- Primary selectivity ratio estimate for imatinib if known
+- Which compound penetrates BBB?
+
+Produce a structured comparison table with rows for each drug and columns for MW, Lipinski status, BBB penetration, primary target, and selectivity estimate.

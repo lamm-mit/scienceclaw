@@ -1,0 +1,44 @@
+{
+  "benchmark_id": "T32",
+  "system_name": "gpt-5.2",
+  "system_class": "frontier_model",
+  "benchmark_mode": "single_model_direct",
+  "models_used": [
+    "gpt-5.2"
+  ],
+  "agents_used": 1,
+  "skills_used": [],
+  "seed": 42,
+  "started_at": "2026-03-30T14:49:00.703812+00:00",
+  "finished_at": "2026-03-30T14:49:35.808709+00:00",
+  "wall_seconds": 35.105,
+  "llm_calls": 1,
+  "tool_calls": 0,
+  "raw_output": "### 1) Fe\u2082O\u2083 (hematite)\n- **Experimentally reported band gap (Eg):** ~**2.0\u20132.2 eV** (often cited ~2.1 eV; indirect/allowed transitions complicate the exact optical onset).\n- **Crystal structure:** **Corundum (\u03b1-Fe\u2082O\u2083), rhombohedral/hexagonal setting (R-3c)**.\n- **Key electronic properties (photoelectrochemical-relevant):**\n  - Typically **n-type** in most practical films due to oxygen vacancies/Fe interstitials (so it is *not reliably p-type* in PEC practice).\n  - **Poor majority carrier transport**: short hole diffusion length (often a few nm), polaronic/low mobility transport; significant recombination.\n  - **Band edges:** Valence band is sufficiently positive for **water oxidation**; conduction band is generally **not negative enough for H\u207a/H\u2082** (hematite is mainly used as a **photoanode** material).\n  - Very good **chemical stability** in many aqueous conditions.\n- **Visible-light suitability (Eg ideal 1.8\u20132.4 eV):** **Good** (in/near the ideal window; absorbs visible light reasonably well).\n\n**Suitability score (given formula):**  \nEg in [1.8, 2.4] \u2192 **1.0**\n\n---\n\n### 2) NiO\n- **Experimentally reported band gap (Eg):** typically **3.6\u20134.0 eV** (often quoted ~3.7\u20133.8 eV for stoichiometric NiO; optical edge can vary with defects).\n- **Crystal structure:** **Rock-salt (NaCl-type), cubic (Fm-3m)**.\n- **Key electronic properties (photoelectrochemical-relevant):**\n  - Classic **p-type oxide**, usually via **Ni vacancies** / acceptor-like defects.\n  - **Wide-gap**, so it absorbs mostly **UV**; visible absorption usually comes from defect states rather than band-to-band transitions.\n  - Strongly correlated oxide; carrier transport can be limited (small polaron-like behavior in many cases).\n  - Often used as a **p-type contact / hole transport / protective layer** rather than the primary visible-light absorber.\n- **Visible-light suitability:** **Poor** as a standalone visible-light photocatalyst because Eg is far above the visible range.\n\n**Suitability score:**  \n\\[\n\\max\\left(0, 1 - \\frac{|E_g-2.1|}{0.5}\\right)\n= \\max\\left(0, 1 - \\frac{|3.7-2.1|}{0.5}\\right)\n= \\max(0, 1 - 3.2) = 0\n\\]\n\u2192 **0**\n\n---\n\n### 3) CoO\n- **Experimentally reported band gap (Eg):** commonly **~2.4\u20132.8 eV** (values vary notably with stoichiometry, phase purity, and measurement; CoO is a correlated oxide with strong excitations and defect sensitivity).\n- **Crystal structure:** **Rock-salt (NaCl-type), cubic (Fm-3m)** (often with antiferromagnetic ordering at low temperature; can influence spectra).\n- **Key electronic properties (photoelectrochemical-relevant):**\n  - Often reported as **p-type** (acceptor-like defects; non-stoichiometry can matter).\n  - Compared with NiO, **narrower gap** and can absorb near the visible boundary; still not an ideal visible absorber if Eg is closer to ~2.7\u20132.8 eV.\n  - Correlated/low-mobility tendencies and recombination can be significant; stability and surface chemistry can be challenging depending on electrolyte and bias.\n- **Visible-light suitability:** **Borderline to moderate**. If Eg is near **2.4 eV**, it just meets the target; if closer to **2.7\u20132.8 eV**, it misses much of the visible spectrum.\n\n**Suitability score (taking a representative Eg \u2248 2.7 eV):**  \n\\[\n\\max\\left(0, 1 - \\frac{|2.7-2.1|}{0.5}\\right)\n= \\max(0, 1 - 1.2) = 0\n\\]\n\u2192 **0**  \n\n(If one instead assumes an optimistic **Eg = 2.4 eV**, then it would score **1.0** by the rule; the literature spread is the key issue.)\n\n---\n\n## Which has the band gap best suited for visible-light absorption (1.8\u20132.4 eV)?\n**Fe\u2082O\u2083 (hematite)**, with **Eg ~2.1 eV**, is the clearest match to the ideal visible-light window among the three.\n\n---\n\n## Ranking by visible-light photocatalytic suitability (per the scoring rule)\nUsing representative experimental gaps (Fe\u2082O\u2083 ~2.1 eV; NiO ~3.7 eV; CoO ~2.7 eV):\n\n1. **Fe\u2082O\u2083** \u2014 **Score 1.0** (best visible absorber of the three)\n2. **CoO** \u2014 **Score 0** (borderline in some reports, but often too wide-gap)\n3. **NiO** \u2014 **Score 0** (too wide-gap; UV absorber)\n\n---\n\n## Electronic property ranking for photoelectrochemical (PEC) applications (qualitative, beyond band gap)\nBecause PEC performance also depends on conductivity/type, minority carrier transport, recombination, and band-edge alignment:\n\n- **Best-established PEC oxide absorber (overall track record): Fe\u2082O\u2083**\n  - Strongest literature presence as a **photoanode** (water oxidation), but suffers from **short diffusion lengths/poor transport** and typically **n-type** behavior.\n- **Best \u201cp-type oxide\u201d behavior / hole-conducting layer: NiO**\n  - Strong, well-known **p-type** oxide; widely used as **hole transport/contact** in photoelectrodes, but **not** as a visible absorber (too wide-gap).\n- **CoO**\n  - Potentially **p-type** with a smaller gap than NiO, but **less consistent optoelectronics** and more variable reported band gap; PEC utility often ends up more in catalysis/overlayers than as a robust standalone light absorber.\n\nSo, if you mean **\u201cbest visible-light absorber for solar water splitting\u201d**: **Fe\u2082O\u2083**.  \nIf you mean **\u201cbest p-type oxide electronic behavior for device integration\u201d**: **NiO** tends to rank highest as a **p-type contact**, but not as the absorber.\n\n---\n\n## Recommendation (most promising among these for solar water splitting)\n- **Most promising primary solar absorber:** **Fe\u2082O\u2083 (hematite)** due to its **near-ideal visible band gap (~2.1 eV)**, abundance, and aqueous stability, and its extensive literature as a **photoanode** material (often paired with catalysts/overlayers and nanostructuring to mitigate transport/recombination limits).\n- **NiO:** best considered as a **p-type layer/contact** or support component rather than the main visible-light photocatalyst.\n- **CoO:** potentially interesting if a reliably **~2.4 eV** gap and stable p-type transport can be achieved, but the typical reported gap and correlated-transport limitations make it less straightforward than hematite.\n\n**Literature context (general):** Hematite is one of the most studied oxide photoanodes for PEC water oxidation; NiO is a canonical p-type wide-band-gap oxide used in photovoltaics/PEC architectures as a hole-selective contact; CoO is investigated in oxide electronics and catalysis and sometimes appears in PEC as a catalytic/functional layer, with band-gap reports spanning the near-UV/visible boundary.",
+  "task_success": true,
+  "success_details": {
+    "required_elements": [],
+    "missing": []
+  },
+  "product_quality_score": 4.17,
+  "product_quality_subscores": {
+    "correct_materials": 1.0,
+    "band_gap_values": 1.0,
+    "computed_suitability_score": 1.0,
+    "literature_pmid": 0.0,
+    "ranking_recommendation": 1.0,
+    "synthesis_coherence": 1.0
+  },
+  "artifacts": [],
+  "needs_emitted": 0,
+  "needs_fulfilled": 0,
+  "artifact_reuse_rate": null,
+  "lineage_depth": null,
+  "validation_events": 0,
+  "error": null,
+  "collaboration_uplift": null,
+  "emergence_uplift": null,
+  "product_quality_uplift": null,
+  "llm_efficiency": 4.17,
+  "wall_budget_fraction": 0.117
+}
