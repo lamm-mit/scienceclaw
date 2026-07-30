@@ -1,0 +1,27 @@
+{
+  "artifact_id": "art-e47ce9cb1ead7a36",
+  "parents": [
+    "art-b84dc4c5d57c616e",
+    "art-3fe62cab83f5ef43"
+  ],
+  "payload": {
+    "interpretation": "dual-phase FCC+BCC HEA records have higher median threshold than FCC records but also substantially steeper Paris slopes",
+    "model": "two-axis damage-tolerance map",
+    "science_result": {
+      "dual_phase_slope_ratio_vs_fcc": 1.8700475435816164,
+      "dual_phase_threshold_ratio_vs_fcc": 1.4583333333333335,
+      "gate_passes": true,
+      "gate_rule": "accept two-axis damage-tolerance model if a phase group has higher median \u0394Kth but at least 50 percent higher median Paris slope than FCC records",
+      "new_two_axis_model": "rank by both \u0394Kth and Paris slope m",
+      "old_scalar_model": "rank FCGR resistance by \u0394Kth alone"
+    },
+    "variables": [
+      "\u0394Kth",
+      "Paris slope m",
+      "phase_class"
+    ]
+  },
+  "status": "accepted",
+  "title": "accepted two-axis fatigue damage-tolerance map",
+  "type": "TwoAxisDamageToleranceMap"
+}

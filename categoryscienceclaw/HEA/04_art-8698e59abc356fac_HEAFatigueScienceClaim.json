@@ -1,0 +1,18 @@
+{
+  "artifact_id": "art-8698e59abc356fac",
+  "parents": [
+    "art-e47ce9cb1ead7a36"
+  ],
+  "payload": {
+    "claim": "In the open HEA FCGR dataset, threshold resistance and post-threshold crack-growth stability are decoupled: FCC+BCC records have higher median \u0394Kth than FCC records, but also much steeper median Paris slopes.",
+    "limitations": [
+      "literature-compiled dataset",
+      "small phase-group counts",
+      "hypothesis requires prospective validation"
+    ],
+    "science_value": "For HEA fatigue design, screening by \u0394Kth alone can select alloys with poor post-threshold crack-growth stability; a two-axis threshold-slope map is the scientifically relevant descriptor."
+  },
+  "status": "accepted",
+  "title": "HEA fatigue science claim",
+  "type": "HEAFatigueScienceClaim"
+}

@@ -1,0 +1,14 @@
+{
+  "artifact_id": "art-3fe62cab83f5ef43",
+  "parents": [
+    "art-b84dc4c5d57c616e"
+  ],
+  "payload": {
+    "accepted_variable": "\u0394Kth",
+    "model": "threshold-only fatigue-crack-growth design",
+    "rejected_reason": "high threshold can coincide with high Paris slope, so threshold alone confounds crack-initiation resistance with post-threshold growth stability"
+  },
+  "status": "rejected",
+  "title": "rejected threshold-only FCGR model",
+  "type": "RejectedThresholdOnlyFCGRModel"
+}

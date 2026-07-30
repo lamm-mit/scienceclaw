@@ -1,0 +1,12 @@
+{
+  "artifact_id": "art-b84dc4c5d57c616e",
+  "parents": [],
+  "payload": {
+    "fcgr_records_with_paris_slope": 22,
+    "source": "Materials Cloud HEA fatigue database",
+    "workbook": "Fatigue_database_HEA.xlsx"
+  },
+  "status": "accepted",
+  "title": "open HEA fatigue database",
+  "type": "HEAFatigueDatabase"
+}

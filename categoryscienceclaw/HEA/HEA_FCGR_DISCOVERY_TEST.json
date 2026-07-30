@@ -1,0 +1,35 @@
+{
+  "phase_group_summary": {
+    "BCC": {
+      "n": 1,
+      "paris_slope_mean": 2.2,
+      "paris_slope_median": 2.2,
+      "threshold_mean": 2.5,
+      "threshold_median": 2.5
+    },
+    "FCC": {
+      "n": 8,
+      "paris_slope_mean": 3.2024999999999997,
+      "paris_slope_median": 3.1550000000000002,
+      "threshold_mean": 4.4375,
+      "threshold_median": 4.8
+    },
+    "FCC+BCC": {
+      "n": 6,
+      "paris_slope_mean": 10.066666666666665,
+      "paris_slope_median": 5.9,
+      "threshold_mean": 9.5,
+      "threshold_median": 7.0
+    }
+  },
+  "record_count_with_paris_slope": 22,
+  "record_count_with_threshold_and_slope": 15,
+  "science_gate": {
+    "dual_phase_slope_ratio_vs_fcc": 1.8700475435816164,
+    "dual_phase_threshold_ratio_vs_fcc": 1.4583333333333335,
+    "gate_passes": true,
+    "gate_rule": "accept two-axis damage-tolerance model if a phase group has higher median \u0394Kth but at least 50 percent higher median Paris slope than FCC records",
+    "new_two_axis_model": "rank by both \u0394Kth and Paris slope m",
+    "old_scalar_model": "rank FCGR resistance by \u0394Kth alone"
+  }
+}

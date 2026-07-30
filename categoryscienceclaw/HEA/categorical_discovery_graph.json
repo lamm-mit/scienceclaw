@@ -1,0 +1,94 @@
+{
+  "audit_status": "pass",
+  "edges": [
+    {
+      "source": "art-b84dc4c5d57c616e",
+      "target": "art-3fe62cab83f5ef43"
+    },
+    {
+      "source": "art-b84dc4c5d57c616e",
+      "target": "art-e47ce9cb1ead7a36"
+    },
+    {
+      "source": "art-3fe62cab83f5ef43",
+      "target": "art-e47ce9cb1ead7a36"
+    },
+    {
+      "source": "art-e47ce9cb1ead7a36",
+      "target": "art-8698e59abc356fac"
+    }
+  ],
+  "nodes": [
+    {
+      "artifact_id": "art-b84dc4c5d57c616e",
+      "parents": [],
+      "payload": {
+        "fcgr_records_with_paris_slope": 22,
+        "source": "Materials Cloud HEA fatigue database",
+        "workbook": "Fatigue_database_HEA.xlsx"
+      },
+      "status": "accepted",
+      "title": "open HEA fatigue database",
+      "type": "HEAFatigueDatabase"
+    },
+    {
+      "artifact_id": "art-3fe62cab83f5ef43",
+      "parents": [
+        "art-b84dc4c5d57c616e"
+      ],
+      "payload": {
+        "accepted_variable": "\u0394Kth",
+        "model": "threshold-only fatigue-crack-growth design",
+        "rejected_reason": "high threshold can coincide with high Paris slope, so threshold alone confounds crack-initiation resistance with post-threshold growth stability"
+      },
+      "status": "rejected",
+      "title": "rejected threshold-only FCGR model",
+      "type": "RejectedThresholdOnlyFCGRModel"
+    },
+    {
+      "artifact_id": "art-e47ce9cb1ead7a36",
+      "parents": [
+        "art-b84dc4c5d57c616e",
+        "art-3fe62cab83f5ef43"
+      ],
+      "payload": {
+        "interpretation": "dual-phase FCC+BCC HEA records have higher median threshold than FCC records but also substantially steeper Paris slopes",
+        "model": "two-axis damage-tolerance map",
+        "science_result": {
+          "dual_phase_slope_ratio_vs_fcc": 1.8700475435816164,
+          "dual_phase_threshold_ratio_vs_fcc": 1.4583333333333335,
+          "gate_passes": true,
+          "gate_rule": "accept two-axis damage-tolerance model if a phase group has higher median \u0394Kth but at least 50 percent higher median Paris slope than FCC records",
+          "new_two_axis_model": "rank by both \u0394Kth and Paris slope m",
+          "old_scalar_model": "rank FCGR resistance by \u0394Kth alone"
+        },
+        "variables": [
+          "\u0394Kth",
+          "Paris slope m",
+          "phase_class"
+        ]
+      },
+      "status": "accepted",
+      "title": "accepted two-axis fatigue damage-tolerance map",
+      "type": "TwoAxisDamageToleranceMap"
+    },
+    {
+      "artifact_id": "art-8698e59abc356fac",
+      "parents": [
+        "art-e47ce9cb1ead7a36"
+      ],
+      "payload": {
+        "claim": "In the open HEA FCGR dataset, threshold resistance and post-threshold crack-growth stability are decoupled: FCC+BCC records have higher median \u0394Kth than FCC records, but also much steeper median Paris slopes.",
+        "limitations": [
+          "literature-compiled dataset",
+          "small phase-group counts",
+          "hypothesis requires prospective validation"
+        ],
+        "science_value": "For HEA fatigue design, screening by \u0394Kth alone can select alloys with poor post-threshold crack-growth stability; a two-axis threshold-slope map is the scientifically relevant descriptor."
+      },
+      "status": "accepted",
+      "title": "HEA fatigue science claim",
+      "type": "HEAFatigueScienceClaim"
+    }
+  ]
+}
