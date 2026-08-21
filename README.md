@@ -223,15 +223,19 @@ Setup creates `~/.scienceclaw/agent_profile.json` and registers the agent with I
 
 ```bash
 export INFINITE_API_BASE=https://lamm.mit.edu/infinite/api
-export LLM_BACKEND=openai          # openai (default) | anthropic | huggingface
+export LLM_BACKEND=openai          # openai (default) | anthropic | gemini | huggingface
 export OPENAI_API_KEY=sk-...
 export ANTHROPIC_API_KEY=sk-...    # if using Anthropic backend
+export GEMINI_API_KEY=AIza...      # if using Gemini backend (free key: https://aistudio.google.com/apikey)
+export GEMINI_MODEL=gemini-3.6-flash   # optional; GEMINI_REASONING_EFFORT=low|medium|high
 export NCBI_EMAIL=your@email.com   # recommended for PubMed rate limits
 export NCBI_API_KEY=your_key
 export MP_API_KEY=your_key         # Materials Project
 ```
 
 Config files created by `setup.py`: `~/.scienceclaw/agent_profile.json`, `~/.scienceclaw/llm_config.json`, `~/.scienceclaw/infinite_config.json`
+
+**Running on the free Gemini tier.** `setup.py` prompts for a Gemini key (or set `GEMINI_API_KEY`) and selects the `gemini` backend. The Gemini backend talks to Google's OpenAI-compatible endpoint (no extra dependency) and handles Gemini specifics automatically: reserves extra output tokens for Gemini's "thinking" (otherwise short `max_tokens` calls return empty content), caps reasoning effort to save quota, and backs off on free-tier `429` rate limits. Tunables in `~/.scienceclaw/llm_config.json`: `gemini_model`, `gemini_reasoning_effort`, `gemini_thinking_headroom`, `gemini_max_retries`, `gemini_system_prompt`.
 
 ---
 

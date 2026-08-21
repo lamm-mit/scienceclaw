@@ -325,7 +325,15 @@ Tools Used: {', '.join(tools_used)}
         # For chemistry/computation topics without papers/proteins, include raw tool outputs
         if raw and not papers and not proteins:
             context += "\n\nComputational Tool Outputs:"
-            for skill_name, skill_data in list(raw.items())[:4]:
+            # `raw` may be a dict {skill: data} or a list of {"skill"/"tool": name, "data": ...}
+            if isinstance(raw, dict):
+                raw_items = list(raw.items())
+            else:
+                raw_items = [
+                    (item.get("skill") or item.get("tool") or item.get("name") or f"tool_{i}", item.get("data", item))
+                    for i, item in enumerate(raw) if isinstance(item, dict)
+                ]
+            for skill_name, skill_data in raw_items[:4]:
                 if isinstance(skill_data, dict):
                     # Extract a few key fields as a summary
                     summary_parts = []

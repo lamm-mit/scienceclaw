@@ -384,9 +384,38 @@ def save_profile(profile: dict):
         pass
 
 
+# Supported LLM providers: (backend name, config key, env vars, prompt label)
+LLM_PROVIDERS = [
+    ("openai",    "openai_api_key",    ("OPENAI_API_KEY",),                  "OpenAI API key    (OPENAI_API_KEY)"),
+    ("anthropic", "anthropic_api_key", ("ANTHROPIC_API_KEY",),               "Anthropic API key (ANTHROPIC_API_KEY)"),
+    ("gemini",    "gemini_api_key",    ("GEMINI_API_KEY", "GOOGLE_API_KEY"), "Gemini API key    (GEMINI_API_KEY — free at https://aistudio.google.com/apikey)"),
+]
+
+
+def _write_llm_config(config: dict, keys: dict, default_backend: str) -> dict:
+    """Merge API keys + backend into the existing LLM config and write it (mode 0o600).
+
+    Non-key settings already in the file (e.g. gemini_model, openai_base_url,
+    timeout) are preserved so re-running setup never wipes a tuned config.
+    """
+    new_config = dict(config)
+    new_config["backend"] = default_backend
+    for backend, cfg_key, _envs, _label in LLM_PROVIDERS:
+        if keys.get(backend):
+            new_config[cfg_key] = keys[backend]
+        else:
+            new_config.pop(cfg_key, None)
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    with open(LLM_CONFIG_FILE, "w") as f:
+        json.dump(new_config, f, indent=2)
+    LLM_CONFIG_FILE.chmod(0o600)
+    return new_config
+
+
 def prompt_llm_api_key():
     """Prompt for LLM API keys and save them to llm_config.json (mode 0o600).
 
+    Supports OpenAI, Anthropic and Gemini (Google AI Studio — has a free tier).
     If keys are already present in the environment, skip prompting entirely.
     """
     import os
@@ -400,74 +429,60 @@ def prompt_llm_api_key():
         except Exception:
             config = {}
 
-    env_openai = os.environ.get("OPENAI_API_KEY", "")
-    env_anthropic = os.environ.get("ANTHROPIC_API_KEY", "")
+    env_keys = {}
+    for backend, cfg_key, envs, _label in LLM_PROVIDERS:
+        for env in envs:
+            if os.environ.get(env, ""):
+                env_keys[backend] = os.environ[env]
+                break
 
     # If env vars are already set, use them silently — no prompting
-    if env_openai or env_anthropic:
-        openai_key = env_openai or config.get("openai_api_key", "")
-        anthropic_key = env_anthropic or config.get("anthropic_api_key", "")
-        available = []
-        if openai_key:
-            available.append("openai")
-        if anthropic_key:
-            available.append("anthropic")
-        default_backend = config.get("backend", available[0]) if available else "openai"
-        new_config = {"backend": default_backend}
-        if openai_key:
-            new_config["openai_api_key"] = openai_key
-        if anthropic_key:
-            new_config["anthropic_api_key"] = anthropic_key
-        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        with open(LLM_CONFIG_FILE, "w") as f:
-            json.dump(new_config, f, indent=2)
-        LLM_CONFIG_FILE.chmod(0o600)
-        detected = ", ".join(f"{k.upper()}_API_KEY" for k in available)
-        print(f"✓ LLM keys detected from environment ({detected})")
+    if env_keys:
+        keys = {b: env_keys.get(b) or config.get(cfg_key, "") for b, cfg_key, _e, _l in LLM_PROVIDERS}
+        available = [b for b, _c, _e, _l in LLM_PROVIDERS if keys.get(b)]
+        current = config.get("backend")
+        default_backend = current if current in available else available[0]
+        _write_llm_config(config, keys, default_backend)
+        detected = ", ".join(envs[0] for b, _c, envs, _l in LLM_PROVIDERS if b in env_keys)
+        print(f"✓ LLM keys detected from environment ({detected}); default backend: {default_backend}")
         return
 
     # No env vars — fall back to interactive prompt
-    openai_key = config.get("openai_api_key", "")
-    anthropic_key = config.get("anthropic_api_key", "")
-
     print()
     print("LLM API keys (used for autonomous investigations).")
-    print("Press Enter to keep existing value or skip.")
+    print("Press Enter to keep existing value or skip. Gemini has a free tier.")
 
     def _prompt(label, existing):
         masked = f"...{existing[-4:]}" if existing else "not set"
         val = input(f"  {label} [{masked}]: ").strip()
         return val if val else existing
 
-    openai_key = _prompt("OpenAI API key    (OPENAI_API_KEY)", openai_key)
-    anthropic_key = _prompt("Anthropic API key (ANTHROPIC_API_KEY)", anthropic_key)
+    keys = {}
+    for backend, cfg_key, _envs, label in LLM_PROVIDERS:
+        keys[backend] = _prompt(label, config.get(cfg_key, ""))
 
-    if not openai_key and not anthropic_key:
-        print("  Skipped — set OPENAI_API_KEY or ANTHROPIC_API_KEY before running agents.")
+    available = [b for b, _c, _e, _l in LLM_PROVIDERS if keys.get(b)]
+    if not available:
+        print("  Skipped — set OPENAI_API_KEY, ANTHROPIC_API_KEY or GEMINI_API_KEY before running agents.")
         return
 
-    available = []
-    if openai_key:
-        available.append("openai")
-    if anthropic_key:
-        available.append("anthropic")
     if len(available) > 1:
-        current_default = config.get("backend", available[0])
+        current_default = config.get("backend") if config.get("backend") in available else available[0]
         choice = input(f"  Default backend [{'/'.join(available)}] (current: {current_default}): ").strip().lower()
         default_backend = choice if choice in available else current_default
     else:
         default_backend = available[0]
 
-    new_config = {"backend": default_backend}
-    if openai_key:
-        new_config["openai_api_key"] = openai_key
-    if anthropic_key:
-        new_config["anthropic_api_key"] = anthropic_key
+    if default_backend == "gemini":
+        try:
+            from core.llm_client import GEMINI_DEFAULT_MODEL
+        except Exception:
+            GEMINI_DEFAULT_MODEL = "gemini-3.6-flash"
+        current_model = config.get("gemini_model", GEMINI_DEFAULT_MODEL)
+        model = input(f"  Gemini model [{current_model}]: ").strip()
+        config["gemini_model"] = model or current_model
 
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    with open(LLM_CONFIG_FILE, "w") as f:
-        json.dump(new_config, f, indent=2)
-    LLM_CONFIG_FILE.chmod(0o600)
+    new_config = _write_llm_config(config, keys, default_backend)
     keys_saved = ", ".join(k.replace("_api_key", "") for k in new_config if k.endswith("_api_key"))
     print(f"✓ LLM config saved (default backend: {default_backend}, keys: {keys_saved}) → {LLM_CONFIG_FILE}")
 

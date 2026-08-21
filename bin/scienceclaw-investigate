@@ -8,8 +8,16 @@ Usage:
 """
 
 import sys
+import os
 import argparse
 import logging
+from pathlib import Path
+
+# Resolve scienceclaw root (bin/ is one level below root) so imports work
+# when invoked via the ~/.local/bin symlink
+_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ROOT))
+os.chdir(_ROOT)
 
 from coordination.autonomous_orchestrator import AutonomousOrchestrator
 

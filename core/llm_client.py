@@ -5,12 +5,16 @@ Supports multiple LLM backends:
 - Anthropic API (default) - direct Claude API calls
 - OpenAI API - direct GPT API calls
 - Hugging Face - models via Hugging Face Inference API or local deployment
+- Gemini (Google AI Studio) - via Gemini's OpenAI-compatible endpoint; free tier works
 
 Configuration via environment variables or config file:
-- LLM_BACKEND: openai (default), anthropic, huggingface
+- LLM_BACKEND: openai (default), anthropic, gemini, huggingface
 - OPENAI_API_KEY: for OpenAI backend (default)
 - ANTHROPIC_API_KEY: for Anthropic backend
-- OPENAI_API_KEY: for OpenAI backend
+- GEMINI_API_KEY (or GOOGLE_API_KEY): for Gemini backend
+- GEMINI_MODEL: Gemini model ID (default: gemini-3.6-flash)
+- GEMINI_REASONING_EFFORT: low (default) | medium | high — caps "thinking" tokens
+- GEMINI_THINKING_HEADROOM: extra output tokens reserved for Gemini thinking (default: 4096)
 - HF_API_KEY or HUGGINGFACE_API_KEY: for Hugging Face backend
 - HF_MODEL: Hugging Face model ID
 - HF_ENDPOINT: Optional custom endpoint for self-hosted models
@@ -22,6 +26,22 @@ import json
 import re
 from typing import Optional, Dict, Any
 from pathlib import Path
+
+
+# Gemini's OpenAI-compatible endpoint (Google AI Studio keys)
+GEMINI_OPENAI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+GEMINI_DEFAULT_MODEL = "gemini-3.6-flash"
+
+# Gemini-specific system prompt. Gemini models tend to wrap structured output in
+# markdown fences and add preamble; ScienceClaw's callers parse raw JSON/sections,
+# so steer the model toward the exact requested format.
+GEMINI_SYSTEM_PROMPT = (
+    "You are the reasoning engine of ScienceClaw, an autonomous scientific research agent. "
+    "Follow the user's requested output format exactly. When asked for JSON, return only "
+    "valid JSON with no markdown code fences and no commentary before or after it. "
+    "When asked for prose or sections, return them directly without preamble. "
+    "Be specific, quantitative, and cite concrete evidence from the provided context."
+)
 
 
 class LLMClient:
@@ -39,7 +59,7 @@ class LLMClient:
         
         Args:
             agent_name: Name of the agent (for session tracking)
-            backend: LLM backend to use (openai, anthropic, huggingface)
+            backend: LLM backend to use (openai, anthropic, gemini, huggingface)
                     If None, reads from LLM_BACKEND env var or defaults to openai
         """
         self.agent_name = agent_name
@@ -53,6 +73,8 @@ class LLMClient:
             self._init_anthropic()
         elif self.backend == "openai":
             self._init_openai()
+        elif self.backend == "gemini":
+            self._init_gemini()
         elif self.backend == "huggingface":
             self._init_huggingface()
     
@@ -72,6 +94,19 @@ class LLMClient:
         self.openai_model = os.environ.get("OPENAI_MODEL", "gpt-5.2")
         # Optional base URL override for local/compatible servers (e.g. vLLM)
         self.openai_base_url = os.environ.get("OPENAI_BASE_URL")
+
+        # Gemini (Google AI Studio) via the OpenAI-compatible endpoint.
+        self.gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        self.gemini_model = os.environ.get("GEMINI_MODEL", GEMINI_DEFAULT_MODEL)
+        self.gemini_base_url = os.environ.get("GEMINI_BASE_URL", GEMINI_OPENAI_BASE_URL)
+        # Gemini "thinking" tokens count against max_tokens: a small max_tokens yields an
+        # empty answer (finish_reason=length, content=None). Reserve headroom for thinking
+        # and cap reasoning effort to keep free-tier quota usage low.
+        # reasoning_effort: low | medium | high (Gemini rejects "none"); "" disables the param.
+        self.gemini_reasoning_effort = os.environ.get("GEMINI_REASONING_EFFORT", "low")
+        self.gemini_thinking_headroom = int(os.environ.get("GEMINI_THINKING_HEADROOM", "4096"))
+        self.gemini_max_retries = int(os.environ.get("GEMINI_MAX_RETRIES", "4"))
+        self.gemini_system_prompt = os.environ.get("GEMINI_SYSTEM_PROMPT", GEMINI_SYSTEM_PROMPT)
         
         # Timeout (seconds) - loose defaults for slow models like Kimi-K2.5
         timeout_env = os.environ.get("LLM_TIMEOUT")
@@ -92,6 +127,15 @@ class LLMClient:
                     self.anthropic_model = config.get("anthropic_model", self.anthropic_model)
                     self.openai_model = config.get("openai_model", self.openai_model)
                     self.openai_base_url = config.get("openai_base_url", self.openai_base_url)
+                    self.gemini_key = config.get("gemini_api_key", self.gemini_key)
+                    self.gemini_model = config.get("gemini_model", self.gemini_model)
+                    self.gemini_base_url = config.get("gemini_base_url", self.gemini_base_url)
+                    self.gemini_reasoning_effort = config.get("gemini_reasoning_effort", self.gemini_reasoning_effort)
+                    self.gemini_system_prompt = config.get("gemini_system_prompt", self.gemini_system_prompt)
+                    if "gemini_thinking_headroom" in config:
+                        self.gemini_thinking_headroom = int(config["gemini_thinking_headroom"])
+                    if "gemini_max_retries" in config:
+                        self.gemini_max_retries = int(config["gemini_max_retries"])
                     if "timeout" in config:
                         self.timeout = int(config["timeout"])
             except Exception:
@@ -117,6 +161,23 @@ class LLMClient:
             if self.openai_base_url:
                 kwargs["base_url"] = self.openai_base_url
             self.openai_client = openai.OpenAI(**kwargs)
+        except ImportError:
+            raise ImportError("openai package not installed. Run: pip install openai")
+
+    def _init_gemini(self):
+        """Initialize Gemini client (OpenAI-compatible endpoint, so no extra dependency)."""
+        try:
+            import openai
+            if not self.gemini_key:
+                raise ValueError(
+                    "GEMINI_API_KEY not set. Get a free key at https://aistudio.google.com/apikey"
+                )
+            self.gemini_client = openai.OpenAI(
+                api_key=self.gemini_key,
+                base_url=self.gemini_base_url,
+                timeout=self.timeout,
+                max_retries=0,  # we handle rate-limit retries ourselves (free-tier friendly)
+            )
         except ImportError:
             raise ImportError("openai package not installed. Run: pip install openai")
     
@@ -176,6 +237,8 @@ class LLMClient:
             return self._call_anthropic(prompt, max_tokens, temperature)
         elif self.backend == "openai":
             return self._call_openai(prompt, max_tokens, temperature)
+        elif self.backend == "gemini":
+            return self._call_gemini(prompt, max_tokens, temperature)
         elif self.backend == "huggingface":
             return self._call_huggingface(prompt, max_tokens, temperature)
         else:
@@ -208,7 +271,7 @@ class LLMClient:
 
             import openai
             shield_client = openai.OpenAI(
-                api_key=self.openai_key or self.anthropic_key or "shield-local",
+                api_key=self.openai_key or self.anthropic_key or self.gemini_key or "shield-local",
                 base_url=f"{shield_url}/shield/v1",
             )
 
@@ -292,6 +355,106 @@ class LLMClient:
             print(f"OpenAI API error: {e}")
             return ""
     
+    # ── Gemini ───────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _gemini_retry_delay(err_msg: str, attempt: int) -> float:
+        """Pick a backoff delay for a Gemini 429, honouring the server's hint if present."""
+        m = re.search(r"retry(?:Delay|\s+in)[\"':\s]*([0-9.]+)\s*s", err_msg, re.IGNORECASE)
+        if m:
+            try:
+                return min(float(m.group(1)) + 1.0, 120.0)
+            except ValueError:
+                pass
+        return float(min(10 * (2 ** attempt), 90))
+
+    @staticmethod
+    def _strip_wrapping_code_fence(text: str) -> str:
+        """If the whole response is a single ```lang ... ``` block, unwrap it."""
+        stripped = text.strip()
+        m = re.match(r"^```[a-zA-Z0-9_-]*\s*\n(.*)\n```$", stripped, re.DOTALL)
+        return m.group(1).strip() if m else text
+
+    def _call_gemini(self, prompt: str, max_tokens: int, temperature: float) -> str:
+        """
+        Call Gemini through its OpenAI-compatible endpoint with Gemini-specific handling:
+
+        - Prepends a system prompt steering Gemini to the exact requested format.
+        - Adds thinking headroom to max_tokens (Gemini bills thinking tokens against
+          max_tokens; too small a budget yields finish_reason=length and empty content).
+        - Caps reasoning effort (default "low") to conserve free-tier quota.
+        - Retries empty/truncated responses with a larger budget, and 429 rate limits
+          with backoff — the free tier is ~10-15 requests/min.
+        - Unwraps a response that is entirely a markdown code fence.
+        """
+        import time
+
+        messages = []
+        if self.gemini_system_prompt:
+            messages.append({"role": "system", "content": self.gemini_system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        reasoning_effort = (self.gemini_reasoning_effort or "").strip().lower() or None
+        headroom = max(0, int(self.gemini_thinking_headroom))
+        budget = int(max_tokens) + headroom
+        debug = bool(os.environ.get("DEBUG_LLM_TOPIC"))
+
+        attempt = 0
+        last_error = None
+        while attempt <= self.gemini_max_retries:
+            kwargs: Dict[str, Any] = {
+                "model": self.gemini_model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": budget,
+            }
+            if reasoning_effort:
+                kwargs["reasoning_effort"] = reasoning_effort
+            try:
+                response = self.gemini_client.chat.completions.create(**kwargs)
+                choice = response.choices[0] if response.choices else None
+                text = (choice.message.content if choice and choice.message else None) or ""
+                finish = getattr(choice, "finish_reason", None) if choice else None
+                if text.strip():
+                    return self._strip_wrapping_code_fence(text)
+                # Empty answer: thinking consumed the budget — grow it and retry.
+                if finish == "length" and attempt < self.gemini_max_retries:
+                    budget = budget * 2 if budget else 2048
+                    if debug:
+                        print(f"    [DEBUG] Gemini returned empty content (finish_reason=length); "
+                              f"retrying with max_tokens={budget}")
+                    attempt += 1
+                    continue
+                if debug:
+                    print(f"    [DEBUG] Gemini returned empty content (finish_reason={finish})")
+                return ""
+            except Exception as e:
+                last_error = e
+                msg = str(e)
+                status = getattr(e, "status_code", None)
+                is_rate_limit = status == 429 or "RESOURCE_EXHAUSTED" in msg or "429" in msg[:40]
+                # 503 "high demand" / UNAVAILABLE is transient on the free tier — treat like a rate limit
+                is_unavailable = status in (502, 503, 504) or "UNAVAILABLE" in msg or "high demand" in msg
+                is_bad_request = status == 400 or "INVALID_ARGUMENT" in msg
+                if (is_rate_limit or is_unavailable) and attempt < self.gemini_max_retries:
+                    delay = self._gemini_retry_delay(msg, attempt)
+                    why = "rate limit hit (free tier)" if is_rate_limit else "temporarily unavailable (high demand)"
+                    print(f"Gemini {why}; retrying in {delay:.0f}s "
+                          f"(attempt {attempt + 1}/{self.gemini_max_retries})...")
+                    time.sleep(delay)
+                    attempt += 1
+                    continue
+                if is_bad_request and reasoning_effort and attempt < self.gemini_max_retries:
+                    # Some Gemini models reject reasoning_effort values — retry without it.
+                    if debug:
+                        print(f"    [DEBUG] Gemini rejected reasoning_effort={reasoning_effort}; retrying without it")
+                    reasoning_effort = None
+                    attempt += 1
+                    continue
+                break
+        print(f"Gemini API error: {last_error}")
+        return ""
+
     def _call_huggingface(self, prompt: str, max_tokens: int, temperature: float) -> str:
         """
         Call Hugging Face models using the most general syntax.
@@ -356,7 +519,7 @@ def get_llm_client(agent_name: str = "Agent", backend: Optional[str] = None) -> 
     
     Args:
         agent_name: Name of the agent
-        backend: LLM backend (anthropic, openai, huggingface)
+        backend: LLM backend (anthropic, openai, gemini, huggingface)
         
     Returns:
         LLMClient instance
