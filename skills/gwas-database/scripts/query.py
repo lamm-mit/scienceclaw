@@ -11,6 +11,10 @@ Usage:
 import argparse
 import json
 import sys
+from pathlib import Path
+
+# Skill directory name, used in human-readable output.
+SKILL_NAME = Path(__file__).resolve().parents[1].name
 
 try:
     import requests
@@ -73,7 +77,7 @@ def main():
             print(json.dumps(result, indent=2))
         else:
             print("=" * 60)
-            print(f"{skill_name} Query Results")
+            print(f"{SKILL_NAME} Query Results")
             print("=" * 60)
             print(f"Query: {args.search}")
             print(f"Status: {result.get('status', 'unknown')}")
