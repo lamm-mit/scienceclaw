@@ -313,6 +313,7 @@ SKILL_DOMAIN_MAP: Dict[str, List[str]] = {
     "websearch":                    ["web_content"],
     "browser-automation":           ["web_content"],
     "firecrawl-scraper":            ["web_content"],
+    "firecrawl-search":             ["web_content"],
 
     # -----------------------------------------------------------------------
     # Economic / geospatial / astronomical
