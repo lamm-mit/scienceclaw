@@ -603,6 +603,8 @@ IMPORTANT RULES:
 
                 # ── Generic retry: if skill failed, read SKILL.md and ask
                 # the LLM to generate correct parameters, then retry once. ──
+                _executables = skill_meta.get('executables', [])
+                _script_name = Path(_executables[0]).name if _executables else 'unknown'
                 if result.get('status') == 'error':
                     _err_msg = result.get('error', '')
                     _is_param_error = ('unrecognized arguments' in _err_msg
