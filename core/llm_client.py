@@ -246,8 +246,7 @@ class LLMClient:
         """
         Call the LLM with a prompt.
 
-        If Coherence Shield is enabled, routes through the Shield proxy
-        for hallucination filtering and PQC attestation of responses.
+        If Coherence Shield is enabled, routes through the Shield proxy.
 
         Args:
             prompt: The prompt to send
@@ -292,10 +291,8 @@ class LLMClient:
         """
         Route LLM call through Paraxiom Coherence Shield.
 
-        The Shield is an OpenAI-compatible proxy that:
-        1. Applies toroidal logit bias to reduce hallucination
-        2. Attests every response with PQC signatures
-        3. Logs the interaction for audit
+        The Shield is an OpenAI-compatible proxy at coherence_shield_url
+        in paraxiom_trust.json.
 
         Falls back to None if Shield is unavailable.
         """

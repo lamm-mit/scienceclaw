@@ -615,13 +615,15 @@ class ArtifactStore:
         self._append_global_index(artifact)
         self._sync_to_infinite(artifact)
 
-        # Paraxiom Trust Layer: PQC attestation for every artifact
+        # Paraxiom Trust Layer: PQC attestation, opt-in via
+        # ~/.scienceclaw/paraxiom_trust.json. Never blocks science.
         try:
-            from paraxiom_trust import AttestationLayer
-            attester = AttestationLayer(self.agent_name)
-            attester.attest(artifact.to_dict())
-        except Exception:
-            pass  # Trust layer is optional — never block science
+            from paraxiom_trust import AttestationLayer, ParaxiomTrustConfig
+            trust_config = ParaxiomTrustConfig.load()
+            if trust_config.signing_enabled:
+                AttestationLayer(self.agent_name, trust_config).attest(artifact.to_dict())
+        except Exception as exc:
+            logging.warning("ArtifactStore: artifact %s was not attested: %s", artifact.artifact_id, exc)
 
         return artifact.artifact_id
 
