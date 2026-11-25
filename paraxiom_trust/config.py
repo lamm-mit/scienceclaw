@@ -12,20 +12,20 @@ from pathlib import Path
 class ParaxiomTrustConfig:
     """Configuration for the Paraxiom trust layer."""
 
-    # Enable PQC artifact signing
-    signing_enabled: bool = True
+    # Enable PQC artifact signing (opt-in; needs `pip install pqcrypto==1.0.0`)
+    signing_enabled: bool = False
 
-    # Signature algorithm: "falcon512" | "falcon1024"
-    sign_algorithm: str = "falcon512"
+    # Signature algorithm: "ml-dsa-87" (FIPS 204)
+    sign_algorithm: str = "ml-dsa-87"
 
     # Key storage directory
     key_dir: str = "~/.scienceclaw/paraxiom_keys"
 
-    # Enable Coherence Shield filtering on LLM calls
+    # Route LLM calls through the Coherence Shield proxy
     coherence_shield_enabled: bool = False
     coherence_shield_url: str = "http://127.0.0.1:3080"
 
-    # Enable QuantumHarmony blockchain anchoring
+    # Reserved: QuantumHarmony anchoring is not implemented yet, so this has no effect
     blockchain_enabled: bool = False
     blockchain_ws_url: str = "ws://127.0.0.1:9944"
 

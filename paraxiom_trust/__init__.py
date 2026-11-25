@@ -2,19 +2,19 @@
 Paraxiom Trust Layer for ScienceClaw
 
 Post-quantum cryptographic attestation for autonomous scientific agents.
-Every artifact is signed, every claim is verifiable, every lineage is immutable.
+A signed artifact can be checked later for changes to its content or lineage.
 
 Integration points:
-- Artifact signing: Falcon-512 signatures on every skill invocation
+- Artifact signing: ML-DSA-87 (FIPS 204) signatures, opt-in via paraxiom_trust.json
 - Content attestation: SHA3-256 content hash + PQC signature
-- Blockchain anchoring: QuantumHarmony on-chain attestation (optional)
-- Coherence Shield: LLM output filtering for agent synthesis steps
+- Blockchain anchoring: QuantumHarmony on-chain attestation (planned, not implemented)
+- Coherence Shield: optional routing of LLM calls through the Shield proxy
 
 Paraxiom Technologies Inc. — Montreal
 https://paraxiom.org
 """
 
-from .attestation import AttestationLayer, ArtifactAttestation
+from .attestation import AttestationLayer, ArtifactAttestation, TrustLayerError
 from .config import ParaxiomTrustConfig
 
-__all__ = ["AttestationLayer", "ArtifactAttestation", "ParaxiomTrustConfig"]
+__all__ = ["AttestationLayer", "ArtifactAttestation", "ParaxiomTrustConfig", "TrustLayerError"]

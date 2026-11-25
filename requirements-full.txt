@@ -14,6 +14,9 @@ pydantic>=2.0.0
 # openai>=1.0.0      # For direct OpenAI API
 # huggingface_hub>=0.20.0  # For Hugging Face models
 
+# Optional: post-quantum artifact signing (paraxiom_trust, opt-in via ~/.scienceclaw/paraxiom_trust.json)
+# pqcrypto==1.0.0
+
 # Core bioinformatics
 biopython>=1.81
 

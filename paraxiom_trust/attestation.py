@@ -1,24 +1,38 @@
 """
 Paraxiom Attestation Layer for ScienceClaw
 
-Signs every artifact with post-quantum cryptography (Falcon-512).
-Verifies artifact integrity and agent identity.
-Optionally anchors attestations to QuantumHarmony blockchain.
+Signs artifacts with ML-DSA-87 (FIPS 204), a post-quantum signature scheme,
+through the pqcrypto package (pip install pqcrypto==1.0.0).
+Verifies artifact integrity against the agent's own public key.
 
-No C code. Pure Python calling paraxiom-pqc via subprocess or native bindings.
+Signing is opt-in: set "signing_enabled": true in
+~/.scienceclaw/paraxiom_trust.json. When it is enabled and the library is
+missing, or a key is unusable, this module raises TrustLayerError instead of
+writing a record that is not a real signature.
 """
 
 import hashlib
+import importlib
 import json
 import os
-import subprocess
-import time
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from .config import ParaxiomTrustConfig
+
+
+# sign_algorithm value -> pqcrypto module
+SUPPORTED_ALGORITHMS = {"ml-dsa-87": "pqcrypto.sign.ml_dsa_87"}
+
+# FIPS 204 context string, bound into every signature so a ScienceClaw
+# attestation can't be passed off as a signature over anything else.
+SIGNING_CONTEXT = b"scienceclaw-attestation-v1"
+
+
+class TrustLayerError(RuntimeError):
+    """Signing was requested but cannot be done safely."""
 
 
 @dataclass
@@ -33,16 +47,16 @@ class ArtifactAttestation:
     timestamp: str  # ISO 8601
 
     # PQC signature
-    signature_algorithm: str  # "falcon512" | "falcon1024"
-    signature: str  # hex-encoded Falcon signature over attestation payload
+    signature_algorithm: str  # "ml-dsa-87"
+    signature: str  # hex-encoded ML-DSA signature over attestation payload
     public_key_fingerprint: str  # SHA256 of agent's public key
 
     # Lineage
     parent_artifact_ids: list
     investigation_id: str
 
-    # Optional blockchain anchor
-    blockchain_tx: Optional[str] = None  # QuantumHarmony tx hash if anchored
+    # Reserved for QuantumHarmony anchoring (not implemented yet)
+    blockchain_tx: Optional[str] = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -51,14 +65,34 @@ class ArtifactAttestation:
         return json.dumps(self.to_dict(), sort_keys=True)
 
 
+def _load_backend(algorithm: str):
+    """Return the pqcrypto module for `algorithm`, or raise TrustLayerError."""
+    if algorithm not in SUPPORTED_ALGORITHMS:
+        raise TrustLayerError(
+            f"Unsupported sign_algorithm {algorithm!r} in paraxiom_trust.json "
+            f"(supported: {', '.join(sorted(SUPPORTED_ALGORITHMS))})"
+        )
+    try:
+        return importlib.import_module(SUPPORTED_ALGORITHMS[algorithm])
+    except ImportError as e:
+        raise TrustLayerError(
+            "Artifact signing is enabled but pqcrypto is not installed. "
+            "Run `pip install pqcrypto==1.0.0` or set signing_enabled to false."
+        ) from e
+
+
 class AttestationLayer:
     """
     Manages PQC key generation, artifact signing, and verification.
 
     Key storage: ~/.scienceclaw/paraxiom_keys/{agent_name}/
-        - signing_key.bin (Falcon secret key)
-        - verification_key.bin (Falcon public key)
-        - fingerprint.txt (SHA256 of public key)
+        - ml-dsa-87.sk (secret key, mode 0600)
+        - ml-dsa-87.pk (public key)
+
+    Key files from earlier versions (signing_key.bin, verification_key.bin)
+    are never read.
+
+    verify() checks records against this agent's own public key only.
     """
 
     def __init__(self, agent_name: str, config: Optional[ParaxiomTrustConfig] = None):
@@ -66,52 +100,63 @@ class AttestationLayer:
         self.config = config or ParaxiomTrustConfig.load()
         self.key_dir = Path(self.config.key_dir).expanduser() / agent_name
         self.attestation_log = Path(self.config.attestation_log).expanduser()
+        self.algorithm = self.config.sign_algorithm
+
+        self._backend = None
+        self._sk: Optional[bytes] = None
+        self._pk: Optional[bytes] = None
+        self._fingerprint: Optional[str] = None
 
         if self.config.signing_enabled:
+            self._backend = _load_backend(self.algorithm)
             self._ensure_keys()
 
     def _ensure_keys(self) -> None:
-        """Generate Falcon keypair if not present."""
-        self.key_dir.mkdir(parents=True, exist_ok=True)
-        sk_path = self.key_dir / "signing_key.bin"
-        vk_path = self.key_dir / "verification_key.bin"
-        fp_path = self.key_dir / "fingerprint.txt"
+        """Load this agent's key pair, generating it on first use."""
+        self.key_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        sk_path = self.key_dir / f"{self.algorithm}.sk"
+        pk_path = self.key_dir / f"{self.algorithm}.pk"
 
-        if sk_path.exists() and vk_path.exists():
-            self._fingerprint = fp_path.read_text().strip() if fp_path.exists() else "unknown"
-            return
+        if not sk_path.exists() and not pk_path.exists():
+            pk, sk = self._backend.keygen()
+            fd = os.open(sk_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, "wb") as f:
+                f.write(sk)
+            pk_path.write_bytes(pk)
 
-        # Generate keys using Python falcon-rs bindings
         try:
-            from falcon import safe_api as falcon_api
-            kp = falcon_api.FnDsaKeyPair.generate(9)  # logn=9 for Falcon-512
-            sk_bytes = kp.private_key()
-            vk_bytes = kp.public_key()
-        except ImportError:
-            # Fallback: generate random bytes as placeholder
-            # In production, paraxiom-pqc binary would be called
-            import secrets
-            sk_bytes = secrets.token_bytes(1281)  # Falcon-512 SK size
-            vk_bytes = secrets.token_bytes(897)   # Falcon-512 PK size
+            sk, pk = sk_path.read_bytes(), pk_path.read_bytes()
+        except FileNotFoundError as e:
+            raise TrustLayerError(f"Incomplete key pair in {self.key_dir}: {e.filename} is missing") from e
 
-        sk_path.write_bytes(sk_bytes if isinstance(sk_bytes, bytes) else bytes(sk_bytes))
-        vk_path.write_bytes(vk_bytes if isinstance(vk_bytes, bytes) else bytes(vk_bytes))
+        if len(sk) != self._backend.SECRET_KEY_SIZE or len(pk) != self._backend.PUBLIC_KEY_SIZE:
+            raise TrustLayerError(f"Key files in {self.key_dir} have the wrong size for {self.algorithm}")
 
-        fingerprint = hashlib.sha256(
-            vk_bytes if isinstance(vk_bytes, bytes) else bytes(vk_bytes)
-        ).hexdigest()[:32]
-        fp_path.write_text(fingerprint)
-        self._fingerprint = fingerprint
+        # Check that the two halves belong together before signing real records.
+        probe = b"scienceclaw key check"
+        try:
+            self._backend.verify(pk, probe, self._backend.sign(sk, probe, SIGNING_CONTEXT), SIGNING_CONTEXT)
+        except Exception as e:
+            raise TrustLayerError(f"Key pair in {self.key_dir} failed its self-check") from e
+
+        self._sk, self._pk = sk, pk
+        self._fingerprint = hashlib.sha256(pk).hexdigest()[:32]
+
+    def _require_keys(self) -> None:
+        if self._sk is None:
+            raise TrustLayerError("Artifact signing is disabled (signing_enabled is false in paraxiom_trust.json)")
 
     def attest(self, artifact_dict: dict) -> ArtifactAttestation:
         """
         Create a cryptographic attestation for an artifact.
 
         1. Compute SHA3-256 content hash of the artifact payload
-        2. Sign the attestation payload with Falcon-512
+        2. Sign the attestation payload with ML-DSA
         3. Return the attestation record
         4. Append to attestation log
         """
+        self._require_keys()
+
         # Content hash (SHA3-256 for quantum resistance)
         canonical = json.dumps(artifact_dict.get("payload", {}), sort_keys=True, ensure_ascii=False)
         content_hash = hashlib.sha3_256(canonical.encode()).hexdigest()
@@ -135,7 +180,7 @@ class AttestationLayer:
             producer_agent=artifact_dict["producer_agent"],
             skill_used=artifact_dict["skill_used"],
             timestamp=attest_payload["timestamp"],
-            signature_algorithm=self.config.sign_algorithm,
+            signature_algorithm=self.algorithm,
             signature=sig_hex,
             public_key_fingerprint=self._fingerprint,
             parent_artifact_ids=artifact_dict.get("parent_artifact_ids", []),
@@ -149,15 +194,25 @@ class AttestationLayer:
 
     def verify(self, attestation: ArtifactAttestation, artifact_dict: dict) -> bool:
         """
-        Verify an artifact attestation.
+        Verify an attestation made by this agent.
 
         1. Recompute content hash and check it matches
-        2. Verify the PQC signature
+        2. Check the record names this agent's algorithm and key
+        3. Verify the PQC signature
         """
+        self._require_keys()
+
         # Check content hash
         canonical = json.dumps(artifact_dict.get("payload", {}), sort_keys=True, ensure_ascii=False)
         expected_hash = hashlib.sha3_256(canonical.encode()).hexdigest()
         if attestation.content_hash != expected_hash:
+            return False
+
+        # Records from earlier versions say "falcon512" but carry an HMAC tag
+        # ("hmac_..."), which is not a signature; they fail here.
+        if attestation.signature_algorithm != self.algorithm:
+            return False
+        if attestation.public_key_fingerprint != self._fingerprint:
             return False
 
         # Rebuild attestation payload
@@ -174,53 +229,19 @@ class AttestationLayer:
         return self._verify(
             json.dumps(attest_payload, sort_keys=True).encode(),
             attestation.signature,
-            attestation.public_key_fingerprint,
         )
 
     def _sign(self, message: bytes) -> str:
-        """Sign a message with the agent's Falcon-512 key."""
-        if not self.config.signing_enabled:
-            return "signing_disabled"
+        """Sign a message with the agent's ML-DSA key."""
+        return self._backend.sign(self._sk, message, SIGNING_CONTEXT).hex()
 
-        sk_path = self.key_dir / "signing_key.bin"
-        if not sk_path.exists():
-            return "no_key"
-
+    def _verify(self, message: bytes, signature_hex: str) -> bool:
+        """Verify an ML-DSA signature against the agent's public key."""
         try:
-            from falcon import safe_api as falcon_api
-            sk_bytes = sk_path.read_bytes()
-            kp = falcon_api.FnDsaKeyPair.from_private_key(sk_bytes)
-            sig = kp.sign(message, falcon_api.DomainSeparation.None_)
-            return sig.to_bytes().hex()
-        except (ImportError, Exception):
-            # Fallback: HMAC-SHA3 placeholder (not PQC, but functional)
-            import hmac
-            sk_bytes = sk_path.read_bytes()
-            h = hmac.new(sk_bytes[:32], message, hashlib.sha3_256)
-            return "hmac_" + h.hexdigest()
-
-    def _verify(self, message: bytes, signature_hex: str, expected_fingerprint: str) -> bool:
-        """Verify a Falcon-512 signature."""
-        if signature_hex.startswith("hmac_"):
-            # HMAC fallback verification
-            sk_path = self.key_dir / "signing_key.bin"
-            if not sk_path.exists():
-                return False
-            import hmac as hmac_mod
-            sk_bytes = sk_path.read_bytes()
-            expected = "hmac_" + hmac_mod.new(sk_bytes[:32], message, hashlib.sha3_256).hexdigest()
-            return hmac_mod.compare_digest(signature_hex, expected)
-
-        try:
-            from falcon import safe_api as falcon_api
-            vk_path = self.key_dir / "verification_key.bin"
-            vk_bytes = vk_path.read_bytes()
-            sig_bytes = bytes.fromhex(signature_hex)
-            falcon_api.FnDsaSignature.verify(
-                sig_bytes, vk_bytes, message, falcon_api.DomainSeparation.None_
-            )
+            self._backend.verify(self._pk, message, bytes.fromhex(signature_hex), SIGNING_CONTEXT)
             return True
-        except Exception:
+        except ValueError:
+            # Bad hex, wrong length, or pqcrypto.InvalidSignatureError
             return False
 
     def _log_attestation(self, attestation: ArtifactAttestation) -> None:
