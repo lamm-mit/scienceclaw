@@ -58,6 +58,7 @@ SKILL_INPUT_MAP: Dict[str, Dict[str, str]] = {
     "research-lookup":         {"param": "query",        "entity": "research topic",                        "hint": "APR-246 clinical trials TP53"},
     "perplexity-search":       {"param": "query",        "entity": "research topic",                        "hint": "eprenetapopt mechanism of action"},
     "websearch":               {"param": "query",        "entity": "research topic",                        "hint": "p53 reactivation small molecules"},
+    "firecrawl-search":        {"param": "query",        "entity": "research topic",                        "hint": "CRISPR base editing efficiency"},
     # ── Protein / Sequence ───────────────────────────────────────────────────
     "uniprot":                 {"param": "query",        "entity": "protein name or UniProt accession",     "hint": "TP53, P04637, or KRAS"},
     "uniprot-database":        {"param": "query",        "entity": "protein name or UniProt accession",     "hint": "P53_HUMAN, BRCA1, or P04637"},

@@ -164,7 +164,7 @@ SKILL_CATEGORIES = {
     "general": [
         "arxiv", "arxiv-database", "browser-automation", "citation-management",
         "datavis", "diagramming", "disease-research", "document-skills",
-        "hypothesis-generation", "idea-generation", "image-analysis",
+        "firecrawl-search", "hypothesis-generation", "idea-generation", "image-analysis",
         "infographics", "infinite", "investigation-plotter", "literature-deep-research",
         "literature-meta-search", "literature-review", "markdown-mermaid-writing",
         "openalex-database", "pdf", "perplexity-search", "plotly",

@@ -8,6 +8,7 @@ SKILL_DEPS = {
     "sequence": [],
     "pdb": [],
     "websearch": [],
+    "firecrawl-search": [],
     "arxiv": [],
     "cas": [],
     "nistwebbook": [],
