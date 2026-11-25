@@ -596,7 +596,8 @@ class ArtifactStore:
         self.store_path.parent.mkdir(parents=True, exist_ok=True)
         self._global_index_path = base / "artifacts" / "global_index.jsonl"
         # Byte-offset index for O(1) artifact lookups; built lazily on first get().
-        self._id_index: Optional[Dict[str, int]] = None
+        self._id_index: Dict[str, int] = {}
+        self._indexed_bytes = 0
 
     # ------------------------------------------------------------------
     # Write
@@ -606,12 +607,7 @@ class ArtifactStore:
         """Append artifact to per-agent store and global index. Returns artifact_id."""
         line = json.dumps(artifact.to_dict(), ensure_ascii=False) + "\n"
         with open(self.store_path, "a", encoding="utf-8") as fh:
-            # Record byte offset before writing so the ID index stays current.
-            offset = fh.seek(0, 2)  # seek to end
             fh.write(line)
-        # Update in-memory index if it has been built already.
-        if self._id_index is not None:
-            self._id_index[artifact.artifact_id] = offset
         self._append_global_index(artifact)
         self._sync_to_infinite(artifact)
 
@@ -857,42 +853,29 @@ class ArtifactStore:
 
     def get(self, artifact_id: str) -> Optional["Artifact"]:
         """Retrieve artifact by ID using a byte-offset index for O(1) seek."""
-        # Build the index lazily on first call.
-        if self._id_index is None:
-            self._build_id_index()
-        if artifact_id not in self._id_index:  # type: ignore[operator]
-            return None
         try:
             with open(self.store_path, "rb") as fh:
-                fh.seek(self._id_index[artifact_id])  # type: ignore[index]
-                line = fh.readline().decode("utf-8").strip()
-                if line:
-                    return Artifact.from_dict(json.loads(line))
+                if artifact_id not in self._id_index:
+                    fh.seek(self._indexed_bytes)
+                    while line := fh.readline():
+                        offset = fh.tell() - len(line)
+                        try:
+                            record = json.loads(line)
+                        except (json.JSONDecodeError, UnicodeDecodeError):
+                            # A writer may still be appending this final record.
+                            if not line.endswith(b"\n"):
+                                break
+                        else:
+                            if isinstance(record, dict) and record.get("artifact_id"):
+                                self._id_index[record["artifact_id"]] = offset
+                        self._indexed_bytes = fh.tell()
+                offset = self._id_index.get(artifact_id)
+                if offset is not None:
+                    fh.seek(offset)
+                    return Artifact.from_dict(json.loads(fh.readline()))
         except (OSError, json.JSONDecodeError, KeyError):
             pass
         return None
-
-    def _build_id_index(self) -> None:
-        """Scan store.jsonl once and record {artifact_id: byte_offset}."""
-        index: Dict[str, int] = {}
-        if self.store_path.exists():
-            try:
-                with open(self.store_path, "rb") as fh:
-                    while True:
-                        offset = fh.tell()
-                        line = fh.readline()
-                        if not line:
-                            break
-                        try:
-                            obj = json.loads(line)
-                            aid = obj.get("artifact_id")
-                            if aid:
-                                index[aid] = offset
-                        except json.JSONDecodeError:
-                            pass
-            except OSError:
-                pass
-        self._id_index = index
 
     def list(
         self,
