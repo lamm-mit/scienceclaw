@@ -9,6 +9,7 @@ SKILL_DEPS = {
     "pdb": [],
     "websearch": [],
     "firecrawl-search": [],
+    "keenable-search": [],
     "arxiv": [],
     "cas": [],
     "nistwebbook": [],
