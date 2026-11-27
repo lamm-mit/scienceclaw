@@ -293,7 +293,7 @@ CAPABILITY_TAXONOMY = {
         "functions": {
             "search": {
                 "description": "Web search and general information retrieval",
-                "exact_names": {"websearch", "perplexity-search", "firecrawl-search"},
+                "exact_names": {"websearch", "perplexity-search", "firecrawl-search", "keenable-search"},
             },
             "platforms": {
                 "description": "Lab management, collaboration, and data sharing platforms",
